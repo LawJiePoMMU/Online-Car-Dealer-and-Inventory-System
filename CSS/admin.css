@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+    --sidebar-bg: #ffffff;
+    --sidebar-width: 250px;
+    --text-muted: #8c8c8c;
+    --text-dark: #1f1f1f;
+    --primary-color: #6366f1;
+    --border-color: #f0f0f0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+}
+
+/*---sidebar css---*/
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    position: fixed;
+    left: 0;
+    top: 0;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    margin-bottom: 32px;
+}
+
+.sidebar-brand .logo-icon {
+    font-size: 24px;
+    color: var(--primary-color);
+    margin-right: 12px;
+}
+
+.sidebar-brand h2 {
+    font-size: 20px;
+    color: var(--text-dark);
+    font-weight: 700;
+}
+
+.sidebar-section {
+    padding: 0 24px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #b3b3b3;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    margin-top: 16px;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0 16px;
+}
+
+.sidebar-menu li {
+    margin-bottom: 4px;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.sidebar-menu a i {
+    width: 24px;
+    font-size: 16px;
+    margin-right: 12px;
+}
+
+.sidebar-menu a:hover {
+    background-color: #fafafa;
+    color: var(--text-dark);
+}
+
+.sidebar-menu a.active {
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.05);
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 0 24px;
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.logout-btn i {
+    margin-right: 12px;
+}
+
+.logout-btn:hover {
+    color: #ef4444;
+}
