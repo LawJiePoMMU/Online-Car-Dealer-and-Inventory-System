@@ -34,7 +34,7 @@
         </li>
         <li>
             <a href="users.php">
-                <i class="far fa-users"></i> <span>Users</span>
+                <i class="fas fa-users"></i> <span>Users</span>
             </a>
         </li>
         <li>
@@ -52,8 +52,8 @@
             </a>
         </li>
     </ul>
-    <div class="sidebar-footer"></div>
-    <a href="logout.php">
+    <div class="sidebar-footer">
+    <a href="logout.php" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
     </a>
     </div>
