@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment | ACE MOTORS</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+<nav>
+    <div class="logo">ACE MOTORS</div>
+    <div class="nav-links">
+        <a href="#">Home</a>
+        <a href="#">Cars</a>
+        <a href="#">Reservation</a>
+        <a href="#">Contact</a>
+        <a href="#">Login</a>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="container">
+
+        <h1 class="page-title">Payment</h1>
+
+        <div class="card payment-card">
+
+            <h2 class="section-title">Payment Details</h2>
+
+            <form>
+
+                <!-- Card Name -->
+                <div class="input-group">
+                    <label>Cardholder Name</label>
+                    <input type="text" placeholder="John Doe" required>
+                </div>
+
+                <!-- Card Number -->
+                <div class="input-group">
+                    <label>Card Number</label>
+                    <input type="text" placeholder="1234 5678 9012 3456" required>
+                </div>
+
+                <!-- Row (MM/YY + CVV) -->
+                <div class="row">
+                    <div class="input-group">
+                        <label>Expiry Date</label>
+                        <input type="text" placeholder="MM/YY" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>CVV</label>
+                        <input type="text" placeholder="123" required>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div class="input-group">
+                    <label>Billing Address</label>
+                    <input type="text" placeholder="Enter your address" required>
+                </div>
+
+                <!-- Amount Box -->
+                <div class="payment-summary">
+                    <span>Total Amount</span>
+                    <strong>RM 73,800</strong>
+                </div>
+
+                <button type="submit" class="payment-btn">
+                    Proceed Payment
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
+
+<footer class="footer">
+    © 2026 ACE MOTORS
+</footer>
+
+</body>
+</html>
