@@ -445,3 +445,14 @@ body {
 .spec-right .admin-table td:first-child {
     padding-left: 0;
 }
+
+/*---reservation css---*/
+.badge-paid {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.badge-unpaid {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
