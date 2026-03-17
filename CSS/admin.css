@@ -18,7 +18,7 @@
 }
 
 body {
-    background-color: var(--bg-clor);
+    background-color: var(--bg-color);
 }
 
 /*---sidebar css---*/
@@ -99,11 +99,22 @@ body {
     color: #ffffff;
 }
 
+.sidebar-menu a.active i {
+    color: #111827;
+}
+
+.sidebar-menu a:hover:not(.active) {
+    background-color: #1f2937;
+    color: #ffffff;
+}
+
 .sidebar-menu a.active {
-    color: #818cf8;
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    background-color: rgba(99, 102, 241, 0.1);
-  }
+    color: #111827;
+    border: none;
+    background-color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
 .sidebar-footer {
     margin-top: auto;
@@ -187,7 +198,7 @@ body {
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .stat-icon {
@@ -283,4 +294,62 @@ body {
 .badge-pending {
     background-color: #fef9c3;
     color: #854d0e;
+}
+
+.badge-new {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-used {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+.btn-add {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.btn-add:hover {
+    background-color: #4f46e5;
+}
+
+/*---manage cars css---*/
+.car-cell {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.car-thumb {
+    width: 64px;
+    height: 48px;
+    border-radius: 6px;
+    background-color: #f3f4f6;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.car-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.car-thumb i {
+    font-size: 20px;
+    color: #9ca3af;
 }

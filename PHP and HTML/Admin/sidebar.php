@@ -51,9 +51,14 @@
                 <i class="fas fa-cog"></i> <span>Settings</span>
             </a>
         </li>
+        <li>
+            <a href="notifications.php">
+                <i class="fas fa-bell"></i> <span>Notifications</span>
+            </a>
+        </li>
     </ul>
     <div class="sidebar-footer">
-    <a href="logout.php" class="logout-btn">
+    <a href="../logout.php" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
     </a>
     </div>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Manage Cars</title>
+    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
+<body>
+    /*sidebar*/
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-circle-notch logo-icon"></i>
+            <h2>Admin</h2>
+        </div>
+
+        <div class="sidebar-section">NAVIGATION</div>
+
+        <ul class="sidebar-menu">
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-th-large"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="manage-cars.html">
+                    <i class="fas fa-car"></i> <span>Manage Cars</span>
+                </a>
+            </li>
+            <li>
+                <a href="specifications.html">
+                    <i class="fas fa-cogs"></i> <span>Specifications</span>
+                </a>
+            </li>
+            <li>
+                <a href="reservations.html">
+                    <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
+                </a>
+            </li>
+            <li>
+                <a href="inventory.html">
+                    <i class="fas fa-boxes"></i> <span>Inventory</span>
+                </a>
+            </li>
+            <li>
+                <a href="users.html">
+                    <i class="fas fa-users"></i> <span>Users</span>
+                </a>
+            </li>
+            <li>
+                <a href="chat.html">
+                    <i class="fas fa-comments"></i> <span>Chat</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-section">GENERAL</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </a>
+            </li>
+            <li>
+            <a href="notifications.html">
+                <i class="fas fa-bell"></i> <span>Notifications</span>
+            </a>
+        </li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="logout.php" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+    /*sidebar*/
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div class="page-title">
+                <h1>Manage Cars</h1>
+                <p>View, add, and edit your car information.</p>
+            </div>
+            <a href="add-car.html" class="btn-add">
+                <i class="fas fa-plus"></i> Add New Car
+            </a>
+        </header>
+
+        <div class="table-card">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Cars</th>
+                        <th>Condition</th>
+                        <th>Year</th>
+                        <th>Price</th>
+                        <th>Stock Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="car-cell">
+                                <div class="car-thumb">
+                                    <img src="https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=150&q=80" alt="Honda Civic">
+                                </div>
+                                <div class="car-info-text">
+                                    <strong>Honda Civic RS</strong><br>
+                                    <span style="font-size: 12px; color: var(--text-muted);">1.5L Turbo / Sedan</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-new">New Car</span></td>
+                        <td>2026</td>
+                        <td><strong>RM 150,000</strong></td>
+                        <td><span class="badge badge-success">Available</span></td>
+                        <td>
+                            <a href="#" style="color: var(--primary-color); margin-right: 12px;" title="Edit"><i class="fas fa-edit"></i></a>
+                            <a href="#" style="color: #ef4444;" title="Delete"><i class="fas fa-trash-alt"></i></a>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <div class="car-cell">
+                                <div class="car-thumb">
+                                    <i class="fas fa-car-side"></i>
+                                </div>
+                                <div class="car-info-text">
+                                    <strong>Toyota Camry V</strong><br>
+                                    <span style="font-size: 12px; color: var(--text-muted);">2.5L / 45,000 km</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-used">Used Car</span></td>
+                        <td>2021</td>
+                        <td><strong>RM 115,000</strong></td>
+                        <td><span class="badge badge-success">Available</span></td>
+                        <td>
+                            <a href="#" style="color: var(--primary-color); margin-right: 12px;" title="Edit"><i class="fas fa-edit"></i></a>
+                            <a href="#" style="color: #ef4444;" title="Delete"><i class="fas fa-trash-alt"></i></a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+</body>
+</html>

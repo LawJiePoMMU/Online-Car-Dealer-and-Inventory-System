@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,70 +8,77 @@
     <link rel="stylesheet" href="../../CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
+
 <body>
+    /*sidebar*/
     <aside class="sidebar">
-    <div class="sidebar-brand">
-        <i class="fas fa-circle-notch logo-icon"></i>
-        <h2>Admin</h2>
-    </div>
+        <div class="sidebar-brand">
+            <i class="fas fa-circle-notch logo-icon"></i>
+            <h2>Admin</h2>
+        </div>
 
-    <div class="sidebar-section">NAVIGATION</div>
+        <div class="sidebar-section">NAVIGATION</div>
 
-    <ul class="sidebar-menu">
-        <li>
-            <a href="dashboard.php">
-                <i class="fas fa-th-large"></i> <span>Dashboard</span>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="dashboard.php">
+                    <i class="fas fa-th-large"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="manage-cars.php">
+                    <i class="fas fa-car"></i> <span>Manage Cars</span>
+                </a>
+            </li>
+            <li>
+                <a href="specifications.php">
+                    <i class="fas fa-cogs"></i> <span>Specifications</span>
+                </a>
+            </li>
+            <li>
+                <a href="reservations.php">
+                    <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
+                </a>
+            </li>
+            <li>
+                <a href="inventory.php">
+                    <i class="fas fa-boxes"></i> <span>Inventory</span>
+                </a>
+            </li>
+            <li>
+                <a href="users.php">
+                    <i class="fas fa-users"></i> <span>Users</span>
+                </a>
+            </li>
+            <li>
+                <a href="chat.php">
+                    <i class="fas fa-comments"></i> <span>Chat</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-section">GENERAL</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="settings.php">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </a>
+            </li>
+            <li>
+            <a href="notifications.php">
+                <i class="fas fa-bell"></i> <span>Notifications</span>
             </a>
         </li>
-        <li>
-            <a href="manage-cars.php">
-                <i class="fas fa-car"></i> <span>Manage Cars</span>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="logout.php" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
             </a>
-        </li>
-        <li>
-            <a href="specifications.php">
-                <i class="fas fa-cogs"></i> <span>Specifications</span>
-            </a>
-        </li>
-        <li>
-            <a href="reservations.php">
-                <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
-            </a>
-        </li>
-        <li>
-            <a href="inventory.php">
-                <i class="fas fa-boxes"></i> <span>Inventory</span>
-            </a>
-        </li>
-        <li>
-            <a href="users.php">
-                <i class="fas fa-users"></i> <span>Users</span>
-            </a>
-        </li>
-        <li>
-            <a href="chat.php">
-                <i class="fas fa-comments"></i> <span>Chat</span>
-            </a>
-        </li>
-    </ul>
+        </div>
+    </aside>
+    /*sidebar*/
 
-    <div class="sidebar-section">GENERAL</div>
-    <ul class="sidebar-menu">
-        <li>
-            <a href="settings.php">
-                <i class="fas fa-cog"></i> <span>Settings</span>
-            </a>
-        </li>
-    </ul>
-    <div class="sidebar-footer">
-    <a href="logout.php" class="logout-btn">
-        <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
-    </a>
-    </div>
-</aside>
+    <main class="main-content">
 
- <main class="main-content">
-        
         <header class="topbar">
             <div class="page-title">
                 <h1>Dashboard</h1>
@@ -85,14 +93,19 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon" style="color: #6366f1; background: #e0e7ff;"><i class="fas fa-car"></i></div>
-                <div class="stat-info">
+                <div class="stat-info" style="width: 100%;">
                     <p>Total Fleet</p>
-                    <h3>124</h3>
+                    <h3 style="margin-bottom: 4px;">124</h3>
+                    <div style="font-size: 11px; color: #6b7280; display: flex; gap: 12px;">
+                        <span><b style="color: #1e40af;">50</b> New</span>
+                        <span><b style="color: #4b5563;">74</b> Used</span>
+                    </div>
                 </div>
             </div>
-            
+
             <div class="stat-card">
-                <div class="stat-icon" style="color: #10b981; background: #d1fae5;"><i class="fas fa-calendar-check"></i></div>
+                <div class="stat-icon" style="color: #10b981; background: #d1fae5;"><i
+                        class="fas fa-calendar-check"></i></div>
                 <div class="stat-info">
                     <p>Reservations</p>
                     <h3>856</h3>
@@ -108,7 +121,8 @@
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon" style="color: #ef4444; background: #fee2e2;"><i class="fas fa-warehouse"></i></div>
+                <div class="stat-icon" style="color: #ef4444; background: #fee2e2;"><i class="fas fa-warehouse"></i>
+                </div>
                 <div class="stat-info">
                     <p>In Stock</p>
                     <h3>42</h3>
@@ -121,7 +135,7 @@
                 <h3>Recent Reservations</h3>
                 <a href="reservations.html" class="view-all">View All</a>
             </div>
-            
+
             <table class="admin-table">
                 <thead>
                     <tr>
@@ -136,23 +150,20 @@
                     <tr>
                         <td>#RES-001</td>
                         <td>John Doe</td>
-                        <td>BMW X5 2023</td>
+                        <td class="car-name">
+                            BMW X5 2023 <span class="badge badge-new" style="margin-left: 8px; font-size: 10px; padding: 4px 8px;">New</span>
+                        </td>
                         <td>Mar 17, 2026</td>
                         <td><span class="badge badge-success">Approved</span></td>
                     </tr>
                     <tr>
                         <td>#RES-002</td>
                         <td>Jane Smith</td>
-                        <td>Toyota Camry</td>
+                        <td class="car-name">
+                            Toyota Camry <span class="badge badge-used" style="margin-left: 8px; font-size: 10px; padding: 4px 8px;">Used</span>
+                        </td>
                         <td>Mar 16, 2026</td>
                         <td><span class="badge badge-pending">Pending</span></td>
-                    </tr>
-                    <tr>
-                        <td>#RES-003</td>
-                        <td>Michael Lee</td>
-                        <td>Honda Civic</td>
-                        <td>Mar 15, 2026</td>
-                        <td><span class="badge badge-success">Approved</span></td>
                     </tr>
                 </tbody>
             </table>
@@ -161,4 +172,5 @@
     </main>
 
 </body>
+
 </html>
