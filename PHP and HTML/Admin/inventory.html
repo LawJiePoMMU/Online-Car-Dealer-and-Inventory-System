@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +10,7 @@
 </head>
 
 <body>
-        /*sidebar*/
+    /*sidebar*/
     <aside class="sidebar">
         <div class="sidebar-brand">
             <i class="fas fa-circle-notch logo-icon"></i>
@@ -63,10 +64,10 @@
                 </a>
             </li>
             <li>
-            <a href="notifications.php">
-                <i class="fas fa-bell"></i> <span>Notifications</span>
-            </a>
-        </li>
+                <a href="notifications.php">
+                    <i class="fas fa-bell"></i> <span>Notifications</span>
+                </a>
+            </li>
         </ul>
         <div class="sidebar-footer">
             <a href="logout.php" class="logout-btn">
@@ -79,12 +80,13 @@
     <main class="main-content">
         <div class="page-header">
             <h1>Inventory</h1>
-        <p>Track quantities for new cars and manage unique units for used cars.</p>
-            </div>
-            
-            <a href="#" class="btn-add" style="background-color: white; color: var(--text-dark); border: 1px solid #d1d5db;">
-                <i class="fas fa-download"></i> Export Report
-            </a>
+            <p>Track quantities for new cars and manage unique units for used cars.</p>
+        </div>
+
+        <a href="#" class="btn-add"
+            style="background-color: white; color: var(--text-dark); border: 1px solid #d1d5db;">
+            <i class="fas fa-download"></i> Export Report
+        </a>
         </header>
 
         <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
@@ -109,10 +111,11 @@
         </div>
 
         <div class="table-card">
-            
+
             <div class="card-header" style="margin-bottom: 24px; display: flex; justify-content: space-between;">
                 <div style="display: flex; gap: 16px;">
-                    <input type="text" class="form-control" placeholder="Search car model or Plate No..." style="width: 300px;">
+                    <input type="text" class="form-control" placeholder="Search car model or Plate No..."
+                        style="width: 300px;">
                     <select class="form-control" style="width: 150px;">
                         <option value="all">All Types</option>
                         <option value="new">New Cars</option>
@@ -139,12 +142,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    
+
                     <tr>
                         <td>
                             <div class="customer-info">
                                 <div class="car-thumb" style="width: 48px; height: 36px;">
-                                    <img src="https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=100&q=80" alt="Civic">
+                                    <img src="https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=100&q=80"
+                                        alt="Civic">
                                 </div>
                                 <strong>Honda Civic RS</strong>
                             </div>
@@ -158,11 +162,13 @@
                         </td>
                         <td><strong>RM 150,000</strong></td>
                         <td>
-                            <span class="badge badge-success" style="margin-bottom: 4px; display: inline-block;">Active</span><br>
+                            <span class="badge badge-success"
+                                style="margin-bottom: 4px; display: inline-block;">Active</span><br>
                             <span style="font-size: 12px; color: #166534; font-weight: 600;">In Stock</span>
                         </td>
                         <td>
-                            <a href="#" style="color: var(--primary-color); font-weight: 600; font-size: 13px;"><i class="fas fa-edit"></i> Edit</a>
+                            <a href="#" style="color: var(--primary-color); font-weight: 600; font-size: 13px;"><i
+                                    class="fas fa-edit"></i> Edit</a>
                         </td>
                     </tr>
 
@@ -170,7 +176,8 @@
                         <td>
                             <div class="customer-info">
                                 <div class="car-thumb" style="width: 48px; height: 36px;">
-                                    <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=100&q=80" alt="BMW">
+                                    <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=100&q=80"
+                                        alt="BMW">
                                 </div>
                                 <strong>BMW 320i M Sport</strong>
                             </div>
@@ -178,23 +185,31 @@
                         <td><span class="badge badge-used">Used Car</span></td>
                         <td>
                             <div>
-                                <span style="font-weight: 600; color: #111827; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; border: 1px solid #d1d5db;">BQM 8888</span><br>
-                                <span style="font-size: 12px; color: var(--text-muted);"><i class="fas fa-tachometer-alt"></i> 45,200 km</span>
+                                <span
+                                    style="font-weight: 600; color: #111827; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; border: 1px solid #d1d5db;">BQM
+                                    8888</span><br>
+                                <span style="font-size: 12px; color: var(--text-muted);"><i
+                                        class="fas fa-tachometer-alt"></i> 45,200 km</span>
                             </div>
                         </td>
                         <td><strong>RM 115,000</strong></td>
                         <td>
-                            <span class="badge badge-success" style="margin-bottom: 4px; display: inline-block;">Active</span><br>
+                            <span class="badge badge-success"
+                                style="margin-bottom: 4px; display: inline-block;">Active</span><br>
                             <span style="font-size: 12px; color: #166534; font-weight: 600;">Available</span>
                         </td>
                         <td>
-                            <a href="#" style="color: var(--primary-color); font-weight: 600; font-size: 13px;"><i class="fas fa-edit"></i> Edit</a>
+                            <a href="#" style="color: var(--primary-color); font-weight: 600; font-size: 13px;"><i
+                                    class="fas fa-edit"></i> Edit</a>
                         </td>
                     </tr>
 
-                    <tr style="background-color: #f9fafb; opacity: 0.7;"> <td>
+                    <tr style="background-color: #f9fafb; opacity: 0.7;">
+                        <td>
                             <div class="customer-info">
-                                <div class="car-thumb" style="width: 48px; height: 36px; filter: grayscale(100%);"> <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=100&q=80" alt="Mazda">
+                                <div class="car-thumb" style="width: 48px; height: 36px; filter: grayscale(100%);"> <img
+                                        src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=100&q=80"
+                                        alt="Mazda">
                                 </div>
                                 <strong style="text-decoration: line-through; color: #6b7280;">Mazda 3 High</strong>
                             </div>
@@ -202,16 +217,20 @@
                         <td><span class="badge badge-used">Used Car</span></td>
                         <td>
                             <div>
-                                <span style="font-weight: 600; color: #6b7280; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; border: 1px solid #d1d5db;">VBC 1234</span>
+                                <span
+                                    style="font-weight: 600; color: #6b7280; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; border: 1px solid #d1d5db;">VBC
+                                    1234</span>
                             </div>
                         </td>
                         <td><strong style="color: #6b7280;">RM 85,000</strong></td>
                         <td>
-                            <span class="badge" style="background-color: #e5e7eb; color: #4b5563; margin-bottom: 4px; display: inline-block;">Inactive</span><br>
+                            <span class="badge"
+                                style="background-color: #e5e7eb; color: #4b5563; margin-bottom: 4px; display: inline-block;">Inactive</span><br>
                             <span style="font-size: 12px; color: #991b1b; font-weight: 700;">SOLD</span>
                         </td>
                         <td>
-                            <a href="#" style="color: #6b7280; font-weight: 600; font-size: 13px;"><i class="fas fa-eye"></i> View</a>
+                            <a href="#" style="color: #6b7280; font-weight: 600; font-size: 13px;"><i
+                                    class="fas fa-eye"></i> View</a>
                         </td>
                     </tr>
 
@@ -221,4 +240,5 @@
     </main>
 
 </body>
+
 </html>

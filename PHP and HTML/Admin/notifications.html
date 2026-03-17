@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Notifications</title>
+    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+     /*sidebar*/
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-circle-notch logo-icon"></i>
+            <h2>Admin</h2>
+        </div>
+
+        <div class="sidebar-section">NAVIGATION</div>
+
+        <ul class="sidebar-menu">
+            <li>
+                <a href="dashboard.php">
+                    <i class="fas fa-th-large"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="manage-cars.php">
+                    <i class="fas fa-car"></i> <span>Manage Cars</span>
+                </a>
+            </li>
+            <li>
+                <a href="specifications.php">
+                    <i class="fas fa-cogs"></i> <span>Specifications</span>
+                </a>
+            </li>
+            <li>
+                <a href="reservations.php">
+                    <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
+                </a>
+            </li>
+            <li>
+                <a href="inventory.php">
+                    <i class="fas fa-boxes"></i> <span>Inventory</span>
+                </a>
+            </li>
+            <li>
+                <a href="users.php">
+                    <i class="fas fa-users"></i> <span>Users</span>
+                </a>
+            </li>
+            <li>
+                <a href="chat.php">
+                    <i class="fas fa-comments"></i> <span>Chat</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-section">GENERAL</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="settings.php">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </a>
+            </li>
+            <li>
+            <a href="notifications.php">
+                <i class="fas fa-bell"></i> <span>Notifications</span>
+            </a>
+        </li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="logout.php" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+    /*sidebar*/
+
+    <main class="main-content">
+        
+        <header class="topbar" style="margin-bottom: 24px;">
+            <div class="page-title">
+                <h1 style="font-size: 28px;">Notifications</h1>
+                <p>Stay updated on system activities, reservations, and inventory alerts.</p>
+            </div>
+            
+            <a href="#" class="btn-add btn-outline">
+                <i class="fas fa-check-double"></i> Mark All as Read
+            </a>
+        </header>
+
+        <div class="page-tabs">
+            <div class="tab-item active">All Alerts <span class="badge" style="background: var(--primary-color); color: white; margin-left: 6px; padding: 2px 6px;">2</span></div>
+            <div class="tab-item">Reservations</div>
+            <div class="tab-item">System & Inventory</div>
+        </div>
+
+        <div class="notification-list">
+            
+            <div class="notification-item unread">
+                <div class="noti-icon" style="background-color: #e0e7ff; color: var(--primary-color);">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="noti-content">
+                    <div class="noti-title">
+                        New Test Drive Reservation
+                        <span class="noti-time">10 mins ago</span>
+                    </div>
+                    <div class="noti-desc">
+                        Customer <strong>Alice Smith</strong> has requested a test drive for the <strong>Honda Civic RS</strong> on Mar 20, 2026.
+                    </div>
+                    <div class="noti-actions">
+                        <a href="reservations.php" class="btn-add" style="padding: 6px 16px; font-size: 13px;">Review Order</a>
+                        <a href="#" class="btn-outline" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; color: #374151;">Mark as Read</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="notification-item unread">
+                <div class="noti-icon" style="background-color: #dcfce7; color: #166534;">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="noti-content">
+                    <div class="noti-title">
+                        Booking Fee Received
+                        <span class="noti-time">1 hour ago</span>
+                    </div>
+                    <div class="noti-desc">
+                        A payment of <strong>RM 500.00</strong> was successfully processed via FPX for Order #RES-001 (John Doe).
+                    </div>
+                    <div class="noti-actions">
+                        <a href="reservations.php" class="btn-add" style="padding: 6px 16px; font-size: 13px; background-color: #10b981;">View Payment</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="notification-item">
+                <div class="noti-icon" style="background-color: #fee2e2; color: #991b1b;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="noti-content">
+                    <div class="noti-title">
+                        Low Stock Alert: Toyota Yaris
+                        <span class="noti-time">Yesterday</span>
+                    </div>
+                    <div class="noti-desc">
+                        The inventory for <strong>Toyota Yaris (New Car)</strong> has dropped to 1 unit. Please consider restocking soon to meet demand.
+                    </div>
+                    <div class="noti-actions">
+                        <a href="inventory.php" class="btn-outline" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; color: #374151;">Manage Inventory</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="notification-item">
+                <div class="noti-icon" style="background-color: #f3f4f6; color: #4b5563;">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div class="noti-content">
+                    <div class="noti-title">
+                        System Maintenance Complete
+                        <span class="noti-time">Mar 15, 2026</span>
+                    </div>
+                    <div class="noti-desc">
+                        The Soon Keng Auto system database was successfully backed up. No errors were detected.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+    
+</body>
+</html>

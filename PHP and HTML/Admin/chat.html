@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Chat</title>
+    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-circle-notch logo-icon"></i>
+            <h2>Admin</h2>
+        </div>
+
+        <div class="sidebar-section">NAVIGATION</div>
+
+        <ul class="sidebar-menu">
+            <li>
+                <a href="dashboard.php">
+                    <i class="fas fa-th-large"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="manage-cars.php">
+                    <i class="fas fa-car"></i> <span>Manage Cars</span>
+                </a>
+            </li>
+            <li>
+                <a href="specifications.php">
+                    <i class="fas fa-cogs"></i> <span>Specifications</span>
+                </a>
+            </li>
+            <li>
+                <a href="reservations.php">
+                    <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
+                </a>
+            </li>
+            <li>
+                <a href="inventory.php">
+                    <i class="fas fa-boxes"></i> <span>Inventory</span>
+                </a>
+            </li>
+            <li>
+                <a href="users.php">
+                    <i class="fas fa-users"></i> <span>Users</span>
+                </a>
+            </li>
+            <li>
+                <a href="chat.php">
+                    <i class="fas fa-comments"></i> <span>Chat</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-section">GENERAL</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="settings.php">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="notifications.php">
+                    <i class="fas fa-bell"></i> <span>Notifications</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="logout.php" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+    /*sidebar*/
+
+    <main class="main-content">
+
+        <header class="topbar" style="margin-bottom: 24px;">
+            <div class="page-title">
+                <h1 style="font-size: 28px;">Messages</h1>
+                <p>Chat with your customers and staff members.</p>
+            </div>
+        </header>
+
+        <div class="chat-container">
+
+            <div class="chat-sidebar">
+                <div class="chat-search">
+                    <div style="position: relative;">
+                        <i class="fas fa-search"
+                            style="position: absolute; left: 12px; top: 12px; color: #9ca3af; font-size: 14px;"></i>
+                        <input type="text" class="form-control" placeholder="Search customer..."
+                            style="padding-left: 36px; width: 100%;">
+                    </div>
+                </div>
+
+                <div class="contact-list">
+                    <div class="contact-item active">
+                        <div class="car-thumb"
+                            style="width: 40px; height: 40px; border-radius: 50%; background-color: #f59e0b; color: white; font-weight: 700;">
+                            AS</div>
+                        <div>
+                            <div class="contact-name">
+                                Alice Smith
+                                <span class="dot dot-active" style="display: inline-block; margin-left: 4px;"></span>
+                            </div>
+                            <div class="contact-msg">Are there any discounts for...</div>
+                        </div>
+                        <div style="margin-left: auto; font-size: 11px; color: #9ca3af;">10:42 AM</div>
+                    </div>
+
+                    <div class="contact-item">
+                        <div class="car-thumb"
+                            style="width: 40px; height: 40px; border-radius: 50%; background-color: #3b82f6; color: white; font-weight: 700;">
+                            AA</div>
+                        <div>
+                            <div class="contact-name">
+                                Abizar Alghifary
+                                <span class="dot dot-inactive" style="display: inline-block; margin-left: 4px;"></span>
+                            </div>
+                            <div class="contact-msg">Thanks for the update!</div>
+                        </div>
+                        <div style="margin-left: auto; font-size: 11px; color: #9ca3af;">Yesterday</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-main">
+
+                <div class="chat-header">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="car-thumb"
+                            style="width: 40px; height: 40px; border-radius: 50%; background-color: #f59e0b; color: white; font-weight: 700;">
+                            AS</div>
+                        <div>
+                            <strong style="font-size: 15px; color: #111827;">Alice Smith</strong>
+                            <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">ID: UA003 •
+                                Customer</span>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="#" style="color: #6b7280; margin-right: 16px;"><i class="fas fa-phone"></i></a>
+                        <a href="#" style="color: #6b7280;"><i class="fas fa-ellipsis-v"></i></a>
+                    </div>
+                </div>
+
+                <div class="chat-history">
+                    <div class="message-row incoming">
+                        <div class="message-bubble">
+                            Hi there! I saw the Honda Civic RS on your website. Is it still available for a test drive
+                            this weekend?
+                            <span class="message-time">10:40 AM</span>
+                        </div>
+                    </div>
+
+                    <div class="message-row outgoing">
+                        <div class="message-bubble">
+                            Hello Alice! Yes, the Honda Civic RS is currently in stock. We have a slot available at 2:00
+                            PM this Saturday. Does that work for you?
+                            <span class="message-time">10:41 AM <i class="fas fa-check-double"
+                                    style="margin-left: 4px; color: #a5b4fc;"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="message-row incoming">
+                        <div class="message-bubble">
+                            That works perfectly. Are there any discounts for booking it early?
+                            <span class="message-time">10:42 AM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <a href="#" style="color: #9ca3af; font-size: 20px;"><i class="fas fa-paperclip"></i></a>
+                    <input type="text" placeholder="Type a message to Alice...">
+                    <button class="btn-send"><i class="fas fa-paper-plane"></i></button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+</body>
+
+</html>
