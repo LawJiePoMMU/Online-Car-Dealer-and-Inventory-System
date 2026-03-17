@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Manage Cars</title>
+    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
+<body>
+    /*sidebar*/
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-circle-notch logo-icon"></i>
+            <h2>Admin</h2>
+        </div>
+
+        <div class="sidebar-section">NAVIGATION</div>
+
+        <ul class="sidebar-menu">
+            <li>
+                <a href="dashboard.html">
+                    <i class="fas fa-th-large"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="manage-cars.html">
+                    <i class="fas fa-car"></i> <span>Manage Cars</span>
+                </a>
+            </li>
+            <li>
+                <a href="specifications.html">
+                    <i class="fas fa-cogs"></i> <span>Specifications</span>
+                </a>
+            </li>
+            <li>
+                <a href="reservations.html">
+                    <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
+                </a>
+            </li>
+            <li>
+                <a href="inventory.html">
+                    <i class="fas fa-boxes"></i> <span>Inventory</span>
+                </a>
+            </li>
+            <li>
+                <a href="users.html">
+                    <i class="fas fa-users"></i> <span>Users</span>
+                </a>
+            </li>
+            <li>
+                <a href="chat.html">
+                    <i class="fas fa-comments"></i> <span>Chat</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-section">GENERAL</div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="settings.html">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="notifications.html">
+                    <i class="fas fa-bell"></i> <span>Notifications</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="logout.php" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+    /*sidebar*/
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div class="page-title">
+                <h1>Car Specifications</h1>
+                <p>Manage and view technical specifications for each specific vehicle.</p>
+            </div>
+        </header>
+
+        <div class="spec-container">
+
+            <div class="spec-left" style="flex: 0 0 32%;">
+                <div class="card-header" style="margin-bottom: 16px;">
+                    <h3>Select Car</h3>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <input type="text" class="form-control" placeholder="Search car name...">
+                </div>
+
+                <ul class="spec-list">
+                    <li class="spec-list-item active">
+                        <div class="customer-info">
+                            <div class="car-thumb" style="width: 48px; height: 36px;">
+                                <img src="https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=100&q=80"
+                                    alt="Civic">
+                            </div>
+                            <div>
+                                <strong>Honda Civic RS</strong><br>
+                                <span style="color: #6b7280;">New Car • 2026</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color: var(--primary-color);"></i>
+                    </li>
+
+                    <li class="spec-list-item">
+                        <div class="customer-info">
+                            <div class="car-thumb" style="width: 48px; height: 36px;">
+                                <i class="fas fa-car-side" style="font-size: 16px;"></i>
+                            </div>
+                            <div>
+                                <strong>Toyota Camry V</strong><br>
+                                <span>Used Car • 2021</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color: #d1d5db;"></i>
+                    </li>
+
+                    <li class="spec-list-item">
+                        <div class="customer-info">
+                            <div class="car-thumb" style="width: 48px; height: 36px;">
+                                <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=100&q=80"
+                                    alt="BMW">
+                            </div>
+                            <div>
+                                <strong>BMW 320i M Sport</strong><br>
+                                <span>Used Car • 2019</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color: #d1d5db;"></i>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="spec-right">
+                <div class="card-header" style="margin-bottom: 24px;">
+                    <h3>Specifications for "Honda Civic RS"</h3>
+                    <a href="#" class="btn-add" style="padding: 8px 16px; font-size: 13px;">
+                        <i class="fas fa-edit"></i> Edit Specs
+                    </a>
+                </div>
+
+                <table class="admin-table spec-detail-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%; color: #9ca3af;">CATEGORY / FIELD</th>
+                            <th style="color: #9ca3af;">VALUE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr class="table-group-header">
+                            <td colspan="2"
+                                style="background-color: #f9fafb; color: #111827; font-weight: 700; font-size: 12px; text-transform: uppercase; padding: 12px 20px;">
+                                <i class="fas fa-layer-group"
+                                    style="color: var(--primary-color); margin-right: 8px;"></i> Engine & Performance
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Engine Type</td>
+                            <td><strong>1.5L VTEC Turbo</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Horsepower</td>
+                            <td><strong>182 hp @ 6000 rpm</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Transmission</td>
+                            <td><strong>CVT Automatic</strong></td>
+                        </tr>
+
+                        <tr class="table-group-header">
+                            <td colspan="2"
+                                style="background-color: #f9fafb; color: #111827; font-weight: 700; font-size: 12px; text-transform: uppercase; padding: 12px 20px;">
+                                <i class="fas fa-ruler-combined"
+                                    style="color: var(--primary-color); margin-right: 8px;"></i> Dimensions
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Fuel Tank Capacity</td>
+                            <td><strong>47 Liters</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--text-muted);">Wheel Size</td>
+                            <td><strong>18-inch Alloy</strong></td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+
+</html>
