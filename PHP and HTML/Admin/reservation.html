@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservations - Admin Panel</title>
+    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-circle-notch logo-icon"></i>
+            <h2>Admin</h2>
+        </div>
+
+        <div class="sidebar-section">NAVIGATION</div>
+        <ul class="sidebar-menu">
+            <li><a href="dashboard.html"><i class="fas fa-th-large"></i> <span>Dashboard</span></a></li>
+            <li><a href="manage-cars.html"><i class="fas fa-car"></i> <span>Manage Cars</span></a></li>
+            <li><a href="specifications.html"><i class="fas fa-cogs"></i> <span>Specifications</span></a></li>
+            <li><a href="reservations.html" class="active"><i class="fas fa-calendar-alt"></i> <span>Reservations</span></a></li>
+            <li><a href="inventory.html"><i class="fas fa-boxes"></i> <span>Inventory</span></a></li>
+            <li><a href="users.html"><i class="fas fa-users"></i> <span>Users</span></a></li>
+            <li><a href="chat.html"><i class="fas fa-comments"></i> <span>Chat</span></a></li>
+        </ul>
+
+        <div class="sidebar-section">GENERAL</div>
+        <ul class="sidebar-menu">
+            <li><a href="settings.html"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="logout.html" class="logout-btn"><i class="fas fa-sign-out-alt"></i> <span>Log Out</span></a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <header class="topbar">
+            <div class="page-title">
+                <h1>Reservation Management</h1>
+                <p>Manage customer test drives and car bookings.</p>
+            </div>
+        </header>
+
+        <div class="card-header" style="margin-bottom: 24px; display: flex; gap: 16px;">
+            <input type="text" class="form-control" placeholder="Search by Order ID or Customer Name..." style="flex: 1;">
+            <select class="form-control" style="width: 200px;">
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+            </select>
+        </div>
+
+        <div class="dashboard-split">
+            
+            <div class="table-section">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Car</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background-color: #f9fafb;">
+                            <td style="font-weight: 600;">#RES-001</td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="car-thumb" style="width: 32px; height: 32px; border-radius: 50%; background-color: #f97316; color: white;">JD</div>
+                                    <span style="font-weight: 500;">John Doe</span>
+                                </div>
+                            </td>
+                            <td>Honda Civic RS</td>
+                            <td>Mar 18, 2026</td>
+                            <td><span class="badge badge-pending" style="background-color: #fef9c3; color: #854d0e;">Pending</span></td>
+                        </tr>
+
+                        <tr>
+                            <td style="font-weight: 600;">#RES-002</td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="car-thumb" style="width: 32px; height: 32px; border-radius: 50%; background-color: #3b82f6; color: white;">AS</div>
+                                    <span style="font-weight: 500;">Alice Smith</span>
+                                </div>
+                            </td>
+                            <td>BMW 320i M Sport</td>
+                            <td>Mar 17, 2026</td>
+                            <td><span class="badge badge-success">Approved</span></td>
+                        </tr>
+
+                        <tr>
+                            <td style="font-weight: 600;">#RES-003</td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="car-thumb" style="width: 32px; height: 32px; border-radius: 50%; background-color: #10b981; color: white;">WL</div>
+                                    <span style="font-weight: 500;">Wong Lee</span>
+                                </div>
+                            </td>
+                            <td>Toyota Camry V</td>
+                            <td>Mar 15, 2026</td>
+                            <td><span class="badge badge-success">Approved</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="detail-panel">
+                <div class="panel-header">
+                    <div class="panel-title">Reservation Details</div>
+                    <i class="fas fa-times panel-close" style="color: #9ca3af; cursor: pointer;"></i>
+                </div>
+
+                <div class="panel-profile" style="text-align: center; margin-bottom: 24px;">
+                    <div class="car-thumb" style="width: 72px; height: 72px; border-radius: 50%; background-color: #f97316; color: white; font-size: 28px; margin: 0 auto 12px;">JD</div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 4px;">John Doe</h3>
+                    <p style="font-size: 13px; color: #6b7280;">New Customer</p>
+                </div>
+
+                <div class="action-buttons" style="display: flex; justify-content: center; gap: 16px; margin-bottom: 32px;">
+                    <a href="#" class="circle-btn" style="width: 40px; height: 40px; border-radius: 50%; background: #f3f4f6; color: #4b5563; display: flex; align-items: center; justify-content: center;"><i class="fas fa-envelope"></i></a>
+                    <a href="#" class="circle-btn" style="width: 40px; height: 40px; border-radius: 50%; background: #f3f4f6; color: #4b5563; display: flex; align-items: center; justify-content: center;"><i class="fas fa-phone"></i></a>
+                    <a href="#" class="circle-btn" style="width: 40px; height: 40px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center;"><i class="fab fa-whatsapp"></i></a>
+                </div>
+
+                <div class="detail-list" style="border-top: 1px dashed #e5e7eb; padding-top: 24px;">
+                    <div class="detail-item" style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px;">
+                        <span style="color: #6b7280;">Order ID</span>
+                        <span style="font-weight: 600; color: #111827;">#RES-001</span>
+                    </div>
+                    <div class="detail-item" style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px;">
+                        <span style="color: #6b7280;">Car</span>
+                        <div style="text-align: right;">
+                            <span style="font-weight: 600; color: #111827;">Honda Civic RS</span><br>
+                            <span style="font-size: 12px; color: var(--primary-color);">New Car</span>
+                        </div>
+                    </div>
+                    <div class="detail-item" style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px;">
+                        <span style="color: #6b7280;">Schedule Date</span>
+                        <div style="text-align: right;">
+                            <span style="font-weight: 600; color: #111827;">Mar 18, 2026</span><br>
+                            <span style="font-size: 12px; color: #6b7280;">14:30 PM</span>
+                        </div>
+                    </div>
+                    <div class="detail-item" style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px;">
+                        <span style="color: #6b7280;">Status</span>
+                        <span class="badge badge-pending" style="background-color: #fef9c3; color: #854d0e;">Pending</span>
+                    </div>
+                </div>
+
+                <div class="panel-footer" style="display: flex; gap: 12px; margin-top: 32px;">
+                    <button style="flex: 1; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer;">Reject</button>
+                    <button style="flex: 1; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; background: var(--primary-color); color: white; cursor: pointer;">Approve</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>
