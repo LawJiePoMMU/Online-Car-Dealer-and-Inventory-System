@@ -438,7 +438,7 @@ body {
 
 .form-control:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); 
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .spec-right .admin-table th:first-child,
@@ -455,4 +455,124 @@ body {
 .badge-unpaid {
     background-color: #fee2e2;
     color: #991b1b;
+}
+
+/*---users css---*/
+.page-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
+    gap: 32px;
+}
+
+.tab-item {
+    padding-bottom: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab-item:hover {
+    color: var(--text-dark);
+}
+
+.tab-item.active {
+    color: var(--text-dark);
+    border-bottom-color: #d97706;
+    font-weight: 600;
+}
+
+.status-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dot-active {
+    background-color: #10b981;
+}
+
+.text-active {
+    color: #10b981;
+}
+
+.dot-inactive {
+    background-color: #ef4444;
+}
+
+.text-inactive {
+    color: #ef4444;
+}
+
+.action-icons a {
+    color: #9ca3af;
+    font-size: 14px;
+    margin-right: 12px;
+    transition: color 0.2s;
+}
+
+.action-icons a:hover {
+    color: var(--primary-color);
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 10px;
+}
+
+.page-info {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.page-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.page-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.page-btn:hover {
+    border-color: #d1d5db;
+    color: var(--text-dark);
+}
+
+.page-btn.active {
+    background-color: #111827; 
+    color: #ffffff;
+    border-color: #111827;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.btn-outline:hover {
+    background-color: #f9fafb;
 }
