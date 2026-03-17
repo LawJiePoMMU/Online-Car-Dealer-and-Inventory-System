@@ -1,1 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Reservation | ACE MOTORS</title>
 
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Link CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <nav>
+        <div class="logo">ACE MOTORS</div>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Cars</a>
+            <a href="#">Reservation</a>
+            <a href="#">Contact</a>
+            <a href="#">Login</a>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container">
+            <h1 class="page-title">Car Reservation</h1>
+            
+            <div class="card">
+                <div class="car-section">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKN011Eoeen3qinV5IjCZSc_nzYQjEetXSNQ&s" alt="Proton S70">
+                    <div class="car-name">Proton S70</div>
+                    <div class="car-price">RM 73,800</div>
+                    <p class="car-specs">Auto | 2024 Model</p>
+                </div>
+
+                <div class="form-section">
+                    <form action="#">
+                        <input type="text" placeholder="Full Name" required>
+                        <input type="email" placeholder="Email Address" required>
+                        <input type="tel" placeholder="Phone Number" required>
+                        
+                        <select required>
+                            <option value="" disabled selected>Select Payment Method</option>
+                            <option>Credit Card</option>
+                            <option>Debit Card</option>
+                            <option>FPX Online Banking</option>
+                        </select>
+                        
+                        <input type="date" required>
+                        
+                        <button type="submit">Confirm Reservation</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        © 2026 ACE MOTORS
+    </footer>
+
+</body>
+</html>
