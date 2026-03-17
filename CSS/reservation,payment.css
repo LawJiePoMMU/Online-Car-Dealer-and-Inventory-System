@@ -1,1 +1,320 @@
+/* ===================================
+   1. RESET & BASE
+=================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
+body {
+    background-color: #F5F5F5;
+    font-family: 'Poppins', sans-serif;
+    color: #333333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ===================================
+   2. NAVBAR
+=================================== */
+nav {
+    background: #FFFFFF;
+    padding: 20px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.logo {
+    font-weight: 700;
+    color: #1E3A8A;
+    font-size: 20px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #333;
+    margin-left: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.nav-links a:hover {
+    color: #2563EB;
+}
+
+/* ===================================
+   3. LAYOUT
+=================================== */
+.main-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 1100px;
+}
+
+.page-title {
+    color: #1E3A8A;
+    font-size: 32px;
+    margin-bottom: 30px;
+}
+
+/* ===================================
+   4. CARD (SHARED)
+=================================== */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* ===================================
+   5. RESERVATION PAGE
+=================================== */
+.card.flex {
+    display: flex;
+    gap: 50px;
+    align-items: center;
+}
+
+/* LEFT */
+.car-section {
+    flex: 1.2;
+    text-align: center;
+}
+
+.car-section img {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    background: #eee;
+    min-height: 250px;
+}
+
+.car-name {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.car-price {
+    font-size: 20px;
+    color: #1E3A8A;
+    font-weight: 600;
+}
+
+.car-specs {
+    color: #888;
+    margin-top: 5px;
+}
+
+/* RIGHT (FORM) */
+.form-section {
+    flex: 1;
+}
+
+.form-section input,
+.form-section select {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+/* ===================================
+   6. BUTTON (GLOBAL)
+=================================== */
+button {
+    width: 100%;
+    padding: 14px;
+    background: #2563EB;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #1D4ED8;
+}
+
+/* ===================================
+   7. CONFIRMATION PAGE
+=================================== */
+h2 {
+    color: #1E3A8A;
+    font-size: 28px;
+}
+
+.success {
+    font-size: 50px;
+    color: #2563EB;
+    text-align: center;
+}
+
+.details {
+    text-align: left;
+    margin-top: 20px;
+}
+
+.details p {
+    margin: 8px 0;
+}
+
+/* ===================================
+   8. STATUS PAGE
+=================================== */
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.search-box input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.search-box button {
+    width: auto;
+    padding: 12px 20px;
+}
+
+.status-box {
+    margin-top: 25px;
+    padding: 15px;
+    border-radius: 10px;
+    background: #F9FAFB;
+}
+
+/* STATUS COLORS */
+.pending { color: orange; font-weight: 600; }
+.approved { color: green; font-weight: 600; }
+.rejected { color: red; font-weight: 600; }
+
+/* ===================================
+   9. FOOTER
+=================================== */
+footer, .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+}
+
+.footer {
+    margin-top: 40px;
+    background: #1E3A8A;
+    color: white;
+}
+
+/* ===================================
+   10. RESPONSIVE
+=================================== */
+@media (max-width: 850px) {
+    .card.flex {
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .car-section img {
+        max-width: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+        margin: 30px auto;
+    }
+}
+
+
+
+
+/* ===== PAYMENT PAGE ===== */
+
+.payment-card {
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Title */
+.section-title {
+    color: #1E3A8A;
+    margin-bottom: 20px;
+}
+
+/* Input group */
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    font-size: 14px;
+    color: #555;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+/* Row layout */
+.row {
+    display: flex;
+    gap: 15px;
+}
+
+/* Payment summary */
+.payment-summary {
+    margin: 20px 0;
+    padding: 15px;
+    background: #F9FAFB;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+}
+
+/* Button */
+.payment-btn {
+    width: 100%;
+    padding: 14px;
+    background: #2563EB;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.payment-btn:hover {
+    background: #1D4ED8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .row {
+        flex-direction: column;
+    }
+}
