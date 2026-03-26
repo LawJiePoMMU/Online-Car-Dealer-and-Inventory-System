@@ -1,0 +1,244 @@
+/* =========================================
+   1. CSS Variables (统一颜色和设定 - Step 13)
+   ========================================= */
+:root {
+    --primary-color: #007bff; /* Primary Blue */
+    --primary-hover: #0056b3;
+    --bg-color: #f4f7f6;      /* Light Grey Background */
+    --card-bg: #ffffff;       /* White Card */
+    --text-dark: #333333;
+    --text-light: #666666;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
+/* =========================================
+   2. Basic Reset & Typography
+   ========================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-dark);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* =========================================
+   3. Navbar (导航栏)
+   ========================================= */
+.navbar {
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow);
+    position: sticky; /* Sticky top */
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-dark);
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.nav-links a:hover {
+    color: var(--primary-color);
+}
+
+/* =========================================
+   4. Buttons (按钮统一样式)
+   ========================================= */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+/* =========================================
+   5. Grid System (网格布局)
+   ========================================= */
+.grid {
+    display: grid;
+    gap: 20px;
+}
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+
+/* =========================================
+   6. Card Design (车卡片 / 分类卡片)
+   ========================================= */
+.card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0,0,0,0.15);
+}
+
+.card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.card-title {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.card-price {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+/* =========================================
+   7. Forms & Inputs (登录/注册/联系表单)
+   ========================================= */
+.form-container {
+    max-width: 500px;
+    margin: 50px auto;
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-family: 'Poppins', sans-serif;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* =========================================
+   8. Specific Page Layouts (特定页面排版)
+   ========================================= */
+/* Car Details Page (左图右文) */
+.details-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin: 40px 0;
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+.details-img img {
+    width: 100%;
+    border-radius: 8px;
+    object-fit: cover;
+}
+.details-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Search Page (左过滤右列表) */
+.search-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 30px;
+    margin-top: 40px;
+}
+.filter-card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    height: fit-content;
+}
+
+/* =========================================
+   9. Utility & Footer (工具类与底部)
+   ========================================= */
+.text-center { text-align: center; }
+.section-title { margin: 40px 0 20px; font-size: 28px; }
+
+.footer { 
+    background: white; 
+    padding: 20px; 
+    margin-top: 50px; 
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
+}
+
+/* =========================================
+   10. Responsive Design (简单响应式)
+   ========================================= */
+@media (max-width: 768px) {
+    .nav-container { flex-direction: column; gap: 15px; }
+    .details-layout, .search-layout { grid-template-columns: 1fr; }
+}

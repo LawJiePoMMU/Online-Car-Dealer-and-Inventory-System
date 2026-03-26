@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Dealer - Search</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../CSS/cus.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="homepage.html" class="nav-logo">🚗 CarDealer</a>
+            <ul class="nav-links">
+                <li><a href="homepage.html">Home</a></li>
+                <li><a href="car-listing.html">Cars</a></li>
+                <li><a href="category.html">Categories</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+            <div class="nav-action">
+                <a href="login.html" class="btn-primary">Login / Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="section-title">Search Results</h1>
+        
+        <div class="search-layout">
+            <aside class="filter-card">
+                <h3>Filter Cars</h3>
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                <form>
+                    <div class="form-group">
+                        <label>Keyword</label>
+                        <input type="text" class="form-control" placeholder="Search...">
+                    </div>
+                    <div class="form-group">
+                        <label>Brand</label>
+                        <select class="form-control">
+                            <option>All Brands</option>
+                            <option>Toyota</option>
+                            <option>BMW</option>
+                            <option>Honda</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select class="form-control">
+                            <option>All Categories</option>
+                            <option>SUV</option>
+                            <option>Sedan</option>
+                            <option>Luxury</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-primary" style="width: 100%;">Apply Filters</button>
+                </form>
+            </aside>
+
+            <div class="grid grid-3">
+                <div class="card">
+                    <img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800" alt="Car">
+                    <div class="card-body">
+                        <h3 class="card-title">2023 Honda Civic</h3>
+                        <div class="card-price">$25,000</div>
+                        <a href="car-details.html" class="btn-primary" style="display: block; text-align: center;">View Details</a>
+                    </div>
+                </div>
+                <div class="card">
+                    <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800" alt="Car">
+                    <div class="card-body">
+                        <h3 class="card-title">2022 BMW M3</h3>
+                        <div class="card-price">$72,000</div>
+                        <a href="car-details.html" class="btn-primary" style="display: block; text-align: center;">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <p>&copy; 2024 Car Dealer. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
