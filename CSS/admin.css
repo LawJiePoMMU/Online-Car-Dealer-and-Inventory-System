@@ -460,9 +460,10 @@ body {
 /*---users css---*/
 .page-tabs {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid #e5e7eb;
     margin-bottom: 24px;
     gap: 32px;
+    padding-left: 8px;
 }
 
 .tab-item {
@@ -473,6 +474,7 @@ body {
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: all 0.2s;
+    text-decoration: none;
 }
 
 .tab-item:hover {
@@ -481,8 +483,8 @@ body {
 
 .tab-item.active {
     color: var(--text-dark);
-    border-bottom-color: #d97706;
-    font-weight: 600;
+    border-bottom-color: #f59e0b;
+    font-weight: 700;
 }
 
 .status-cell {
@@ -575,6 +577,86 @@ body {
 
 .btn-outline:hover {
     background-color: #f9fafb;
+}
+
+.btn-add-blue {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.btn-add-blue:hover {
+    background-color: #1e3a8a;
+    opacity: 0.9;
+}
+
+.btn-export {
+    background-color: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.btn-export:hover {
+    background-color: #f9fafb;
+}
+
+.admin-table th {
+    background-color: #fcfaf8;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-table th i.fa-sort {
+    color: #d1d5db;
+    margin-left: 6px;
+    font-size: 10px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 450px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 /*---chat css---*/
@@ -868,14 +950,14 @@ body {
     background-color: white;
     transition: .4s;
     border-radius: 50%;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-input:checked + .slider {
+input:checked+.slider {
     background-color: #10b981;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
     transform: translateX(20px);
 }
 
