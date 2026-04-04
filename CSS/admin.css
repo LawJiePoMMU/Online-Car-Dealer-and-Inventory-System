@@ -458,6 +458,37 @@ body {
 }
 
 /*---users css---*/
+@media print {
+    body {
+        background: white !important;
+    }
+
+    .sidebar,
+    .topbar,
+    .page-tabs,
+    form,
+    .btn-add-blue,
+    .btn-export,
+    .action-icons,
+    .pagination-container {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    .table-card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    tr.no-print-row {
+        display: none !important;
+    }
+}
+
 .page-tabs {
     display: flex;
     border-bottom: 1px solid #e5e7eb;
