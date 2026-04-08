@@ -354,6 +354,88 @@ body {
     color: #9ca3af;
 }
 
+.split-container {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.split-column {
+    flex: 1; 
+    min-width: 0; 
+}
+
+.column-header {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+}
+
+.split-column .admin-table th, 
+.split-column .admin-table td {
+    padding: 12px 10px; 
+}
+
+.modal-tab-group {
+    display: flex;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    overflow: hidden; 
+}
+
+.modal-tab-btn {
+    background-color: #f9fafb;
+    border: none;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-tab-btn:first-child {
+    border-right: 1px solid #d1d5db;
+}
+
+.modal-tab-btn.active {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.split-container {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.split-column {
+    flex: 1;
+    min-width: 0;
+}
+
+.column-header {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+}
+
+/* 在分屏下，表格稍微紧凑一点 */
+.split-column .admin-table th,
+.split-column .admin-table td {
+    padding: 12px 10px;
+}
+
 /*---specifications css---*/
 .customer-info {
     display: flex;
