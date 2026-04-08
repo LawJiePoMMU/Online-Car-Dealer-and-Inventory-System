@@ -16,7 +16,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a href="manage-cars.php" class="<?= ($current_page == 'manage-cars.php') ? 'active' : ''; ?>">
+            <a href="manage cars.php" class="<?= ($current_page == 'manage cars.php') ? 'active' : ''; ?>">
                 <i class="fas fa-car"></i> <span>Manage Cars</span>
             </a>
         </li>

@@ -430,7 +430,6 @@ body {
     padding: 0 4px;
 }
 
-/* 在分屏下，表格稍微紧凑一点 */
 .split-column .admin-table th,
 .split-column .admin-table td {
     padding: 12px 10px;
