@@ -21,18 +21,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a href="specifications.php" class="<?= ($current_page == 'specifications.php') ? 'active' : ''; ?>">
-                <i class="fas fa-cogs"></i> <span>Specifications</span>
-            </a>
-        </li>
-        <li>
             <a href="reservations.php" class="<?= ($current_page == 'reservations.php') ? 'active' : ''; ?>">
                 <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
-            </a>
-        </li>
-        <li>
-            <a href="inventory.php" class="<?= ($current_page == 'inventory.php') ? 'active' : ''; ?>">
-                <i class="fas fa-boxes"></i> <span>Inventory</span>
             </a>
         </li>
         <li>

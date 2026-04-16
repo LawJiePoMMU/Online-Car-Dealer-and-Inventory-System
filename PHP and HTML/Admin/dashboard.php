@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 include '../database.php';
 
@@ -50,11 +49,10 @@ $recent_res_result = mysqli_query($conn, $recent_res_query);
 </head>
 
 <body>
-
     <?php include 'sidebar.php'; ?>
 
     <main class="main-content">
-
+        
         <header class="topbar">
             <div class="page-title">
                 <h1>Dashboard</h1>

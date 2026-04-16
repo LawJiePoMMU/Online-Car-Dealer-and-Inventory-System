@@ -6,6 +6,8 @@ $_SESSION['user_id'] = 4;
 $_SESSION['user_role'] = 'Admin';
 
 if (isset($_GET['ajax']) && isset($_GET['toggle_id']) && isset($_GET['current_status'])) {
+    if ($_SESSION['user_id'] != 4)
+        exit();
     $id = (int) $_GET['toggle_id'];
     if ($id != 4) {
         $new_status = ($_GET['current_status'] == 'Active') ? 'Inactive' : 'Active';
@@ -22,6 +24,7 @@ if (isset($_POST['save_user'])) {
     $role = mysqli_real_escape_string($conn, $_POST['user_role']);
     $status = mysqli_real_escape_string($conn, $_POST['user_status']);
     $password_input = $_POST['user_password'];
+    $avatar = isset($_POST['user_avatar']) ? mysqli_real_escape_string($conn, $_POST['user_avatar']) : '';
     $id = !empty($_POST['user_id']) ? (int) $_POST['user_id'] : 0;
     $redirect_url = isset($_POST['current_url']) ? $_POST['current_url'] : 'users.php';
 
@@ -33,17 +36,51 @@ if (isset($_POST['save_user'])) {
         exit();
     }
 
+    $avatar_path = "";
+    if (isset($_FILES['user_avatar_file']) && $_FILES['user_avatar_file']['error'] === UPLOAD_ERR_OK) {
+        $target_dir = "../../uploads/avatars/";
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0777, true);
+        }
+
+        $target_dir = "../../uploads/avatars/"; 
+
+        if (!is_dir($target_dir)) {
+            if (!mkdir($target_dir, 0777, true)) {
+                die("Error: Failed to create directory: " . $target_dir); 
+            }
+        }
+
+        $file_extension = strtolower(pathinfo($_FILES['user_avatar_file']['name'], PATHINFO_EXTENSION));
+        $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+        if (in_array($file_extension, $allowed_types)) {
+            $new_filename = uniqid("avatar_") . "." . $file_extension;
+            $target_file = $target_dir . $new_filename;
+
+            if (move_uploaded_file($_FILES['user_avatar_file']['tmp_name'], $target_file)) {
+                $avatar_path = $target_file;
+            }
+        } else {
+            $redirect_url = preg_replace('/(&|\?)error=duplicate/', '', $redirect_url);
+            $sep = (strpos($redirect_url, '?') !== false) ? '&' : '?';
+            header("Location: " . $redirect_url . $sep . "error=filetype");
+            exit();
+        }
+    }
+
     if ($id > 0) {
         if (!empty($password_input) && $password_input !== '********') {
             $pass = password_hash($password_input, PASSWORD_DEFAULT);
-            $sql = "UPDATE users SET user_name='$name', user_ic='$ic', user_email='$email', user_phone='$phone', user_role='$role', user_status='$status', user_password='$pass' WHERE user_id=$id";
+            $sql = "UPDATE users SET user_status='$status', user_password='$pass' WHERE user_id=$id";
         } else {
-            $sql = "UPDATE users SET user_name='$name', user_ic='$ic', user_email='$email', user_phone='$phone', user_role='$role', user_status='$status' WHERE user_id=$id";
+            $sql = "UPDATE users SET user_status='$status' WHERE user_id=$id";
         }
     } else {
         $pass = password_hash($password_input, PASSWORD_DEFAULT);
-        $sql = "INSERT INTO users (user_name, user_ic, user_email, user_phone, user_password, user_role, user_status, user_created_at) 
-                VALUES ('$name', '$ic', '$email', '$phone', '$pass', '$role', '$status', NOW())";
+        $avatar_val = !empty($avatar_path) ? "'$avatar_path'" : "NULL";
+        $sql = "INSERT INTO users (user_name, user_ic, user_email, user_phone, user_password, user_role, user_status, user_avatar, user_created_at) 
+        VALUES ('$name', '$ic', '$email', '$phone', '$pass', '$role', '$status', $avatar_val, NOW())";
     }
     mysqli_query($conn, $sql);
 
@@ -193,6 +230,7 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
 
 <body>
     <?php include 'sidebar.php'; ?>
+
     <main class="main-content">
 
         <header class="topbar" style="margin-bottom: 24px;">
@@ -243,6 +281,7 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                                 id="selectAll" style="cursor: pointer;"></th>
                         <th style="text-align: left;">Role</th>
                         <th style="text-align: left;">User ID</th>
+                        <th style="text-align: left;">Avatar</th>
                         <th style="text-align: left;">Full Name</th>
                         <th style="text-align: left;">IC Number</th>
                         <th style="text-align: left;">Phone Number</th>
@@ -272,10 +311,28 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                                 $online_badge = "<br><span class='print-hide' style='font-size: 11px; color: #10b981; background: #d1fae5; padding: 2px 6px; border-radius: 10px; display: inline-block; margin-top: 4px;'><i class='fas fa-circle' style='font-size: 8px;'></i> Online</span>";
                             }
 
+                            $avatar_content = '';
+                            if (!empty($row['user_avatar'])) {
+                                $avatar_url = htmlspecialchars($row['user_avatar']);
+                                $avatar_content = "<img src='{$avatar_url}' alt='Avatar' style='width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;'>";
+                            } else {
+                                $name_parts = explode(' ', trim($row['user_name']));
+                                $initials = '';
+                                foreach ($name_parts as $part) {
+                                    if (!empty($part)) {
+                                        $initials .= strtoupper(mb_substr($part, 0, 1, 'UTF-8'));
+                                    }
+                                }
+                                $avatar_content = mb_substr($initials, 0, 3, 'UTF-8');
+                            }
+
                             echo "<tr class='data-row'>";
                             echo "<td class='print-hide' style='padding-left: 20px;'><input type='checkbox' class='row-checkbox' style='cursor: pointer;'></td>";
                             echo "<td style='text-align: left; color: #4b5563; font-weight: 500;'>" . htmlspecialchars($role) . "</td>";
                             echo "<td style='text-align: left; color: #6b7280;'>UA" . str_pad($row['user_id'], 3, '0', STR_PAD_LEFT) . "</td>";
+                            echo "<td style='text-align: center;'>
+                                    <div class='avatar' style='width: 42px; height: 42px; font-size: 18px; font-weight: 700; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background-color: #e0e7ff; color: #6366f1; margin: 0 auto;'>" . $avatar_content . "</div>
+                                </td>";
                             echo "<td style='text-align: left; font-weight: 500; color: #111827;'>" . htmlspecialchars($row['user_name']) . $online_badge . "</td>";
                             echo "<td style='text-align: left;'>" . $ic . "</td>";
                             echo "<td style='text-align: left;'>" . $phone . "</td>";
@@ -284,15 +341,20 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                             echo "<td style='text-align: left;'><div class='status-cell' style='width: 85px;'><span class='dot {$dot_class} print-hide'></span><span class='{$text_class}'>" . ucfirst($status) . "</span></div></td>";
 
                             echo "<td class='print-hide' style='text-align: center;'>";
-                            if ($row['user_id'] == 4) {
-                                echo "<div style='color: #9ca3af;'>-</div>";
+                            if ($_SESSION['user_id'] == 4) {
+                                if ($row['user_id'] == 4) {
+                                    echo "<div style='color: #9ca3af;'>-</div>";
+                                } else {
+                                    $toggle_icon = ($status == 'Active') ? 'fa-lock' : 'fa-unlock';
+                                    $toggle_color = ($status == 'Active') ? '#ef4444' : '#10b981';
+                                    $action_icon = ($role == 'Customer') ? 'fa-eye' : 'fa-pen';
+                                    echo "<div style='display: flex; justify-content: center; gap: 16px;'>
+                                            <a href='javascript:void(0)' onclick='editUser(" . htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') . ")' style='color: #9ca3af;'><i class='fas {$action_icon}'></i></a>
+                                            <a href='javascript:void(0)' onclick='toggleStatus({$row['user_id']}, \"{$status}\", this)' style='color: {$toggle_color};'><i class='fas {$toggle_icon}'></i></a>
+                                          </div>";
+                                }
                             } else {
-                                $toggle_icon = ($status == 'Active') ? 'fa-lock' : 'fa-unlock';
-                                $toggle_color = ($status == 'Active') ? '#ef4444' : '#10b981';
-                                echo "<div style='display: flex; justify-content: center; gap: 16px;'>
-                                        <a href='javascript:void(0)' onclick='editUser(" . htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') . ")' style='color: #9ca3af;'><i class='fas fa-pen'></i></a>
-                                        <a href='javascript:void(0)' onclick='toggleStatus({$row['user_id']}, \"{$status}\", this)' style='color: {$toggle_color};'><i class='fas {$toggle_icon}'></i></a>
-                                      </div>";
+                                echo "<div style='color: #9ca3af;'>-</div>";
                             }
                             echo "</td>";
                             echo "</tr>";
@@ -367,10 +429,11 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
     <div id="userModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="font-size: 20px; margin-bottom: 20px;">Add New Admin</h2>
-            <form method="POST" id="userForm">
+            <form method="POST" id="userForm" enctype="multipart/form-data">
                 <input type="hidden" name="user_id" id="form_user_id">
                 <input type="hidden" name="current_url" id="current_url"
                     value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+
 
                 <div class="form-group">
                     <label>Full Name</label>
@@ -411,6 +474,12 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                         <i class="fas fa-eye" id="togglePasswordIcon"
                             style="position: absolute; right: 14px; top: 12px; cursor: pointer; color: #9ca3af;"></i>
                     </div>
+                </div>
+
+                <div class="form-group" id="avatar_group">
+                    <label>Upload Avatar <medium style="color:#9ca3af;">(JPG, PNG, GIF)</medium></label>
+                    <input type="file" name="user_avatar_file" id="form_user_avatar" class="form-control"
+                        accept="image/jpeg, image/png, image/gif" style="padding: 7px 14px;">
                 </div>
 
                 <div style="display:flex; gap: 16px;">

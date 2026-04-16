@@ -21,6 +21,10 @@ document.addEventListener("DOMContentLoaded", function () {
         Toast.fire({ icon: 'error', title: 'Data Duplicate! The IC Number, Name, Email, or Phone already belongs to another user.' });
         window.history.replaceState(null, null, window.location.pathname);
     }
+    if (urlParams.get('error') === 'filetype') {
+        Toast.fire({ icon: 'error', title: 'Upload Failed! Only JPG, PNG, GIF are allowed.' });
+        window.history.replaceState(null, null, window.location.pathname);
+    }
 
     let selectAllBox = document.getElementById('selectAll');
     let rowCheckboxes = document.querySelectorAll('.row-checkbox');
@@ -179,33 +183,79 @@ function openModal() {
         document.getElementById('form_user_password').required = true;
         document.getElementById('password_group').style.display = 'block';
         document.getElementById('form_user_role').value = 'Admin';
+        let avatarInput = document.getElementById('form_user_avatar');
+        let avatarGroup = document.getElementById('avatar_group');
+        if (avatarInput) avatarInput.value = "";
+        if (avatarGroup) avatarGroup.style.display = 'block';
         modal.classList.add('active');
+        ['form_user_name', 'form_user_ic', 'form_user_email', 'form_user_phone'].forEach(id => {
+            let el = document.getElementById(id);
+            el.readOnly = false;
+            el.style.backgroundColor = '#ffffff';
+        });
+        document.getElementById('form_user_status').style.pointerEvents = 'auto';
+        document.getElementById('form_user_status').style.backgroundColor = '#ffffff';
+        document.querySelector('button[name="save_user"]').style.display = 'block';
     }
 }
 
 function editUser(data) {
     const modal = document.getElementById('userModal');
     if (modal) {
-        document.getElementById('modalTitle').innerText = "Edit User";
+        if (data.user_role === 'Customer') {
+            document.getElementById('modalTitle').innerText = "View Customer Information";
+        } else {
+            document.getElementById('modalTitle').innerText = "Edit Admin Password";
+        }
+
         document.getElementById('form_user_id').value = data.user_id;
-        document.getElementById('form_user_name').value = data.user_name;
-        document.getElementById('form_user_ic').value = (data.user_ic && data.user_ic !== 'NULL') ? data.user_ic : "";
-        document.getElementById('form_user_email').value = data.user_email;
-        document.getElementById('form_user_phone').value = data.user_phone ? data.user_phone : "";
-        document.getElementById('form_user_password').value = "";
-        document.getElementById('form_user_password').required = false;
+
+        const inputs = [
+            { id: 'form_user_name', val: data.user_name },
+            { id: 'form_user_ic', val: (data.user_ic && data.user_ic !== 'NULL') ? data.user_ic : "" },
+            { id: 'form_user_email', val: data.user_email },
+            { id: 'form_user_phone', val: data.user_phone ? data.user_phone : "" }
+        ];
+
+        inputs.forEach(item => {
+            let el = document.getElementById(item.id);
+            if (el) {
+                el.value = item.val;
+                el.readOnly = true;
+                el.style.backgroundColor = '#f3f4f6';
+            }
+        });
+
+        let pwdInput = document.getElementById('form_user_password');
+        if (pwdInput) {
+            pwdInput.value = "";
+            pwdInput.required = false;
+        }
+
+        let statusEl = document.getElementById('form_user_status');
+        if (statusEl) {
+            statusEl.value = data.user_status;
+            statusEl.style.pointerEvents = 'auto';
+            statusEl.style.backgroundColor = '#ffffff';
+        }
+
+        let avatarGroup = document.getElementById('avatar_group');
+        if (avatarGroup) avatarGroup.style.display = 'none';
 
         let roleInput = document.getElementById('form_user_role');
         let pwdGroup = document.getElementById('password_group');
+        let saveBtn = document.querySelector('button[name="save_user"]');
 
         if (data.user_role === 'Customer') {
-            roleInput.value = 'Customer';
-            pwdGroup.style.display = 'none';
+            if (roleInput) roleInput.value = 'Customer';
+            if (pwdGroup) pwdGroup.style.display = 'none';
+            if (saveBtn) saveBtn.style.display = 'block';
         } else {
-            roleInput.value = 'Admin';
-            pwdGroup.style.display = 'block';
+            if (roleInput) roleInput.value = 'Admin';
+            if (pwdGroup) pwdGroup.style.display = 'block';
+            if (saveBtn) saveBtn.style.display = 'block';
         }
-        document.getElementById('form_user_status').value = data.user_status;
+
         modal.classList.add('active');
     }
 }
@@ -216,29 +266,51 @@ function closeModal() {
 }
 
 function toggleStatus(id, currentStatus, element) {
-    if (id == 4) return;
-    fetch('users.php?ajax=1&toggle_id=' + id + '&current_status=' + currentStatus);
+    if (id == 4) return; 
+
     let newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     let row = element.closest('tr');
-    let statusText = row.querySelector('.status-cell span:last-child');
-    let dot = row.querySelector('.status-cell .dot');
-    let icon = element.querySelector('i');
+    fetch('users.php?ajax=1&toggle_id=' + id + '&current_status=' + currentStatus)
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            let urlParamsStatus = new URLSearchParams(window.location.search).get('status');
+            if ((urlParamsStatus === 'Active' && newStatus === 'Inactive') ||
+                (urlParamsStatus === 'Inactive' && newStatus === 'Active')) {
+                row.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'scale(0.95)'; 
+                setTimeout(() => {
+                    row.remove();
+                    if (document.querySelectorAll('tbody .data-row').length === 0) {
+                        location.reload();
+                    }
+                }, 400);
 
-    element.setAttribute('onclick', 'toggleStatus(' + id + ', "' + newStatus + '", this)');
+            } else {
+                let statusText = row.querySelector('.status-cell span:last-child');
+                let dot = row.querySelector('.status-cell .dot');
+                let icon = element.querySelector('i');
+                element.setAttribute('onclick', 'toggleStatus(' + id + ', "' + newStatus + '", this)');
 
-    if (newStatus === 'Active') {
-        statusText.textContent = 'Active';
-        statusText.className = 'text-active';
-        dot.className = 'dot dot-active print-hide';
-        icon.className = 'fas fa-lock';
-        element.style.color = '#ef4444';
-    } else {
-        statusText.textContent = 'Inactive';
-        statusText.className = 'text-inactive';
-        dot.className = 'dot dot-inactive print-hide';
-        icon.className = 'fas fa-unlock';
-        element.style.color = '#10b981';
-    }
+                if (newStatus === 'Active') {
+                    statusText.textContent = 'Active';
+                    statusText.className = 'text-active';
+                    dot.className = 'dot dot-active print-hide';
+                    icon.className = 'fas fa-lock';
+                    element.style.color = '#ef4444'; 
+                } else {
+                    statusText.textContent = 'Inactive';
+                    statusText.className = 'text-inactive';
+                    dot.className = 'dot dot-inactive print-hide';
+                    icon.className = 'fas fa-unlock';
+                    element.style.color = '#10b981'; 
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling status:', error);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Failed to update status.', showConfirmButton: false, timer: 3000 });
+        });
 }
 
 function printSelected() {
