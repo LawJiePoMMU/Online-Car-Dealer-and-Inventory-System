@@ -104,9 +104,9 @@ if (!empty($search))
 if ($status_filter !== 'all')
     $search_condition .= " AND stat.car_status_status = '$status_filter' ";
 
-$count_all = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE 1=1 $search_condition"))['c'];
-$count_new = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE c.car_origin = 'New Car' $search_condition"))['c'];
-$count_used = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE c.car_origin = 'Used Car' $search_condition"))['c'];
+$count_all = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE 1=1 $search_condition"))['c'];
+$count_new = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE c.car_origin = 'New Car' $search_condition"))['c'];
+$count_used = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE c.car_origin = 'Used Car' $search_condition"))['c'];
 
 $limit_new = ($active_tab === 'all') ? 5 : 10;
 $limit_used = ($active_tab === 'all') ? 5 : 10;
@@ -122,6 +122,7 @@ if ($p_used < 1)
     $p_used = 1;
 $offset_used = ($p_used - 1) * $limit_used;
 $pages_used = ceil($count_used / $limit_used);
+
 try {
     $query_new = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, loc.location_state, loc.location_city, ct.car_type_name 
                   FROM cars c 
@@ -129,15 +130,18 @@ try {
                   LEFT JOIN locations loc ON c.location_id = loc.location_id
                   LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
                   WHERE c.car_origin = 'New Car' $search_condition 
+                  GROUP BY c.car_id 
                   ORDER BY (CASE WHEN stat.car_status_stock_quantity <= 1 THEN 0 ELSE 1 END) ASC, c.car_id DESC 
                   LIMIT $limit_new OFFSET $offset_new";
     $result_new = mysqli_query($conn, $query_new);
+
     $query_used = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, loc.location_state, loc.location_city, ct.car_type_name 
                    FROM cars c 
                    LEFT JOIN car_status stat ON c.car_id = stat.car_id 
                    LEFT JOIN locations loc ON c.location_id = loc.location_id
                    LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
                    WHERE c.car_origin = 'Used Car' $search_condition 
+                   GROUP BY c.car_id 
                    ORDER BY FIELD(stat.car_status_status, 'Active', 'Inactive') ASC, c.car_id DESC 
                    LIMIT $limit_used OFFSET $offset_used";
     $result_used = mysqli_query($conn, $query_used);
@@ -376,7 +380,10 @@ try {
                                     $c_id = $row['car_id'];
                                     $img_query = mysqli_query($conn, "SELECT car_image_url FROM car_image WHERE car_id = $c_id LIMIT 1");
                                     $img_row = mysqli_fetch_assoc($img_query);
-                                    $img_url = !empty($img_row['car_image_url']) ? htmlspecialchars($img_row['car_image_url']) : '../../images/default-car.png';
+                                    $img_url = '../../images/default-car.png';
+                                    if ($img_row && !empty($img_row['car_image_url']) && file_exists($img_row['car_image_url'])) {
+                                        $img_url = htmlspecialchars($img_row['car_image_url']);
+                                    }
                                     $type = !empty($row['car_type_name']) ? htmlspecialchars($row['car_type_name']) : '-';
 
                                     echo "<tr class='data-row print-new-car'>";
@@ -489,7 +496,10 @@ try {
                                     $c_id = $row['car_id'];
                                     $img_query = mysqli_query($conn, "SELECT car_image_url FROM car_image WHERE car_id = $c_id LIMIT 1");
                                     $img_row = mysqli_fetch_assoc($img_query);
-                                    $img_url = !empty($img_row['car_image_url']) ? htmlspecialchars($img_row['car_image_url']) : '../../images/default-car.png';
+                                    $img_url = '../../images/default-car.png';
+                                    if ($img_row && !empty($img_row['car_image_url']) && file_exists($img_row['car_image_url'])) {
+                                        $img_url = htmlspecialchars($img_row['car_image_url']);
+                                    }
 
                                     $type = !empty($row['car_type_name']) ? htmlspecialchars($row['car_type_name']) : '-';
                                     $location = !empty($row['location_city']) ? htmlspecialchars($row['location_city'] . ', ' . $row['location_state']) : '-';

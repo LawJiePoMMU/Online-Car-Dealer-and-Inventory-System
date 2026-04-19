@@ -2,14 +2,14 @@
 session_start();
 include '../database.php';
 
-$_SESSION['user_id'] = 4;
+$_SESSION['user_id'] = 1;
 $_SESSION['user_role'] = 'Admin';
 
 if (isset($_GET['ajax']) && isset($_GET['toggle_id']) && isset($_GET['current_status'])) {
-    if ($_SESSION['user_id'] != 4)
+    if ($_SESSION['user_id'] != 1)
         exit();
     $id = (int) $_GET['toggle_id'];
-    if ($id != 4) {
+    if ($id != 1) {
         $new_status = ($_GET['current_status'] == 'Active') ? 'Inactive' : 'Active';
         mysqli_query($conn, "UPDATE users SET user_status = '$new_status' WHERE user_id = $id");
     }
@@ -121,7 +121,7 @@ $offset = ($page - 1) * $limit;
 $total_filtered_rows = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as t FROM users $where"))['t'];
 $total_pages = ceil($total_filtered_rows / $limit);
 
-$order_by = "ORDER BY CASE WHEN user_id = 4 THEN 0 ELSE 1 END, user_created_at DESC";
+$order_by = "ORDER BY CASE WHEN user_id = 1 THEN 0 ELSE 1 END, user_created_at DESC";
 
 $users_result = mysqli_query($conn, "SELECT * FROM users $where $order_by LIMIT $limit OFFSET $offset");
 
@@ -296,7 +296,7 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                     if ($users_result && $total_filtered_rows > 0) {
                         while ($row = mysqli_fetch_assoc($users_result)) {
                             $role = !empty($row['user_role']) ? $row['user_role'] : 'Customer';
-                            if ($row['user_id'] == 4) {
+                            if ($row['user_id'] == 1) {
                                 $role = 'Super Admin';
                             }
 
@@ -341,8 +341,8 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                             echo "<td style='text-align: left;'><div class='status-cell' style='width: 85px;'><span class='dot {$dot_class} print-hide'></span><span class='{$text_class}'>" . ucfirst($status) . "</span></div></td>";
 
                             echo "<td class='print-hide' style='text-align: center;'>";
-                            if ($_SESSION['user_id'] == 4) {
-                                if ($row['user_id'] == 4) {
+                            if ($_SESSION['user_id'] == 1) {
+                                if ($row['user_id'] == 1) {
                                     echo "<div style='color: #9ca3af;'>-</div>";
                                 } else {
                                     $toggle_icon = ($status == 'Active') ? 'fa-lock' : 'fa-unlock';
@@ -404,7 +404,7 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                         <th style="width: 100px; text-align: left;">Status</th>
                       </tr></thead><tbody>';
                 foreach ($chunk as $r) {
-                    $p_role = ($r['user_id'] == 4) ? 'Super Admin' : (!empty($r['user_role']) ? $r['user_role'] : 'Customer');
+                    $p_role = ($r['user_id'] == 1) ? 'Super Admin' : (!empty($r['user_role']) ? $r['user_role'] : 'Customer');
                     $p_status = !empty($r['user_status']) ? $r['user_status'] : 'Active';
                     $p_ic = !empty($r['user_ic']) ? htmlspecialchars($r['user_ic']) : '-';
                     $p_phone = !empty($r['user_phone']) ? htmlspecialchars($r['user_phone']) : '-';
