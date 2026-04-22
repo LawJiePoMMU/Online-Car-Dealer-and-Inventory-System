@@ -1,5 +1,5 @@
 /* =========================================
-   1. CSS Variables (统一颜色和设定 - Step 13)
+   1. CSS Variables (统一颜色和设定)
    ========================================= */
 :root {
     --primary-color: #007bff; /* Primary Blue */
@@ -33,48 +33,87 @@ body {
     padding: 0 20px;
 }
 
+/* Navbar */
 /* =========================================
-   3. Navbar (导航栏)
+   3. Navbar (修正版🔥 真正居中)
    ========================================= */
+
+/* Navbar */
 .navbar {
-    background-color: var(--card-bg);
-    box-shadow: var(--shadow);
-    position: sticky; /* Sticky top */
+    background: #fff;
+    position: sticky;
     top: 0;
     z-index: 1000;
+
+    border-bottom: 2px solid #e0e0e0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
+/* Container */
 .nav-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 15px 20px;
+
     display: flex;
-    justify-content: space-between;
     align-items: center;
+
+    position: relative;
 }
 
+/* Logo */
 .nav-logo {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--primary-color);
     text-decoration: none;
 }
 
+/* 中间菜单 */
 .nav-links {
-    list-style: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+
     display: flex;
-    gap: 20px;
+    gap: 40px;
+    list-style: none;
+    white-space: nowrap;
 }
 
+/* links */
 .nav-links a {
     text-decoration: none;
     color: var(--text-dark);
     font-weight: 500;
+    position: relative;
+    padding: 5px 0;
     transition: var(--transition);
 }
 
 .nav-links a:hover {
     color: var(--primary-color);
+}
+
+/* underline animation */
+.nav-links a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    transition: 0.3s;
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+/* 右侧按钮 */
+.nav-actions {
+    margin-left: auto;
 }
 
 /* =========================================
@@ -146,7 +185,7 @@ body {
 }
 
 /* =========================================
-   7. Forms & Inputs (登录/注册/联系表单)
+   7. Forms & Inputs (联系表单/普通表单)
    ========================================= */
 .form-container {
     max-width: 500px;
@@ -158,8 +197,37 @@ body {
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     text-align: left;
+    /* Form group */
+
+}
+
+/* Password wrapper */
+.password-wrapper {
+    position: relative;
+}
+
+/* Forgot password */
+.forgot-link {
+     display: flex;
+    justify-content: flex-end;
+
+    margin-top: -2px;   /* 🔥 拉上来 */
+    margin-bottom: 8px; /* 🔥 控制和按钮距离 */
+
+}
+
+.forgot-link a {
+    font-size: 15px;
+    color: #666;
+    text-decoration: none;
+}
+
+.forgot-link a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
 }
 
 .form-group label {
@@ -241,4 +309,162 @@ body {
 @media (max-width: 768px) {
     .nav-container { flex-direction: column; gap: 15px; }
     .details-layout, .search-layout { grid-template-columns: 1fr; }
+}
+
+/* =========================================
+   11. Authentication Pages (Login / Register)
+   ========================================= */
+
+/* SMART CSS: If the page contains '.auth-wrapper', automatically stretch the header! */
+body:has(.auth-wrapper) {
+    background-color: #ffffff;
+    min-height: 100vh;
+}
+
+body:has(.auth-wrapper) .navbar {
+    box-shadow: none !important; 
+    border-bottom: 1px solid #eee;
+    width: 100% !important;
+    max-width: 100% !important;
+    background-color: #ffffff !important;
+}
+
+body:has(.auth-wrapper) .nav-container {
+    width: 100% !important;
+    max-width: none !important; /* Destroys the 1200px limit */
+    padding-left: 40px !important; /* Pushes Logo to left edge */
+    padding-right: 40px !important; /* Pushes Button to right edge */
+}
+
+/* Main Container */
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 80vh;
+    padding-top: 80px;
+    background-color: #ffffff;
+}
+
+.auth-container {
+    max-width: 350px;
+    width: 100%;
+    text-align: center;
+}
+
+/* Typography */
+.auth-title {
+    font-weight: 600;
+    margin-bottom: 40px;
+    font-size: 34px;
+    color: #111;
+    text-align: left;
+}
+
+.auth-label {
+    display: block;
+    margin-bottom: 15px;
+    font-weight: 500;
+    color: #533;
+    font-size: 14px;
+    text-align: left;
+}
+
+/* Form Inputs */
+.auth-input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #e0e0e0;   /* 🔥 很淡的边框 */
+    border-radius: 6px;
+    font-size: 15px;
+    box-sizing: border-box;
+    background-color: #f0f0f0;
+    color: #111;
+    outline: none;
+    margin-bottom: 20px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.auth-input:focus {
+    background-color: #e8e8e8;
+}
+
+/* Buttons */
+.auth-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    display: inline-block;
+    box-sizing: border-box;
+    text-decoration: none;
+    font-family: 'Poppins', sans-serif;
+}
+
+.auth-btn-primary {
+    background-color: #3e6ae1;
+    color: white;
+}
+
+.auth-btn-primary:hover {
+    background-color: #3457b2;
+}
+
+  .auth-btn-secondary {
+    background-color: #e2e2e2;  /* 🔥 比 #f4f4f4 深一点 */
+    color: #111;               /* 🔥 文字更清楚 */
+
+    width: 100%;
+    padding: 12px 0;
+
+    display: block;
+    text-align: center;
+
+    margin-top: 10px;
+
+    border: 1px solid #d0d0d0; /* 🔥 加边框更清晰 */
+    border-radius: 4px;
+
+}
+
+.auth-btn-secondary:hover {
+    background-color: #d0d0d0;  /* 🔥 hover 变深 */
+    color: #000;
+}
+
+/* Extras */
+.auth-error {
+    color: #d9534f;
+    padding: 10px 0;
+    margin-bottom: 20px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.auth-links a {
+    color: #5c5e62;
+    text-decoration: underline;
+    font-size: 14px;
+}
+
+.auth-divider {
+    margin: 40px 0;
+    border-top: 1px solid #e2e3e3;
+    position: relative;
+}
+
+.auth-divider span {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    padding: 0 15px;
+    color: #5c5e62;
+    font-size: 13px;
 }
