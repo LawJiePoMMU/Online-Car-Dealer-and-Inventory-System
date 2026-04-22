@@ -1,7 +1,28 @@
 <?php
 session_start();
 include '../database.php';
+$logged_in_id = $_SESSION['user_id'] ?? null;
+$logged_in_name = 'Admin';
+$avatar_letters = 'A';
 
+if ($logged_in_id) {
+    $user_query = "SELECT user_name FROM users WHERE user_id = '$logged_in_id'";
+    $user_result = mysqli_query($conn, $user_query);
+
+    if ($user_result && mysqli_num_rows($user_result) > 0) {
+        $user_data = mysqli_fetch_assoc($user_result);
+        $logged_in_name = $user_data['user_name'];
+        $words = explode(" ", $logged_in_name);
+        $avatar_letters = "";
+        foreach ($words as $w) {
+            $avatar_letters .= strtoupper($w[0]);
+        }
+        $avatar_letters = substr($avatar_letters, 0, 2);
+    }
+}
+
+$fleet_query = "SELECT COUNT(*) as total_cars FROM cars";
+$avatar_letter = strtoupper(substr($logged_in_name, 0, 1));
 $fleet_query = "SELECT COUNT(*) as total_cars FROM cars";
 $fleet_result = mysqli_query($conn, $fleet_query);
 $total_cars = mysqli_fetch_assoc($fleet_result)['total_cars'] ?? 0;
@@ -52,15 +73,35 @@ $recent_res_result = mysqli_query($conn, $recent_res_query);
     <?php include 'sidebar.php'; ?>
 
     <main class="main-content">
-        
-        <header class="topbar">
+
+        <header class="topbar"
+            style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid #f3f4f6; margin-bottom: 24px;">
             <div class="page-title">
                 <h1>Dashboard</h1>
-                <p>Welcome back, Admin</p>
             </div>
-            <div class="user-profile">
-                <span style="font-size: 14px; font-weight: 500; color: #1f1f1f;">Law Jie Po</span>
-                <div class="avatar">L</div>
+
+            <div class="topbar-right" style="display: flex; align-items: center; gap: 20px;">
+                <a href="settings.php" title="Settings" style="color: #6b7280; font-size: 18px; text-decoration: none;">
+                    <i class="fas fa-cog"></i>
+                </a>
+
+                <a href="notifications.php" class="notification-icon" title="Notifications"
+                    style="position: relative; cursor: pointer; color: #6b7280; font-size: 18px; text-decoration: none;">
+                    <i class="fas fa-bell"></i>
+                    <span
+                        style="position: absolute; top: -3px; right: -2px; width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; border: 2px solid #ffffff;"></span>
+                </a>
+
+                <div class="user-profile"
+                    style="display: flex; align-items: center; gap: 10px; margin-left: 10px; padding-left: 20px; border-left: 1px solid #e5e7eb;">
+                    <span style="font-size: 14px; font-weight: 500; color: #1f1f1f;">
+                        <?php echo htmlspecialchars($logged_in_name); ?>
+                    </span>
+                    <div class="avatar"
+                        style="width: 35px; height: 35px; border-radius: 50%; background-color: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">
+                        <?php echo htmlspecialchars($avatar_letters); ?>
+                    </div>
+                </div>
             </div>
         </header>
 

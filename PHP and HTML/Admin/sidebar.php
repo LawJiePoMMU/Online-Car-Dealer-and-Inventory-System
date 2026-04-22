@@ -1,10 +1,10 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
-<aside class="sidebar">
-    <div class="sidebar-brand">
-        <i class="fas fa-circle-notch logo-icon"></i>
-        <h2>Admin</h2>
+<aside class="sidebar" id="mySidebar">
+    <div class="sidebar-brand"
+        style="display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid #374151; padding-bottom: 20px; margin-bottom: 10px;">
+        <h2 style="margin: 0;">ADMIN</h2>
     </div>
 
     <div class="sidebar-section">NAVIGATION</div>
@@ -21,7 +21,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a href="reservations.php" class="<?= ($current_page == 'reservations.php') ? 'active' : ''; ?>">
+            <a href="reservation.php" class="<?= ($current_page == 'reservation.php') ? 'active' : ''; ?>">
                 <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
             </a>
         </li>
@@ -33,6 +33,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <li>
             <a href="chat.php" class="<?= ($current_page == 'chat.php') ? 'active' : ''; ?>">
                 <i class="fas fa-comments"></i> <span>Chat</span>
+            </a>
+        </li>
+        <li>
+            <a href="reservations history.php" class="<?= ($current_page == 'reservations history.php') ? 'active' : ''; ?>">
+                <i class="fas fa-history"></i> <span>Reservations History</span>
             </a>
         </li>
     </ul>
