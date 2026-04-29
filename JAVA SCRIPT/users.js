@@ -26,23 +26,6 @@ document.addEventListener("DOMContentLoaded", function () {
         window.history.replaceState(null, null, window.location.pathname);
     }
 
-    let selectAllBox = document.getElementById('selectAll');
-    let rowCheckboxes = document.querySelectorAll('.row-checkbox');
-
-    if (selectAllBox) {
-        selectAllBox.addEventListener('change', function () {
-            rowCheckboxes.forEach(cb => cb.checked = selectAllBox.checked);
-        });
-    }
-
-    document.addEventListener('change', function (e) {
-        if (e.target.classList.contains('row-checkbox')) {
-            let allChecked = true;
-            rowCheckboxes.forEach(cb => { if (!cb.checked) allChecked = false; });
-            if (selectAllBox) selectAllBox.checked = allChecked;
-        }
-    });
-
     let btnCancel = document.getElementById('btnCancel');
     if (btnCancel) btnCancel.addEventListener('click', closeModal);
 
@@ -311,47 +294,4 @@ function toggleStatus(id, currentStatus, element) {
             console.error('Error toggling status:', error);
             Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Failed to update status.', showConfirmButton: false, timer: 3000 });
         });
-}
-
-function printSelected() {
-    let selectAllBox = document.getElementById('selectAll');
-
-    if (selectAllBox && selectAllBox.checked) {
-        document.body.classList.add('print-all-mode');
-        window.print();
-        setTimeout(() => { document.body.classList.remove('print-all-mode'); }, 1000);
-        return;
-    }
-
-    let rows = document.querySelectorAll('.data-row');
-    let hasSelected = false;
-
-    rows.forEach(row => {
-        let cb = row.querySelector('.row-checkbox');
-        if (cb && cb.checked) {
-            hasSelected = true;
-        } else {
-            row.classList.add('no-print-row');
-        }
-    });
-
-    if (!hasSelected) {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            icon: 'warning',
-            title: 'Please check at least one box to print.'
-        });
-        rows.forEach(r => r.classList.remove('no-print-row'));
-        return;
-    }
-
-    window.print();
-
-    setTimeout(() => {
-        rows.forEach(r => r.classList.remove('no-print-row'));
-    }, 1000);
 }

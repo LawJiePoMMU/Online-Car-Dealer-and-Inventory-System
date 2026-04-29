@@ -125,14 +125,6 @@ $order_by = "ORDER BY CASE WHEN user_id = 1 THEN 0 ELSE 1 END, user_created_at D
 
 $users_result = mysqli_query($conn, "SELECT * FROM users $where $order_by LIMIT $limit OFFSET $offset");
 
-$all_users_result = mysqli_query($conn, "SELECT * FROM users $where $order_by");
-$all_users = [];
-if ($all_users_result) {
-    while ($row = mysqli_fetch_assoc($all_users_result)) {
-        $all_users[] = $row;
-    }
-}
-
 $existing_users_query = mysqli_query($conn, "SELECT user_id, user_name, user_email, user_phone, user_ic FROM users");
 $existing_users = [];
 while ($r = mysqli_fetch_assoc($existing_users_query)) {
@@ -148,84 +140,6 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
     <title>Manage Users</title>
     <link rel="stylesheet" href="../../CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style>
-        #printAllContainer {
-            display: none;
-        }
-
-        @media print {
-            body {
-                background: white !important;
-                margin: 0;
-                padding: 0;
-            }
-
-            .sidebar,
-            .topbar,
-            .page-tabs,
-            form,
-            .btn-add-blue,
-            .btn-export,
-            .pagination-container,
-            .print-hide {
-                display: none !important;
-            }
-
-            .main-content {
-                margin: 0 !important;
-                padding: 20px !important;
-                width: 100% !important;
-            }
-
-            .table-card {
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-                width: 100% !important;
-            }
-
-            table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                border: 2px solid #000 !important;
-            }
-
-            th,
-            td {
-                border: 1px solid #000 !important;
-                padding: 10px 8px !important;
-                color: #000 !important;
-                text-align: left !important;
-                font-size: 13px !important;
-            }
-
-            th {
-                background-color: #f3f4f6 !important;
-                -webkit-print-color-adjust: exact;
-                font-weight: bold !important;
-                text-transform: uppercase;
-            }
-
-            .badge,
-            .dot,
-            .status-cell span {
-                color: #000 !important;
-                background: none !important;
-            }
-
-            tr.no-print-row {
-                display: none !important;
-            }
-
-            body.print-all-mode #userTable {
-                display: none !important;
-            }
-
-            body.print-all-mode #printAllContainer {
-                display: block !important;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -266,9 +180,6 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                 <?php if (isset($_GET['role']))
                     echo '<input type="hidden" name="role" value="' . $_GET['role'] . '">'; ?>
             </form>
-            <div style="display: flex; gap: 12px;">
-                <button type="button" class="btn-export" onclick="printSelected()"><i class="fas fa-print"></i> Print
-                    List</button>
                 <button onclick="openModal()" class="btn-add-blue"><i class="fas fa-user-plus"></i> Add Admin</button>
             </div>
         </div>
@@ -277,8 +188,6 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
             <table class="admin-table" id="userTable">
                 <thead>
                     <tr>
-                        <th class="print-hide" style="width: 40px; padding-left: 20px;"><input type="checkbox"
-                                id="selectAll" style="cursor: pointer;"></th>
                         <th style="text-align: left;">Role</th>
                         <th style="text-align: left;">User ID</th>
                         <th style="text-align: left;">Avatar</th>
@@ -327,7 +236,6 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                             }
 
                             echo "<tr class='data-row'>";
-                            echo "<td class='print-hide' style='padding-left: 20px;'><input type='checkbox' class='row-checkbox' style='cursor: pointer;'></td>";
                             echo "<td style='text-align: left; color: #4b5563; font-weight: 500;'>" . htmlspecialchars($role) . "</td>";
                             echo "<td style='text-align: left; color: #6b7280;'>UA" . str_pad($row['user_id'], 3, '0', STR_PAD_LEFT) . "</td>";
                             echo "<td style='text-align: center;'>
@@ -386,43 +294,6 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                     </div>
                 <?php endif; ?>
             </div>
-        </div>
-
-        <div id="printAllContainer">
-            <?php
-            $chunks = array_chunk($all_users, 10);
-            foreach ($chunks as $chunk) {
-                echo '<table style="page-break-after: always; margin-bottom: 20px;">';
-                echo '<thead><tr>
-                        <th style="text-align: left;">Role</th>
-                        <th style="text-align: left;">User ID</th>
-                        <th style="text-align: left;">Full Name</th>
-                        <th style="text-align: left;">IC Number</th>
-                        <th style="text-align: left;">Phone Number</th>
-                        <th style="text-align: left;">Email</th>
-                        <th style="text-align: left;">Date Created</th>
-                        <th style="width: 100px; text-align: left;">Status</th>
-                      </tr></thead><tbody>';
-                foreach ($chunk as $r) {
-                    $p_role = ($r['user_id'] == 1) ? 'Super Admin' : (!empty($r['user_role']) ? $r['user_role'] : 'Customer');
-                    $p_status = !empty($r['user_status']) ? $r['user_status'] : 'Active';
-                    $p_ic = !empty($r['user_ic']) ? htmlspecialchars($r['user_ic']) : '-';
-                    $p_phone = !empty($r['user_phone']) ? htmlspecialchars($r['user_phone']) : '-';
-
-                    echo "<tr>";
-                    echo "<td>" . htmlspecialchars($p_role) . "</td>";
-                    echo "<td>UA" . str_pad($r['user_id'], 3, '0', STR_PAD_LEFT) . "</td>";
-                    echo "<td>" . htmlspecialchars($r['user_name']) . "</td>";
-                    echo "<td>" . $p_ic . "</td>";
-                    echo "<td>" . $p_phone . "</td>";
-                    echo "<td>" . htmlspecialchars($r['user_email']) . "</td>";
-                    echo "<td>" . date('d M Y', strtotime($r['user_created_at'])) . "</td>";
-                    echo "<td>" . ucfirst($p_status) . "</td>";
-                    echo "</tr>";
-                }
-                echo '</tbody></table>';
-            }
-            ?>
         </div>
     </main>
 
