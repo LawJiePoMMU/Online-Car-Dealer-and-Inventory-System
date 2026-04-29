@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             case 'upload_document':
                 $doc_type = mysqli_real_escape_string($conn, $_POST['doc_type']);
-                $allowed = ['driving_licence', 'bank_statement', 'salary_slip'];
+                $allowed = ['driving_licence', 'bank_statement', 'salary_slip', 'ic_pdf'];
                 if (!in_array($doc_type, $allowed)) {
                     echo json_encode(['success' => false, 'message' => 'Invalid document type.']);
                     break;
@@ -198,6 +198,63 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
     <link rel="stylesheet" href="../../CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
+        @media print {
+
+            body * {
+                visibility: hidden;
+            }
+
+            #splitModal,
+            #splitModal * {
+                visibility: visible;
+            }
+
+            #splitModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+            }
+
+            .modal-container {
+                width: 100%;
+                box-shadow: none;
+                border: none;
+                max-height: none;
+            }
+
+            .modal-body {
+                padding: 0;
+                overflow: visible;
+            }
+
+            .modal-footer,
+            .close-btn,
+            .edit-inline-btn,
+            .upload-btn-label,
+            #dpActionsWrap {
+                display: none !important;
+            }
+
+            .layout-grid {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .info-card {
+                border: 1px solid #000;
+                box-shadow: none;
+                break-inside: avoid;
+            }
+
+            .bottom-card,
+            .dp-panel {
+                border: 1px solid #000;
+                box-shadow: none;
+            }
+        }
+
         .dot {
             display: inline-block;
             width: 8px;
@@ -584,21 +641,14 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                         style="padding-left:38px; width:280px; font-size:13px;"
                         value="<?= htmlspecialchars($search) ?>">
                 </div>
-                <select name="status" class="form-control" style="width:150px; font-size:13px;"
-                    onchange="this.form.submit()">
-                    <option value="all">All Status</option>
-                    <?php if ($active_tab === 'bookings'): ?>
-                        <option value="Pending Viewing" <?= $status_filter === 'Pending Viewing' ? 'selected' : '' ?>>Pending
-                            Viewing</option>
-                    <?php elseif ($active_tab === 'transactions'): ?>
-                        <option value="Loan Processing" <?= $status_filter === 'Loan Processing' ? 'selected' : '' ?>>Loan
-                            Processing</option>
-                    <?php else: ?>
+                <?php if ($active_tab === 'history'): ?>
+                    <select name="status" class="form-control" style="width:150px; font-size:13px;"
+                        onchange="this.form.submit()">
+                        <option value="all">All Status</option>
                         <option value="Sold" <?= $status_filter === 'Sold' ? 'selected' : '' ?>>Sold</option>
                         <option value="Cancelled" <?= $status_filter === 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                        <option value="Refunded" <?= $status_filter === 'Refunded' ? 'selected' : '' ?>>Refunded</option>
-                    <?php endif; ?>
-                </select>
+                    </select>
+                <?php endif; ?>
             </form>
             <div>
                 <button onclick="openAddModal()" class="btn-add-blue"><i class="fas fa-plus"></i> Add
@@ -615,11 +665,10 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                         <th style="text-align:left; width:20%;">Customer</th>
                         <th style="text-align:left; width:20%;">Car Model</th>
                         <th style="text-align:left; width:12%;">Booking Fee</th>
-                        <?php if ($active_tab === 'transactions'): ?>
+                        <?php if (in_array($active_tab, ['transactions', 'history'])): ?>
                             <th style="text-align:left; width:13%;">Down Payment</th>
                         <?php endif; ?>
                         <th style="text-align:left; width:13%;">Status</th>
-                        <th style="text-align:center; width:8%;" class="print-hide">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -647,64 +696,56 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                             $row_json = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                             ?>
                             <tr class="data-row" onclick='openModal(<?= $row_json ?>)'>
-                                    <td style="text-align: left; color: #6b7280;">
+                                <td style="text-align: left; color: #6b7280;">
                                     ORD<?= str_pad($row['reservation_id'], 3, '0', STR_PAD_LEFT) ?>
-                                    </td>
+                                </td>
+                                <td style="text-align:left;">
+                                    <div
+                                        style="width:42px;height:42px;font-size:14px;font-weight:700;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;background-color:#e0e7ff;color:#6366f1;margin:0 auto;">
+                                        <?= $avatar_content ?>
+                                    </div>
+                                </td>
+                                <td style="text-align:left;">
+                                    <div style="font-weight:500; color:#111827; font-size:14px;">
+                                        <?= htmlspecialchars($row['user_name']) ?>
+                                    </div>
+                                    <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($row['user_phone']) ?>
+                                    </div>
+                                </td>
+                                <td style="text-align:left;">
+                                    <div style="font-weight:500; color:#111827; font-size:14px;">
+                                        <?= htmlspecialchars($row['car_brand'] . ' ' . $row['car_model']) ?>
+                                    </div>
+                                    <div style="font-size:12px; color:#6b7280;">
+                                        <?= htmlspecialchars($row['car_plate'] ?: 'No Plate') ?>
+                                    </div>
+                                </td>
+                                <td style="text-align:left; font-weight:500; color:#111827; font-size:14px;">
+                                    RM <?= number_format($row['payment_amount'], 2) ?>
+                                </td>
+                                <?php if (in_array($active_tab, ['transactions', 'history'])): ?>
                                     <td style="text-align:left;">
-                                        <div
-                                            style="width:42px;height:42px;font-size:14px;font-weight:700;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;background-color:#e0e7ff;color:#6366f1;margin:0 auto;">
-                                            <?= $avatar_content ?>
-                                        </div>
-                                    </td>
-                                    <td style="text-align:left;">
-                                        <div style="font-weight:500; color:#111827; font-size:14px;">
-                                            <?= htmlspecialchars($row['user_name']) ?>
-                                        </div>
-                                        <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($row['user_phone']) ?>
-                                        </div>
-                                    </td>
-                                    <td style="text-align:left;">
-                                        <div style="font-weight:500; color:#111827; font-size:14px;">
-                                            <?= htmlspecialchars($row['car_brand'] . ' ' . $row['car_model']) ?>
-                                        </div>
-                                        <div style="font-size:12px; color:#6b7280;">
-                                            <?= htmlspecialchars($row['car_plate'] ?: 'No Plate') ?>
-                                        </div>
-                                    </td>
-                                    <td style="text-align:left; font-weight:500; color:#111827; font-size:14px;">
-                                        RM <?= number_format($row['payment_amount'], 2) ?>
-                                    </td>
-                                    <?php if ($active_tab === 'transactions'): ?>
-                                        <td style="text-align:left;">
-                                            <?php
-                                            $ds = $row['dp_status'] ?? 'Pending';
-                                            $dp_dot = match ($ds) { 'Approved' => '#10b981', 'Cancelled' => '#ef4444', default => '#f59e0b'};
-                                            ?>
-                                            <div class="status-cell">
-                                                <span class="dot print-hide" style="background:<?= $dp_dot ?>;"></span>
-                                                <span
-                                                    style="color:<?= $dp_dot ?>; font-weight:600; font-size:13px;"><?= htmlspecialchars($ds) ?></span>
-                                            </div>
-                                            <div style="font-size:11px; color:#6b7280; margin-top:2px; padding-left:14px;">RM
-                                                <?= number_format($row['dp_amount'] ?? 0, 2) ?>
-                                            </div>
-                                        </td>
-                                    <?php endif; ?>
-                                    <td style="text-align:left;">
-                                        <div class="status-cell" style="width:150px;">
-                                            <span class="dot print-hide" style="background:<?= $dot_color ?>;"></span>
+                                        <?php
+                                        $ds = $row['dp_status'] ?? 'Pending';
+                                        $dp_dot = match ($ds) { 'Approved' => '#10b981', 'Cancelled' => '#ef4444', default => '#f59e0b'};
+                                        ?>
+                                        <div class="status-cell">
+                                            <span class="dot print-hide" style="background:<?= $dp_dot ?>;"></span>
                                             <span
-                                                style="color:<?= $dot_color ?>; font-weight:600; font-size:13px;"><?= $st ?></span>
+                                                style="color:<?= $dp_dot ?>; font-weight:600; font-size:13px;"><?= htmlspecialchars($ds) ?></span>
+                                        </div>
+                                        <div style="font-size:11px; color:#6b7280; margin-top:2px; padding-left:14px;">RM
+                                            <?= number_format($row['dp_amount'] ?? 0, 2) ?>
                                         </div>
                                     </td>
-                                    <td class="print-hide" style="text-align:center;" onclick="event.stopPropagation()">
-                                        <div style="display:flex; justify-content:center; gap:16px;">
-                                            <a href="javascript:void(0)" onclick='openModal(<?= $row_json ?>)'
-                                                style="color:#9ca3af; font-size:15px;">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </div>
-                                    </td>
+                                <?php endif; ?>
+                                <td style="text-align:left;">
+                                    <div class="status-cell" style="width:150px;">
+                                        <span class="dot print-hide" style="background:<?= $dot_color ?>;"></span>
+                                        <span
+                                            style="color:<?= $dot_color ?>; font-weight:600; font-size:13px;"><?= $st ?></span>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
@@ -774,15 +815,37 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                 <div
                                     style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f3f4f6;">
                                     <span style="font-weight:600; font-size:13px; color:#374151;"><i
-                                            class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>Driving
-                                        Licence</span>
+                                            class="fas fa-id-card" style="color:#3b82f6; margin-right:6px;"></i>IC
+                                        Document</span>
                                     <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" onclick="togglePdf('frameDrivingLicence')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer;"><i
+                                        <button type="button" id="btnView_ic_pdf" onclick="togglePdf('frameIcPdf')"
+                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
                                                 class="fas fa-eye"></i> View</button>
                                         <label class="upload-btn-label"
                                             style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <i class="fas fa-upload"></i> Upload
+                                            <span id="lblUpload_ic_pdf"><i class="fas fa-upload"></i> Upload</span>
+                                            <input type="file" accept=".pdf" style="display:none;"
+                                                onchange="uploadDoc(this,'ic_pdf')">
+                                        </label>
+                                    </div>
+                                </div>
+                                <iframe id="frameIcPdf" src=""
+                                    style="width:100%; height:400px; display:none; border:1px solid #d1d5db; border-radius:6px; margin-top:8px;"></iframe>
+
+                                <div
+                                    style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f3f4f6;">
+                                    <span style="font-weight:600; font-size:13px; color:#374151;"><i
+                                            class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>Driving
+                                        Licence</span>
+                                    <div style="display:flex; gap:14px; align-items:center;">
+                                        <button type="button" id="btnView_driving_licence"
+                                            onclick="togglePdf('frameDrivingLicence')"
+                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
+                                                class="fas fa-eye"></i> View</button>
+                                        <label class="upload-btn-label"
+                                            style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
+                                            <span id="lblUpload_driving_licence"><i class="fas fa-upload"></i>
+                                                Upload</span>
                                             <input type="file" accept=".pdf" style="display:none;"
                                                 onchange="uploadDoc(this,'driving_licence')">
                                         </label>
@@ -797,12 +860,14 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                             class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>Bank
                                         Statement</span>
                                     <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" onclick="togglePdf('frameBankStatement')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer;"><i
+                                        <button type="button" id="btnView_bank_statement"
+                                            onclick="togglePdf('frameBankStatement')"
+                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
                                                 class="fas fa-eye"></i> View</button>
                                         <label class="upload-btn-label"
                                             style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <i class="fas fa-upload"></i> Upload
+                                            <span id="lblUpload_bank_statement"><i class="fas fa-upload"></i>
+                                                Upload</span>
                                             <input type="file" accept=".pdf" style="display:none;"
                                                 onchange="uploadDoc(this,'bank_statement')">
                                         </label>
@@ -817,12 +882,13 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                             class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>3 Month
                                         Salary</span>
                                     <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" onclick="togglePdf('frameSalarySlip')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer;"><i
+                                        <button type="button" id="btnView_salary_slip"
+                                            onclick="togglePdf('frameSalarySlip')"
+                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
                                                 class="fas fa-eye"></i> View</button>
                                         <label class="upload-btn-label"
                                             style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <i class="fas fa-upload"></i> Upload
+                                            <span id="lblUpload_salary_slip"><i class="fas fa-upload"></i> Upload</span>
                                             <input type="file" accept=".pdf" style="display:none;"
                                                 onchange="uploadDoc(this,'salary_slip')">
                                         </label>
@@ -868,7 +934,7 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                         onchange="this.size=1; this.style.position='static'; inlinePopulateCities(); this.blur();"
                                         onblur="this.size=1; this.style.position='static';"
                                         style="width:100%; box-sizing:border-box; top:0; left:0;">
-                                        <option value="">-- Select State --</option>
+                                        <option value="">Select State</option>
                                     </select>
                                 </div>
 
@@ -878,7 +944,7 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                         onchange="this.size=1; this.style.position='static'; this.blur();"
                                         onblur="this.size=1; this.style.position='static';"
                                         style="width:100%; box-sizing:border-box; top:0; left:0;">
-                                        <option value="">-- Select City --</option>
+                                        <option value="">Select City</option>
                                     </select>
                                 </div>
 
@@ -942,7 +1008,7 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                 </div>
                             </div>
 
-                            <div class="detail-item"><label>Cars Bought</label>
+                            <div class="detail-item"><label>Quantity</label>
                                 <p id="detCarStock">-</p>
                             </div>
                             <div class="detail-item"><label>Year</label>
@@ -975,7 +1041,6 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                             <option value="5">5 Yrs</option>
                                             <option value="7">7 Yrs</option>
                                             <option value="9" selected>9 Yrs</option>
-                                            <option value="10">10 Yrs</option>
                                         </select>
                                         @ 3% P.A.
                                     </span>
@@ -1046,6 +1111,12 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
 
             <div class="modal-footer">
                 <button onclick="closeModal()" class="btn-modal btn-modal-cancel">Close</button>
+
+                <button id="btnPrintDossier" class="btn-modal" onclick="window.print()"
+                    style="display:none; background:#f3f4f6; color:#374151; border:1px solid #d1d5db;">
+                    <i class="fas fa-print"></i> Print Dossier
+                </button>
+
                 <button id="btnProcessLoan" class="btn-modal btn-modal-process" onclick="processToLoan()"
                     style="display:none;"><i class="fas fa-arrow-right"></i> Process to Loan</button>
                 <button id="btnMarkSold" class="btn-modal btn-modal-sold" onclick="markSold()" style="display:none;"><i

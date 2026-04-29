@@ -40,7 +40,7 @@ function openModal(row) {
     document.getElementById('detCarColor').textContent = row.car_color || '-';
     document.getElementById('detCarOrigin').textContent = row.car_origin || '-';
     document.getElementById('detCarPlate').textContent = row.car_plate || 'N/A';
-    document.getElementById('detCarStock').textContent = (row.stock || '0') + ' Unit(s) in Stock';
+    document.getElementById('detCarStock').textContent = '1 Unit';
     document.getElementById('detCarYear').textContent = row.car_year || '-';
 
     function setPdfFrame(id, url) {
@@ -54,10 +54,39 @@ function openModal(row) {
             frame.style.display = 'none';
         }
     }
+    
     setPdfFrame('frameDrivingLicence', row.driving_licence_url);
     setPdfFrame('frameBankStatement', row.bank_statement_url);
     setPdfFrame('frameSalarySlip', row.salary_slip_url);
     document.getElementById('editPlateBtn').style.display = (status === 'Loan Processing') ? 'inline-block' : 'none';
+
+    function setupDocUI(docType, url) {
+        const viewBtn = document.getElementById('btnView_' + docType);
+        const uploadLbl = document.getElementById('lblUpload_' + docType);
+        if (!viewBtn || !uploadLbl) return;
+
+        if (url && url !== 'NULL' && url !== '') {
+            viewBtn.style.display = 'inline-block';
+            uploadLbl.innerHTML = '<i class="fas fa-sync"></i> Replace';
+            uploadLbl.style.color = '#f59e0b';
+        } else {
+            viewBtn.style.display = 'none';
+            uploadLbl.innerHTML = '<i class="fas fa-upload"></i> Upload';
+            uploadLbl.style.color = '#3b82f6';
+        }
+    }
+
+    setPdfFrame('frameIcPdf', row.ic_pdf_url);
+    setupDocUI('ic_pdf', row.ic_pdf_url);
+    
+    setPdfFrame('frameDrivingLicence', row.driving_licence_url);
+    setupDocUI('driving_licence', row.driving_licence_url);
+    
+    setPdfFrame('frameBankStatement', row.bank_statement_url);
+    setupDocUI('bank_statement', row.bank_statement_url);
+    
+    setPdfFrame('frameSalarySlip', row.salary_slip_url);
+    setupDocUI('salary_slip', row.salary_slip_url);
 
     currentCarPrice = parseFloat(row.price) || 0;
     recalcMonthly();
@@ -71,11 +100,15 @@ function openModal(row) {
     document.getElementById('btnProcessLoan').style.display = status === 'Pending Viewing' ? '' : 'none';
     document.getElementById('btnMarkSold').style.display = status === 'Loan Processing' ? '' : 'none';
     document.getElementById('btnCancelRes').style.display = ['Pending Viewing', 'Loan Processing'].includes(status) ? '' : 'none';
+    const printBtn = document.getElementById('btnPrintDossier');
+    if (printBtn) {
+        printBtn.style.display = ['Sold', 'Cancelled'].includes(status) ? 'inline-block' : 'none';
+    }
 
     document.getElementById('editPlateBtn').style.display = status === 'Pending Viewing' ? 'none' : 'inline-block';
 
     const dpPanel = document.getElementById('dpPanel');
-    if (status === 'Loan Processing') {
+   if (['Loan Processing', 'Sold', 'Cancelled', 'Refunded'].includes(status)) {
         dpPanel.style.display = '';
         const dpStatus = row.dp_status || 'Pending';
         const dpAmt = parseFloat(row.dp_amount) || (currentCarPrice * 0.10);
@@ -188,7 +221,7 @@ function toggleEditPlate(show) {
 
 async function saveInlinePlate() {
     const plate = document.getElementById('inlinePlate').value.trim();
-    await doAction('update_plate', { plate: plate });
+    await doAction('update_plate', { plate: plate }, true);
     document.getElementById('detCarPlate').textContent = plate || 'N/A';
     toggleEditPlate(false);
 }
@@ -235,7 +268,7 @@ async function saveInlineAddress() {
     const city = document.getElementById('inlineCity').value;
     const post = document.getElementById('inlinePost').value;
 
-    await doAction('update_address', { address: addr, city: city, state: state, postcode: post });
+    await doAction('update_address', { address: addr, city: city, state: state, postcode: post }, true);
 
     document.getElementById('detAddress').textContent = addr || '-';
     document.getElementById('detCity').textContent = city || '-';
@@ -323,7 +356,7 @@ async function processToLoan() {
     const addr = document.getElementById('detAddress').textContent;
     if (addr === '-' || addr.trim() === '') {
         Swal.fire('Action Denied', 'Please fill in the Billing Address before processing to loan.', 'warning');
-        return; 
+        return;
     }
 
     const r = await Swal.fire({
@@ -333,16 +366,18 @@ async function processToLoan() {
     if (r.isConfirmed) await doAction('process_to_loan', {});
 }
 
-async function doAction(action, extra = {}) {
+async function doAction(action, extra = {}, skipReload = false) {
     const body = new URLSearchParams({ action, reservation_id: currentResId, ...extra });
     try {
         const res = await fetch('orders.php', { method: 'POST', body });
         const text = await res.text();
         const data = JSON.parse(text);
         if (data.success) {
-            await Swal.fire({ icon: 'success', title: 'Done!', text: data.message, timer: 1800, showConfirmButton: false });
-            closeModal();
-            location.reload();
+            await Swal.fire({ icon: 'success', title: 'Done!', text: data.message, timer: 1500, showConfirmButton: false });
+            if (!skipReload) {
+                closeModal();
+                location.reload();
+            }
         } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.message });
         }
