@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../database.php';
+include '../Config/database.php';
 $logged_in_id = $_SESSION['user_id'] ?? null;
 $logged_in_name = 'Admin';
 $avatar_letters = 'A';
