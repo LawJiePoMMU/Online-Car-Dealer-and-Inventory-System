@@ -1,8 +1,9 @@
 <?php
 session_start();
 
+// 如果已经登录，直接跳到 profile
 if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true){
-    header("location: profile.php");
+    header("location: ../homepage.php");
     exit;
 }
 
@@ -17,34 +18,63 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     if(empty($email) || empty($password)){
         $error = "Please enter both email and password.";
     } else {
-        $sql = "SELECT id, email, password FROM users WHERE email = :email";
+        // 🔥 使用 ? 代替了原来的 :email (这是 mysqli 的写法)
+        $sql = "SELECT user_id, user_email, user_password, user_role, user_status FROM users WHERE user_email = ?";
         
-        if($stmt = $pdo->prepare($sql)){
-            $stmt->bindParam(":email", $email, PDO::PARAM_STR);
+        // 🔥 使用 mysqli_prepare 和 $conn
+        if($stmt = mysqli_prepare($conn, $sql)){
             
-            if($stmt->execute()){
-                if($stmt->rowCount() == 1){
-                    if($row = $stmt->fetch()){
-                        if(password_verify($password, $row["password"])){
+            // 绑定参数 "s" 代表 string (字符串)
+            mysqli_stmt_bind_param($stmt, "s", $email);
+            
+            // 执行查询
+            if(mysqli_stmt_execute($stmt)){
+                
+                // 存储结果以便检查行数
+                mysqli_stmt_store_result($stmt);
+                
+                // 检查有没有找到这个 email
+                if(mysqli_stmt_num_rows($stmt) == 1){
+                    
+                    // 将数据库里的字段绑定到变量上
+                    mysqli_stmt_bind_result($stmt, $db_id, $db_email, $db_password, $db_role, $db_status);
+                    
+                    if(mysqli_stmt_fetch($stmt)){
+                        
+                        // 🔥 1. 检查账号是否 Active
+                        if(strcasecmp($db_status, "Active") !== 0){
+                            $error = "Your account is currently inactive. Cannot login.";
+                        } 
+                        // 🔥 2. 检查身份 (Admin 不可以在这里登录)
+                        elseif(strcasecmp($db_role, "Customer") !== 0){
+                            $error = "Access denied. Only customers can use this login page.";
+                        } 
+                        // 🔥 3. 验证密码
+                        elseif(password_verify($password, $db_password)){
+                            // 密码正确，允许登录
                             $_SESSION["loggedin"] = true;
-                            $_SESSION["id"] = $row["id"];
-                            $_SESSION["email"] = $row["email"];
-                            header("location: profile.php");
+                            $_SESSION["id"] = $db_id;
+                            $_SESSION["email"] = $db_email;
+                            $_SESSION["role"] = $db_role; 
+                            
+                            header("location: ../homepage.php");
                             exit;
                         } else {
-                            $error = "Invalid email or password.";
+                            // 密码错误
+                            $error = "Incorrect password.";
                         }
                     }
                 } else {
-                    $error = "Invalid email or password.";
+                    // 🔥 找不到 Email
+                    $error = "No account found with this email. Please register.";
                 }
             } else{
-                $error = "Something went wrong.";
+                $error = "Something went wrong. Please try again later.";
             }
-            unset($stmt);
+            // 关闭语句
+            mysqli_stmt_close($stmt);
         }
     }
-    unset($pdo);
 }
 
 include '../Includes/header.php';
@@ -57,6 +87,7 @@ include '../Includes/header.php';
             <h1 class="auth-title">Sign In</h1>
 
             <?php 
+            // 打印错误信息
             if(!empty($error)){
                 echo '<div class="auth-error">' . $error . '</div>';
             }        
@@ -64,13 +95,11 @@ include '../Includes/header.php';
 
             <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
 
-                <!-- Email -->
                 <div class="form-group">
                     <label class="auth-label">Email</label>
                     <input type="email" name="email" class="auth-input" required>
                 </div>
 
-                <!-- Password -->
                 <div class="form-group password-wrapper">
                     <label class="auth-label">Password</label>
                     <input type="password" name="password" class="auth-input" required>
@@ -87,7 +116,7 @@ include '../Includes/header.php';
                 <span>Or</span>
             </div>
 
-            <a href="register.php" class="auth-btn auth-btn-secondary">Create Account</a>
+            <a href="Register.php" class="auth-btn auth-btn-secondary">Create Account</a>
 
         </div>
     </div>

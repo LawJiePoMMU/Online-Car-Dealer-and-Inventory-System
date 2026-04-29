@@ -1,104 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Dealer - Homepage</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../CSS/cus.css">
-</head>
-<body>
+<?php
+session_start();
+// 引入你刚刚做好的 Header
+include 'Includes/header.php'; 
+?>
 
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="homepage.html" class="nav-logo">🚗 CarDealer</a>
-            
-            <ul class="nav-links">
-                <li><a href="homepage.html">Home</a></li>
-                <li><a href="car-listing.html">Cars</a></li>
-                <li><a href="category.html">Categories</a></li>
-                <li><a href="contact.html">Contact</a></li>
-            </ul>
+<section class="hero-section">
+    <div class="hero-content">
+        <h1>Find Your Dream Second-Hand Car</h1>
+        <p>Quality inspected vehicles, trusted dealers, and the best prices in Malaysia.</p>
+        <a href="inventory.php" class="btn-primary hero-btn">Browse Inventory</a>
+    </div>
+</section>
 
-            <div class="nav-action">
-                <a href="login.html" class="btn-primary">Login / Register</a>
-            </div>
-        </div>
-    </nav>
-    <section class="hero-banner" style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80') center/cover; padding: 100px 20px; text-align: center; color: white;">
-        <h1 style="font-size: 48px; margin-bottom: 20px;">Find Your Dream Car</h1>
-        <p style="font-size: 18px; margin-bottom: 30px;">The best platform to buy and sell premium cars.</p>
-        <a href="car-listing.html" class="btn-primary" style="font-size: 18px; padding: 15px 30px;">Browse Cars</a>
-    </section>
+<div class="container search-bar-container">
+    <form action="inventory.php" method="GET" class="quick-search-form">
+        <input type="text" name="brand" placeholder="Search brand (e.g. Honda, Toyota)..." class="form-control">
+        <select name="price_range" class="form-control">
+            <option value="">Any Price</option>
+            <option value="under_50k">Under RM 50,000</option>
+            <option value="50k_to_100k">RM 50,000 - RM 100,000</option>
+            <option value="above_100k">Above RM 100,000</option>
+        </select>
+        <button type="submit" class="btn-primary">Search</button>
+    </form>
+</div>
 
-    <div class="container">
-        <section class="search-section" style="background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: var(--shadow); margin-top: -30px; position: relative;">
-            <form action="search.html" style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <input type="text" placeholder="Search keyword (e.g. Civic)..." style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                <select style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                    <option value="">All Brands</option>
-                    <option value="toyota">Toyota</option>
-                    <option value="honda">Honda</option>
-                    <option value="bmw">BMW</option>
-                </select>
-                <button type="button" class="btn-primary" onclick="window.location.href='search.html'">Search 🔍</button>
-            </form>
-        </section>
-
-        <h2 class="section-title text-center">Featured Cars</h2>
-        <div class="grid grid-3">
-            <div class="card">
-                <img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80" alt="Car">
-                <div class="card-body">
-                    <h3 class="card-title">2023 Honda Civic Sedan</h3>
-                    <div class="card-price">$25,000</div>
-                    <a href="car-details.html" class="btn-primary" style="display: block; text-align: center;">View Details</a>
-                </div>
-            </div>
-            <div class="card">
-                <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80" alt="Car">
-                <div class="card-body">
-                    <h3 class="card-title">2022 BMW M3</h3>
-                    <div class="card-price">$72,000</div>
-                    <a href="car-details.html" class="btn-primary" style="display: block; text-align: center;">View Details</a>
-                </div>
-            </div>
-            <div class="card">
-                <img src="https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=800&q=80" alt="Car">
-                <div class="card-body">
-                    <h3 class="card-title">2024 Toyota RAV4 SUV</h3>
-                    <div class="card-price">$32,500</div>
-                    <a href="car-details.html" class="btn-primary" style="display: block; text-align: center;">View Details</a>
-                </div>
+<div class="container" style="margin-top: 60px;">
+    <h2 class="section-title text-center">Featured Vehicles</h2>
+    
+    <div class="grid grid-3">
+        
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Honda Civic">
+            <div class="card-body">
+                <h3 class="card-title">2020 Honda Civic 1.5 TC-P</h3>
+                <div class="card-price">RM 105,000</div>
+                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 14px;">Mileage: 45,000 km | Auto | Petrol</p>
+                <a href="details.php?id=1" class="btn-primary" style="width: 100%; text-align: center;">View Details</a>
             </div>
         </div>
 
-        <h2 class="section-title text-center">Browse by Category</h2>
-        <div class="grid grid-4 text-center">
-            <a href="category.html" class="card" style="padding: 30px 10px; text-decoration: none; color: var(--text-dark);">
-                <div style="font-size: 40px; margin-bottom: 10px;">🚘</div>
-                <h3>Sedan</h3>
-            </a>
-            <a href="category.html" class="card" style="padding: 30px 10px; text-decoration: none; color: var(--text-dark);">
-                <div style="font-size: 40px; margin-bottom: 10px;">🚙</div>
-                <h3>SUV</h3>
-            </a>
-            <a href="category.html" class="card" style="padding: 30px 10px; text-decoration: none; color: var(--text-dark);">
-                <div style="font-size: 40px; margin-bottom: 10px;">🚗</div>
-                <h3>Hatchback</h3>
-            </a>
-            <a href="category.html" class="card" style="padding: 30px 10px; text-decoration: none; color: var(--text-dark);">
-                <div style="font-size: 40px; margin-bottom: 10px;">🏎️</div>
-                <h3>Luxury</h3>
-            </a>
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1590362891991-f776e747a588?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Toyota Vios">
+            <div class="card-body">
+                <h3 class="card-title">2018 Toyota Vios 1.5 G</h3>
+                <div class="card-price">RM 62,000</div>
+                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 14px;">Mileage: 68,000 km | Auto | Petrol</p>
+                <a href="details.php?id=2" class="btn-primary" style="width: 100%; text-align: center;">View Details</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="BMW 3 Series">
+            <div class="card-body">
+                <h3 class="card-title">2017 BMW 330e M Sport</h3>
+                <div class="card-price">RM 128,000</div>
+                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 14px;">Mileage: 52,000 km | Auto | Hybrid</p>
+                <a href="details.php?id=3" class="btn-primary" style="width: 100%; text-align: center;">View Details</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="features-section">
+    <div class="container grid grid-3">
+        <div class="feature-box">
+            <div class="feature-icon">🛡️</div>
+            <h3>175-Point Inspection</h3>
+            <p style="color: var(--text-light); font-size: 14px;">Every car passes a strict quality check before hitting our lot.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">💰</div>
+            <h3>Fixed Transparent Pricing</h3>
+            <p style="color: var(--text-light); font-size: 14px;">No hidden fees. The price you see is the price you pay.</p>
+        </div>
+        <div class="feature-box">
+            <div class="feature-icon">🚗</div>
+            <h3>5-Day Money Back</h3>
+            <p style="color: var(--text-light); font-size: 14px;">Change your mind? Return it within 5 days for a full refund.</p>
         </div>
     </div>
+</div>
 
-    <footer class="footer">
-        <div class="container text-center">
-            <p>&copy; 2024 Car Dealer. All Rights Reserved.</p>
-        </div>
-    </footer>
+<footer class="footer text-center">
+    <p>&copy; <?php echo date("Y"); ?> CarDealer. All rights reserved.</p>
+</footer>
 
 </body>
 </html>
