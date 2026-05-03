@@ -8,7 +8,6 @@ mysqli_query($conn, "INSERT IGNORE INTO locations (location_id, location_state, 
 
 if (isset($_POST['action']) && $_POST['action'] == 'delete_image' && isset($_POST['img_id'])) {
     $img_id = (int) $_POST['img_id'];
-
     $q_path = mysqli_query($conn, "SELECT car_image_url FROM car_image WHERE car_image_id = $img_id");
     if ($row_path = mysqli_fetch_assoc($q_path)) {
         if (!empty($row_path['car_image_url']) && file_exists($row_path['car_image_url'])) {
@@ -23,37 +22,26 @@ if (isset($_POST['action']) && $_POST['action'] == 'delete_image' && isset($_POS
 if (isset($_FILES['ajax_car_images']) && isset($_POST['car_id_ajax'])) {
     $car_id = (int) $_POST['car_id_ajax'];
     $uploaded_images = [];
-
-    if ($car_id == 0) {
-        $upload_dir = "../../uploads/temp_cars/";
-        if (!is_dir($upload_dir))
-            mkdir($upload_dir, 0777, true);
-        if (!isset($_SESSION['temp_car_images']))
-            $_SESSION['temp_car_images'] = [];
-    } else {
-        $upload_dir = "../../uploads/cars/";
-        if (!is_dir($upload_dir))
-            mkdir($upload_dir, 0777, true);
-    }
+    $upload_dir = ($car_id == 0) ? "../../uploads/temp_cars/" : "../../uploads/cars/";
+    if (!is_dir($upload_dir))
+        mkdir($upload_dir, 0777, true);
+    if ($car_id == 0 && !isset($_SESSION['temp_car_images']))
+        $_SESSION['temp_car_images'] = [];
 
     foreach ($_FILES['ajax_car_images']['name'] as $key => $filename) {
         if ($_FILES['ajax_car_images']['error'][$key] == 0) {
             $tmp_name = $_FILES['ajax_car_images']['tmp_name'][$key];
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-
-            if (in_array($ext, $allowed)) {
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
                 $new_name = time() . "_" . uniqid() . "." . $ext;
                 $destination = $upload_dir . $new_name;
-
                 if (move_uploaded_file($tmp_name, $destination)) {
                     if ($car_id == 0) {
                         $_SESSION['temp_car_images'][] = $destination;
                         $uploaded_images[] = ['id' => 'temp_' . (count($_SESSION['temp_car_images']) - 1), 'url' => $destination];
                     } else {
                         mysqli_query($conn, "INSERT INTO car_image (car_id, car_image_url) VALUES ($car_id, '$destination')");
-                        $new_id = mysqli_insert_id($conn);
-                        $uploaded_images[] = ['id' => $new_id, 'url' => $destination];
+                        $uploaded_images[] = ['id' => mysqli_insert_id($conn), 'url' => $destination];
                     }
                 }
             }
@@ -65,12 +53,10 @@ if (isset($_FILES['ajax_car_images']) && isset($_POST['car_id_ajax'])) {
 
 if (isset($_POST['action']) && $_POST['action'] == 'delete_temp_image' && isset($_POST['temp_id'])) {
     $temp_index = (int) str_replace('temp_', '', $_POST['temp_id']);
-
     if (isset($_SESSION['temp_car_images'][$temp_index])) {
         $path = $_SESSION['temp_car_images'][$temp_index];
-        if (file_exists($path)) {
+        if (file_exists($path))
             unlink($path);
-        }
         unset($_SESSION['temp_car_images'][$temp_index]);
         $_SESSION['temp_car_images'] = array_values($_SESSION['temp_car_images']);
     }
@@ -143,11 +129,9 @@ if (isset($_POST['save_all_details'])) {
         mysqli_begin_transaction($conn);
 
         $car_id_post = isset($_POST['car_id_post']) ? (int) $_POST['car_id_post'] : 0;
-        if ($car_id_post === 0 && isset($_GET['id'])) {
+        if ($car_id_post === 0 && isset($_GET['id']))
             $car_id_post = (int) $_GET['id'];
-        }
         $is_updating = ($car_id_post > 0);
-
         $feat_safety = isset($_POST['feat_safety']) ? implode(',', $_POST['feat_safety']) : '';
         $feat_tech = isset($_POST['feat_tech']) ? implode(',', $_POST['feat_tech']) : '';
         $feat_comf = isset($_POST['feat_comf']) ? implode(',', $_POST['feat_comf']) : '';
@@ -172,7 +156,6 @@ if (isset($_POST['save_all_details'])) {
         $fuel_type = mysqli_real_escape_string($conn, $_POST['fuel_type'] ?? '');
         $fuel_consump = max(0, (float) ($_POST['fuel_consumption'] ?? 0)) ?: 'NULL';
         $battery = max(0, (int) ($_POST['battery_range'] ?? 0)) ?: 'NULL';
-
         $cylinders = max(0, (int) ($_POST['cylinders'] ?? 0)) ?: 'NULL';
         $top_speed = max(0, (int) ($_POST['top_speed'] ?? 0)) ?: 'NULL';
         $co2_emissions = max(0, (int) ($_POST['co2_emissions'] ?? 0)) ?: 'NULL';
@@ -183,7 +166,6 @@ if (isset($_POST['save_all_details'])) {
         $fuel_tank = max(0, (int) ($_POST['fuel_tank'] ?? 0)) ?: 'NULL';
         $weight = max(0, (int) ($_POST['weight'] ?? 0)) ?: 'NULL';
         $seats = max(0, (int) ($_POST['seats'] ?? 0)) ?: 'NULL';
-
         $width_with_mirrors = max(0, (int) ($_POST['width_with_mirrors'] ?? 0)) ?: 'NULL';
         $ground_clearance = max(0, (int) ($_POST['ground_clearance'] ?? 0)) ?: 'NULL';
         $airbags_count = max(0, (int) ($_POST['airbags_count'] ?? 0)) ?: 'NULL';
@@ -197,7 +179,6 @@ if (isset($_POST['save_all_details'])) {
         $description = mysqli_real_escape_string($conn, $_POST['description'] ?? '');
 
         $price = max(0, (float) ($_POST['price'] ?? 0));
-        $stock = max(0, (int) ($_POST['stock'] ?? 1));
         $status = mysqli_real_escape_string($conn, $_POST['status'] ?? 'Draft');
         $origin = mysqli_real_escape_string($conn, $_POST['car_origin'] ?? 'New Car');
         $plate = mysqli_real_escape_string($conn, $_POST['plate_no'] ?? '');
@@ -219,7 +200,7 @@ if (isset($_POST['save_all_details'])) {
 
         if ($is_updating) {
             $update_cars = "UPDATE cars SET 
-                car_type_id='$type_id', location_id='$location_id', car_brand='$brand', car_model='$model', car_year='$year', car_origin='$origin', car_plate='$plate', 
+                car_type_id='$type_id', location_id='$location_id', car_brand='$brand', car_model='$model', variant='$variant', car_year='$year', car_origin='$origin', car_plate='$plate', 
                 engine_type='$engine_type', displacement=$displacement, hp=$hp, torque=$torque, acceleration=$acceleration, transmission='$transmission', drive_type='$drive_type', fuel_type='$fuel_type', fuel_consumption=$fuel_consump, battery_range=$battery, 
                 dimensions='$dimensions', wheelbase=$wheelbase, boot_cap=$boot_cap, fuel_tank=$fuel_tank, weight=$weight, seats=$seats, 
                 ext_color='$ext_color', int_color='$int_color', seat_mat='$seat_mat', wheel_size='$wheel_size', headlights='$headlights', screen='$screen', 
@@ -231,14 +212,14 @@ if (isset($_POST['save_all_details'])) {
             $target_car_id = $car_id_post;
         } else {
             $insert_cars = "INSERT INTO cars (
-                car_type_id, location_id, car_brand, car_model, car_year, car_origin, car_plate, car_created_at, 
+                car_type_id, location_id, car_brand, car_model, variant, car_year, car_origin, car_plate, car_created_at, 
                 engine_type, displacement, hp, torque, acceleration, transmission, drive_type, fuel_type, fuel_consumption, battery_range, 
                 dimensions, wheelbase, boot_cap, fuel_tank, weight, seats, 
                 ext_color, int_color, seat_mat, wheel_size, headlights, screen, 
                 feat_safety, feat_tech, feat_comf, description,
                 negotiable, monthly_installment, promotion_rebate, promo_valid_until, cylinders, top_speed, co2_emissions, width_with_mirrors, ground_clearance, airbags_count
             ) VALUES (
-                '$type_id', '$location_id', '$brand', '$model', '$year', '$origin', '$plate', NOW(), 
+                '$type_id', '$location_id', '$brand', '$model', '$variant', '$year', '$origin', '$plate', NOW(), 
                 '$engine_type', $displacement, $hp, $torque, $acceleration, '$transmission', '$drive_type', '$fuel_type', $fuel_consump, $battery, 
                 '$dimensions', $wheelbase, $boot_cap, $fuel_tank, $weight, $seats, 
                 '$ext_color', '$int_color', '$seat_mat', '$wheel_size', '$headlights', '$screen', 
@@ -249,13 +230,38 @@ if (isset($_POST['save_all_details'])) {
             $target_car_id = mysqli_insert_id($conn);
         }
 
+        if ($origin === 'New Car') {
+            $total_stock = 0; 
+            mysqli_query($conn, "DELETE FROM car_inventory WHERE car_id = $target_car_id");
+
+            if (isset($_POST['inv_color']) && is_array($_POST['inv_color'])) {
+                $inv_colors = $_POST['inv_color'];
+                $inv_hexes = $_POST['inv_color_hex'];
+                $inv_qtys = $_POST['inv_qty'];
+
+                for ($i = 0; $i < count($inv_colors); $i++) {
+                    $c_name = mysqli_real_escape_string($conn, $inv_colors[$i]);
+                    $c_hex = mysqli_real_escape_string($conn, $inv_hexes[$i] ?? '#ffffff');
+                    $q = max(0, (int) ($inv_qtys[$i] ?? 0));
+
+                    if (!empty($c_name)) {
+                        mysqli_query($conn, "INSERT INTO car_inventory (car_id, variant_name, color_name, color_hex, quantity) 
+                                             VALUES ($target_car_id, '$variant', '$c_name', '$c_hex', $q)");
+                        $total_stock += $q;
+                    }
+                }
+            }
+            $final_stock = $total_stock;
+        } else {
+            mysqli_query($conn, "DELETE FROM car_inventory WHERE car_id = $target_car_id");
+            $final_stock = max(0, (int) ($_POST['stock'] ?? 1));
+        }
         $check_stat = mysqli_query($conn, "SELECT 1 FROM car_status WHERE car_id = $target_car_id");
         if (mysqli_num_rows($check_stat) > 0) {
-            mysqli_query($conn, "UPDATE car_status SET car_status_price=$price, car_status_stock_quantity=$stock, car_status_status='$status', car_status_updated_at=NOW() WHERE car_id=$target_car_id") or throw new Exception(mysqli_error($conn));
+            mysqli_query($conn, "UPDATE car_status SET car_status_price=$price, car_status_stock_quantity=$final_stock, car_status_status='$status', car_status_updated_at=NOW() WHERE car_id=$target_car_id") or throw new Exception(mysqli_error($conn));
         } else {
-            mysqli_query($conn, "INSERT INTO car_status (car_id, car_status_price, car_status_stock_quantity, car_status_status, car_status_updated_at) VALUES ($target_car_id, $price, $stock, '$status', NOW())") or throw new Exception(mysqli_error($conn));
+            mysqli_query($conn, "INSERT INTO car_status (car_id, car_status_price, car_status_stock_quantity, car_status_status, car_status_updated_at) VALUES ($target_car_id, $price, $final_stock, '$status', NOW())") or throw new Exception(mysqli_error($conn));
         }
-
         if ($origin === 'Used Car') {
             $used_mileage = max(0, (int) ($_POST['used_mileage'] ?? 0));
             $owners = max(0, (int) ($_POST['owners'] ?? 0));
@@ -295,7 +301,6 @@ if (isset($_POST['save_all_details'])) {
             $real_upload_dir = "../../uploads/cars/";
             if (!is_dir($real_upload_dir))
                 mkdir($real_upload_dir, 0777, true);
-
             foreach ($_SESSION['temp_car_images'] as $temp_path) {
                 if (file_exists($temp_path)) {
                     $filename = basename($temp_path);
@@ -334,6 +339,86 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
     <link rel="stylesheet" href="../../CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
+        #inventory-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .color-inv-row {
+            display: grid !important;
+            grid-template-columns: 42px 1fr 100px 36px !important;
+            align-items: center !important;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+
+        .custom-color-picker {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .selected-color-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background-color: #ffffff;
+            transition: 0.2s;
+        }
+
+        .selected-color-circle:hover {
+            border-color: #9ca3af;
+        }
+
+        .color-palette-popup {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            z-index: 50;
+            width: 220px;
+        }
+
+        .color-palette-popup.active {
+            display: grid;
+        }
+
+        .palette-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .palette-swatch:hover {
+            transform: scale(1.2);
+            border-color: #4b5563;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .form-section {
             background: white;
             border: 1px solid var(--border-color);
@@ -496,7 +581,6 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            text-decoration: none;
             border: none;
             cursor: pointer;
             transition: 0.2s;
@@ -560,7 +644,6 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                     <h1 style="font-size: 24px; font-weight: 700; color: #111827;">
                         <?= $is_edit ? 'Edit Car Details' : 'Add New Car' ?>
                     </h1>
-
                     <select id="car_origin_select" name="car_origin"
                         class="badge <?= $is_used_car ? 'badge-used' : 'badge-new' ?>"
                         style="border:none; outline:none; text-transform: uppercase; cursor: pointer;">
@@ -591,22 +674,15 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-car"></i> Basic Info</h3>
                     <div class="grid-4">
-                        <div class="form-group"><label>Car ID</label>
-                            <input type="text" class="form-control" value="CAR<?= $display_id ?>" readonly>
-                        </div>
-                        <div class="form-group"><label>Brand</label>
-                            <input type="text" name="brand" class="form-control"
-                                value="<?= htmlspecialchars($car['car_brand'] ?? 'Proton') ?>">
-                        </div>
-                        <div class="form-group"><label>Model</label>
-                            <input type="text" name="model" class="form-control" placeholder="e.g., X50, Saga"
-                                value="<?= htmlspecialchars($car['car_model'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Variant/Trim</label>
-                            <input type="text" name="variant" class="form-control" placeholder="e.g., 1.5 TGDi Flagship"
-                                value="<?= htmlspecialchars($car['variant'] ?? '') ?>">
-                        </div>
-
+                        <div class="form-group"><label>Car ID</label><input type="text" class="form-control"
+                                value="CAR<?= $display_id ?>" readonly></div>
+                        <div class="form-group"><label>Brand</label><input type="text" name="brand" class="form-control"
+                                value="<?= htmlspecialchars($car['car_brand'] ?? 'Proton') ?>"></div>
+                        <div class="form-group"><label>Model</label><input type="text" name="model" class="form-control"
+                                placeholder="e.g., X50" value="<?= htmlspecialchars($car['car_model'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Variant</label><input type="text" name="variant"
+                                class="form-control" placeholder="e.g., 1.5 TGDi"
+                                value="<?= htmlspecialchars($car['variant'] ?? '') ?>"></div>
                         <div class="form-group"><label>Body Type</label>
                             <select name="body_type" class="form-control">
                                 <option <?= ($car['car_type_name'] ?? '') == 'Sedan' ? 'selected' : '' ?>>Sedan</option>
@@ -617,15 +693,12 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 <option <?= ($car['car_type_name'] ?? '') == 'MPV' ? 'selected' : '' ?>>MPV</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Year</label>
-                            <input type="number" name="year" min="1990" oninput="if(this.value<0)this.value=0"
+                        <div class="form-group"><label>Year</label><input type="number" name="year" min="1990"
                                 class="form-control" value="<?= htmlspecialchars($car['car_year'] ?? date('Y')) ?>">
                         </div>
                         <div class="form-group"><label>Status</label>
                             <select name="status" class="form-control">
                                 <option <?= ($car['car_status_status'] ?? '') == 'Active' ? 'selected' : '' ?>>Active
-                                </option>
-                                <option <?= ($car['car_status_status'] ?? '') == 'Draft' ? 'selected' : '' ?>>Draft
                                 </option>
                                 <option <?= ($car['car_status_status'] ?? '') == 'Inactive' ? 'selected' : '' ?>>Inactive
                                 </option>
@@ -637,10 +710,9 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-tag"></i> Pricing & Stock</h3>
                     <div class="grid-3">
-                        <div class="form-group"><label>OTR Price (RM)</label>
-                            <input type="number" step="0.01" min="0" oninput="if(this.value<0)this.value=0" name="price"
-                                class="form-control" value="<?= htmlspecialchars($car['car_status_price'] ?? '') ?>">
-                        </div>
+                        <div class="form-group"><label>Price (RM)</label><input type="number" step="0.01" min="0"
+                                name="price" class="form-control"
+                                value="<?= htmlspecialchars($car['car_status_price'] ?? '') ?>"></div>
                         <div class="form-group"><label>Negotiable</label>
                             <select name="negotiable" class="form-control">
                                 <option value="Yes" <?= (($car['negotiable'] ?? '') == 'Yes') ? 'selected' : '' ?>>Yes
@@ -649,25 +721,57 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 </option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Monthly Installment (RM)</label>
-                            <input type="number" step="0.01" min="0" oninput="if(this.value<0)this.value=0"
-                                name="monthly_installment" class="form-control"
-                                value="<?= htmlspecialchars($car['monthly_installment'] ?? '') ?>">
+                        <div class="form-group">
+                            <label>Monthly Installment <span style="font-size: 11px; color: #6b7280;">(10% D/P, 3%
+                                    Int.)</span></label>
+                            <div style="display: flex; gap: 8px;">
+                                <select id="loan_tenure_select" class="form-control"
+                                    style="width: 45%; cursor: pointer; background-color: #f9fafb;">
+                                    <option value="5">5 Years</option>
+                                    <option value="7">7 Years</option>
+                                    <option value="9" selected>9 Years</option>
+                                </select>
+                                <div style="position: relative; width: 55%;">
+                                    <span
+                                        style="position: absolute; left: 12px; top: 10px; color: #059669; font-weight: 700;">RM</span>
+                                    <input type="text" name="monthly_installment" id="monthly_installment_input"
+                                        class="form-control"
+                                        style="padding-left: 40px; background-color: #ecfdf5; color: #047857; font-weight: 700; cursor: not-allowed;"
+                                        value="<?= htmlspecialchars($car['monthly_installment'] ?? '') ?>" readonly>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group"><label>Promotion / Rebate Details</label>
-                            <input type="text" name="promotion_rebate" class="form-control"
-                                value="<?= htmlspecialchars($car['promotion_rebate'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Promo Valid Until</label>
-                            <input type="date" name="promo_valid_until" class="form-control"
-                                value="<?= htmlspecialchars($car['promo_valid_until'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Stock Available (units)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="stock"
-                                class="form-control"
-                                value="<?= htmlspecialchars($car['car_status_stock_quantity'] ?? 1) ?>">
-                        </div>
+                        <div class="form-group"><label>Promotion / Rebate Details</label><input type="text"
+                                name="promotion_rebate" class="form-control"
+                                value="<?= htmlspecialchars($car['promotion_rebate'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Promo Valid Until</label><input type="date"
+                                name="promo_valid_until" class="form-control"
+                                value="<?= htmlspecialchars($car['promo_valid_until'] ?? '') ?>"></div>
+                        <div class="form-group" id="stock_group"><label>Stock Available (units)</label><input
+                                type="number" min="0" name="stock" class="form-control"
+                                value="<?= htmlspecialchars($car['car_status_stock_quantity'] ?? 1) ?>"></div>
                     </div>
+                </div>
+
+                <div class="form-section" id="variant_inventory_section">
+                    <h3 class="section-header"><i class="fas fa-palette"></i> Color Variants </h3>
+                    <div id="inventory-container">
+                        <?php
+                        if ($is_edit && $car['car_origin'] == 'New Car') {
+                            $inv_q = mysqli_query($conn, "SELECT * FROM car_inventory WHERE car_id = $car_id");
+                            while ($inv_row = mysqli_fetch_assoc($inv_q)) {
+                                $c = addslashes($inv_row['color_name']);
+                                $hex = addslashes($inv_row['color_hex'] ?: '#ffffff');
+                                $q = $inv_row['quantity'];
+                                echo "<script>document.addEventListener('DOMContentLoaded', function() { addInventoryRow('$c', '$hex', $q); });</script>";
+                            }
+                        }
+                        ?>
+                    </div>
+                    <button type="button" class="btn-add-blue" style="background: margin-top: 10px; border:none;"
+                        onclick="addInventoryRow()">
+                        <i class="fas fa-plus"></i> Add Color
+                    </button>
                 </div>
             </div>
 
@@ -682,23 +786,16 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 <option <?= ($car['engine_type'] ?? '') == 'EV' ? 'selected' : '' ?>>EV</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Displacement (cc)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="displacement"
-                                class="form-control" value="<?= htmlspecialchars($car['displacement'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Horsepower (hp)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="hp"
-                                class="form-control" value="<?= htmlspecialchars($car['hp'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Torque (Nm)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="torque"
-                                class="form-control" value="<?= htmlspecialchars($car['torque'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>0-100 km/h (s)</label>
-                            <input type="number" step="0.1" min="0" oninput="if(this.value<0)this.value=0"
+                        <div class="form-group"><label>Displacement (cc)</label><input type="number" min="0"
+                                name="displacement" class="form-control"
+                                value="<?= htmlspecialchars($car['displacement'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Horsepower (hp)</label><input type="number" min="0" name="hp"
+                                class="form-control" value="<?= htmlspecialchars($car['hp'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Torque (Nm)</label><input type="number" min="0" name="torque"
+                                class="form-control" value="<?= htmlspecialchars($car['torque'] ?? '') ?>"></div>
+                        <div class="form-group"><label>0-100 km/h (s)</label><input type="number" step="0.1" min="0"
                                 name="acceleration" class="form-control"
-                                value="<?= htmlspecialchars($car['acceleration'] ?? '') ?>">
-                        </div>
+                                value="<?= htmlspecialchars($car['acceleration'] ?? '') ?>"></div>
                         <div class="form-group"><label>Transmission</label>
                             <select name="transmission" class="form-control">
                                 <option <?= ($car['transmission'] ?? '') == 'Auto' ? 'selected' : '' ?>>Auto</option>
@@ -722,85 +819,63 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 <option <?= ($car['fuel_type'] ?? '') == 'Electric' ? 'selected' : '' ?>>Electric</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Fuel Consumption (L/100km)</label>
-                            <input type="number" step="0.1" min="0" oninput="if(this.value<0)this.value=0"
+                        <div class="form-group"><label>Fuel Consumption</label><input type="number" step="0.1" min="0"
                                 name="fuel_consumption" class="form-control"
-                                value="<?= htmlspecialchars($car['fuel_consumption'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Battery Range (km, EV only)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="battery_range"
-                                class="form-control" value="<?= htmlspecialchars($car['battery_range'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>No. of Cylinders</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="cylinders"
-                                class="form-control" value="<?= htmlspecialchars($car['cylinders'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Top Speed (km/h)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="top_speed"
-                                class="form-control" value="<?= htmlspecialchars($car['top_speed'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>CO₂ Emissions (g/km)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="co2_emissions"
-                                class="form-control" value="<?= htmlspecialchars($car['co2_emissions'] ?? '') ?>">
-                        </div>
+                                value="<?= htmlspecialchars($car['fuel_consumption'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Battery Range</label><input type="number" min="0"
+                                name="battery_range" class="form-control"
+                                value="<?= htmlspecialchars($car['battery_range'] ?? '') ?>"></div>
+                        <div class="form-group"><label>No. of Cylinders</label><input type="number" min="0"
+                                name="cylinders" class="form-control"
+                                value="<?= htmlspecialchars($car['cylinders'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Top Speed (km/h)</label><input type="number" min="0"
+                                name="top_speed" class="form-control"
+                                value="<?= htmlspecialchars($car['top_speed'] ?? '') ?>"></div>
+                        <div class="form-group"><label>CO₂ Emissions</label><input type="number" min="0"
+                                name="co2_emissions" class="form-control"
+                                value="<?= htmlspecialchars($car['co2_emissions'] ?? '') ?>"></div>
                     </div>
                 </div>
 
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-ruler-combined"></i> Dimensions & Capacity</h3>
                     <div class="grid-3">
-                        <div class="form-group"><label>L × W × H (mm)</label>
-                            <input type="text" name="dimensions" class="form-control"
-                                placeholder="e.g., 4330 x 1800 x 1609"
-                                value="<?= htmlspecialchars($car['dimensions'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Wheelbase (mm)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="wheelbase"
-                                class="form-control" value="<?= htmlspecialchars($car['wheelbase'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Boot Capacity (L)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="boot_cap"
-                                class="form-control" value="<?= htmlspecialchars($car['boot_cap'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Fuel Tank (L)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="fuel_tank"
-                                class="form-control" value="<?= htmlspecialchars($car['fuel_tank'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Kerb Weight (kg)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="weight"
-                                class="form-control" value="<?= htmlspecialchars($car['weight'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Seating Capacity</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="seats"
-                                class="form-control" value="<?= htmlspecialchars($car['seats'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Width with Mirrors (mm)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0"
+                        <div class="form-group"><label>L × W × H (mm)</label><input type="text" name="dimensions"
+                                class="form-control" value="<?= htmlspecialchars($car['dimensions'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Wheelbase (mm)</label><input type="number" min="0"
+                                name="wheelbase" class="form-control"
+                                value="<?= htmlspecialchars($car['wheelbase'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Boot Capacity (L)</label><input type="number" min="0"
+                                name="boot_cap" class="form-control"
+                                value="<?= htmlspecialchars($car['boot_cap'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Fuel Tank (L)</label><input type="number" min="0"
+                                name="fuel_tank" class="form-control"
+                                value="<?= htmlspecialchars($car['fuel_tank'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Kerb Weight (kg)</label><input type="number" min="0"
+                                name="weight" class="form-control"
+                                value="<?= htmlspecialchars($car['weight'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Seating Capacity</label><input type="number" min="0" name="seats"
+                                class="form-control" value="<?= htmlspecialchars($car['seats'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Width with Mirrors (mm)</label><input type="number" min="0"
                                 name="width_with_mirrors" class="form-control"
-                                value="<?= htmlspecialchars($car['width_with_mirrors'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Ground Clearance (mm)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="ground_clearance"
-                                class="form-control" value="<?= htmlspecialchars($car['ground_clearance'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Airbags Count</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="airbags_count"
-                                class="form-control" value="<?= htmlspecialchars($car['airbags_count'] ?? '') ?>">
-                        </div>
+                                value="<?= htmlspecialchars($car['width_with_mirrors'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Ground Clearance (mm)</label><input type="number" min="0"
+                                name="ground_clearance" class="form-control"
+                                value="<?= htmlspecialchars($car['ground_clearance'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Airbags Count</label><input type="number" min="0"
+                                name="airbags_count" class="form-control"
+                                value="<?= htmlspecialchars($car['airbags_count'] ?? '') ?>"></div>
                     </div>
                 </div>
 
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-fill-drip"></i> Exterior & Interior</h3>
                     <div class="grid-3">
-                        <div class="form-group"><label>Exterior Colour</label>
-                            <input type="text" name="ext_color" class="form-control"
-                                value="<?= htmlspecialchars($car['ext_color'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Interior Colour</label>
-                            <input type="text" name="int_color" class="form-control"
-                                value="<?= htmlspecialchars($car['int_color'] ?? '') ?>">
-                        </div>
+                        <div class="form-group" id="ext_color_group"><label>Exterior Colour</label><input type="text"
+                                name="ext_color" class="form-control"
+                                value="<?= htmlspecialchars($car['ext_color'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Interior Colour</label><input type="text" name="int_color"
+                                class="form-control" value="<?= htmlspecialchars($car['int_color'] ?? '') ?>"></div>
                         <div class="form-group"><label>Seat Material</label>
                             <select name="seat_mat" class="form-control">
                                 <option <?= ($car['seat_mat'] ?? '') == 'Fabric' ? 'selected' : '' ?>>Fabric</option>
@@ -809,10 +884,8 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 </option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Wheel Size & Type</label>
-                            <input type="text" name="wheel_size" class="form-control"
-                                value="<?= htmlspecialchars($car['wheel_size'] ?? '') ?>">
-                        </div>
+                        <div class="form-group"><label>Wheel Size & Type</label><input type="text" name="wheel_size"
+                                class="form-control" value="<?= htmlspecialchars($car['wheel_size'] ?? '') ?>"></div>
                         <div class="form-group"><label>Headlights</label>
                             <select name="headlights" class="form-control">
                                 <option <?= ($car['headlights'] ?? '') == 'Halogen' ? 'selected' : '' ?>>Halogen</option>
@@ -821,50 +894,42 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 </option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Infotainment Screen (inch)</label>
-                            <input type="text" name="screen" class="form-control"
-                                value="<?= htmlspecialchars($car['screen'] ?? '') ?>">
-                        </div>
+                        <div class="form-group"><label>Infotainment Screen (inch)</label><input type="text"
+                                name="screen" class="form-control"
+                                value="<?= htmlspecialchars($car['screen'] ?? '') ?>"></div>
                     </div>
                 </div>
             </div>
 
             <div id="tab-media" class="tab-content">
                 <div class="form-section">
-                    <h3 class="section-header"><i class="fas fa-camera"></i> Car Images Gallery <medium
+                    <h3 class="section-header"><i class="fas fa-camera"></i> General Car Gallery <medium
                             style="color:#9ca3af; font-weight:400; margin-left:10px;">(Changes are instant)</medium>
                     </h3>
-
                     <input type="file" id="ajaxImageInput" name="ajax_car_images[]" multiple accept="image/*"
                         style="display:none;">
-
                     <label for="ajaxImageInput" class="custom-file-upload">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span>Click to Upload New Images</span>
                         <medium style="color:#9ca3af; font-size:12px;">(JPG, PNG, WEBP, GIF)</medium>
                     </label>
-
                     <div id="imageGalleryGrid" class="image-gallery-grid">
                         <?php if ($is_edit && !empty($car_images)): ?>
                             <?php foreach ($car_images as $img): ?>
                                 <div class="gallery-item" id="img_container_<?= $img['car_image_id'] ?>">
                                     <img src="<?= htmlspecialchars($img['car_image_url']) ?>">
                                     <button type="button" class="delete-img-btn"
-                                        onclick="deleteExistingImage(<?= $img['car_image_id'] ?>)" title="Delete image">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                        onclick="deleteExistingImage(<?= $img['car_image_id'] ?>)" title="Delete image"><i
+                                            class="fas fa-trash-alt"></i></button>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
-
                         <?php if (!$is_edit && isset($_SESSION['temp_car_images']) && !empty($_SESSION['temp_car_images'])): ?>
                             <?php foreach ($_SESSION['temp_car_images'] as $index => $temp_path): ?>
                                 <div class="gallery-item" id="img_container_temp_<?= $index ?>">
                                     <img src="<?= htmlspecialchars($temp_path) ?>">
                                     <button type="button" class="delete-img-btn" onclick="deleteTempImage('temp_<?= $index ?>')"
-                                        title="Delete image">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                        title="Delete image"><i class="fas fa-trash-alt"></i></button>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -884,7 +949,7 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                         <label class="checkbox-item"><input type="checkbox" name="feat_safety[]" value="LKA"
                                 <?= in_array('LKA', $saved_safety ?? []) ? 'checked' : '' ?>> Lane Keep Assist</label>
                         <label class="checkbox-item"><input type="checkbox" name="feat_safety[]" value="BSM"
-                                <?= in_array('BSM', $saved_safety ?? []) ? 'checked' : '' ?>> Blind Spot Monitor</label>
+                                <?= in_array('BSM', $saved_safety ?? []) ? 'checked' : '' ?>> Blind Spot</label>
                         <label class="checkbox-item"><input type="checkbox" name="feat_safety[]" value="360 Cam"
                                 <?= in_array('360 Cam', $saved_safety ?? []) ? 'checked' : '' ?>> 360° Camera</label>
                     </div>
@@ -935,25 +1000,19 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                     </div>
                 </div>
             </div>
-
             <div id="tab-history" class="tab-content">
                 <div class="form-section" style="border-color: #fdba74; background: #fffbeb;">
                     <h3 class="section-header" style="color: #c2410c; border-bottom-color: #fed7aa;"><i
                             class="fas fa-file-contract"></i> Vehicle History & Location</h3>
                     <div class="grid-3">
-                        <div class="form-group"><label>Plate Number</label>
-                            <input type="text" name="plate_no" class="form-control"
-                                value="<?= htmlspecialchars($car['car_plate'] ?? '') ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label>State</label>
+                        <div class="form-group"><label>Plate Number</label><input type="text" name="plate_no"
+                                class="form-control" value="<?= htmlspecialchars($car['car_plate'] ?? '') ?>"></div>
+                        <div class="form-group"><label>State</label>
                             <select id="state_select" name="location_state" class="form-control">
                                 <option value="">Select State...</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>City</label>
+                        <div class="form-group"><label>City</label>
                             <select id="city_select" name="location_city" class="form-control custom-scroll-dropdown"
                                 onfocus="if(this.options.length > 3) this.size=4;" onblur="this.size=1;"
                                 onchange="this.size=1; this.blur();">
@@ -964,15 +1023,11 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                             <input type="hidden" id="saved_city"
                                 value="<?= htmlspecialchars($car['location_city'] ?? '') ?>">
                         </div>
-
-                        <div class="form-group"><label>Mileage (km)</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="used_mileage"
-                                class="form-control" value="<?= htmlspecialchars($car['used_mileage'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Previous Owners</label>
-                            <input type="number" min="0" oninput="if(this.value<0)this.value=0" name="owners"
-                                class="form-control" value="<?= htmlspecialchars($car['owners'] ?? '') ?>">
-                        </div>
+                        <div class="form-group"><label>Mileage (km)</label><input type="number" min="0"
+                                name="used_mileage" class="form-control"
+                                value="<?= htmlspecialchars($car['used_mileage'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Previous Owners</label><input type="number" min="0" name="owners"
+                                class="form-control" value="<?= htmlspecialchars($car['owners'] ?? '') ?>"></div>
                         <div class="form-group"><label>Accident History</label>
                             <select name="accident" class="form-control">
                                 <option <?= ($car['accident'] ?? '') == 'None' ? 'selected' : '' ?>>None</option>
@@ -990,18 +1045,13 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 </option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Road Tax Expiry</label>
-                            <input type="date" name="road_tax_expiry" class="form-control"
-                                value="<?= htmlspecialchars($car['roadtax'] ?? '') ?>">
-                        </div>
-                        <div class="form-group"><label>Puspakom Date</label>
-                            <input type="date" name="puspakom_date" class="form-control"
-                                value="<?= htmlspecialchars($car['puspakom'] ?? '') ?>">
-                        </div>
-                        <div class="form-group" style="grid-column: span 3;"><label>Known Issues / Defects</label>
-                            <input type="text" name="known_issues" class="form-control"
-                                value="<?= htmlspecialchars($car['defects'] ?? '') ?>">
-                        </div>
+                        <div class="form-group"><label>Road Tax Expiry</label><input type="date" name="road_tax_expiry"
+                                class="form-control" value="<?= htmlspecialchars($car['roadtax'] ?? '') ?>"></div>
+                        <div class="form-group"><label>Puspakom Date</label><input type="date" name="puspakom_date"
+                                class="form-control" value="<?= htmlspecialchars($car['puspakom'] ?? '') ?>"></div>
+                        <div class="form-group" style="grid-column: span 3;"><label>Known Issues / Defects</label><input
+                                type="text" name="known_issues" class="form-control"
+                                value="<?= htmlspecialchars($car['defects'] ?? '') ?>"></div>
                     </div>
                 </div>
 
@@ -1040,7 +1090,7 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
 
         </form>
     </main>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../../JAVA SCRIPT/edit_car_details.js?v=<?= time() ?>"></script>
 </body>
 
