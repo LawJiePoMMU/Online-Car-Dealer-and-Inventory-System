@@ -54,7 +54,7 @@ function openModal(row) {
             frame.style.display = 'none';
         }
     }
-    
+
     setPdfFrame('frameDrivingLicence', row.driving_licence_url);
     setPdfFrame('frameBankStatement', row.bank_statement_url);
     setPdfFrame('frameSalarySlip', row.salary_slip_url);
@@ -78,13 +78,13 @@ function openModal(row) {
 
     setPdfFrame('frameIcPdf', row.ic_pdf_url);
     setupDocUI('ic_pdf', row.ic_pdf_url);
-    
+
     setPdfFrame('frameDrivingLicence', row.driving_licence_url);
     setupDocUI('driving_licence', row.driving_licence_url);
-    
+
     setPdfFrame('frameBankStatement', row.bank_statement_url);
     setupDocUI('bank_statement', row.bank_statement_url);
-    
+
     setPdfFrame('frameSalarySlip', row.salary_slip_url);
     setupDocUI('salary_slip', row.salary_slip_url);
 
@@ -108,10 +108,11 @@ function openModal(row) {
     document.getElementById('editPlateBtn').style.display = status === 'Pending Viewing' ? 'none' : 'inline-block';
 
     const dpPanel = document.getElementById('dpPanel');
-   if (['Loan Processing', 'Sold', 'Cancelled', 'Refunded'].includes(status)) {
+    if (['Loan Processing', 'Sold', 'Cancelled', 'Refunded'].includes(status)) {
         dpPanel.style.display = '';
         const dpStatus = row.dp_status || 'Pending';
-        const dpAmt = parseFloat(row.dp_amount) || (currentCarPrice * 0.10);
+        const dpRate = typeof GLOBAL_DP_RATE !== 'undefined' ? GLOBAL_DP_RATE : 0.10;
+        const dpAmt = parseFloat(row.dp_amount) || (currentCarPrice * dpRate);
         document.getElementById('detDPAmount').textContent = 'RM ' + fmt(dpAmt);
         document.getElementById('detDPStatus').textContent = dpStatus;
         document.getElementById('detDPApproved').textContent = row.dp_approved_at || '-';
@@ -157,9 +158,11 @@ function togglePdf(id) {
 
 function recalcMonthly() {
     const years = parseInt(document.getElementById('loanYears').value);
-    const dp = currentCarPrice * 0.10;
+    const dpRate = typeof GLOBAL_DP_RATE !== 'undefined' ? GLOBAL_DP_RATE : 0.10;
+    const loanRate = typeof GLOBAL_LOAN_RATE !== 'undefined' ? (GLOBAL_LOAN_RATE / 100) : 0.03;
+    const dp = currentCarPrice * dpRate;
     const loan = currentCarPrice - dp;
-    const monthly = loan > 0 ? (loan * (1 + 0.03 * years)) / (years * 12) : 0;
+    const monthly = loan > 0 ? (loan * (1 + loanRate * years)) / (years * 12) : 0;
     document.getElementById('detPrice').textContent = 'RM ' + fmt(currentCarPrice);
     document.getElementById('detDP').textContent = '- RM ' + fmt(dp);
     document.getElementById('detMonthly').textContent = 'RM ' + fmt(monthly) + ' / mo';
@@ -276,14 +279,6 @@ async function saveInlineAddress() {
     document.getElementById('detPostcode').textContent = post || '-';
 
     toggleEditAddress(false);
-}
-
-async function processToLoan() {
-    const r = await Swal.fire({
-        title: 'Process to Loan?', text: 'Moves to Loan Processing and creates a Down Payment record.',
-        icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, Process', confirmButtonColor: '#10b981'
-    });
-    if (r.isConfirmed) await doAction('process_to_loan', {});
 }
 
 async function approveDP() {
