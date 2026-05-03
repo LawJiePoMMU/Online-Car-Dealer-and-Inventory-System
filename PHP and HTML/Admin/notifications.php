@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../database.php';
+include '../Config/database.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

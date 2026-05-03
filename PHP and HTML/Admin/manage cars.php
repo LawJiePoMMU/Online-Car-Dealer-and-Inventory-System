@@ -1,13 +1,75 @@
 <?php
 session_start();
-include '../database.php';
+include '../Config/database.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 mysqli_query($conn, "INSERT IGNORE INTO car_types (car_type_id, car_type_name) VALUES 
 (1, 'Sedan'), (2, 'SUV'), (3, 'Hatchback'), (4, 'EV'), (5, 'Exora (MPV)')");
-if (isset($_GET['ajax']) && isset($_GET['toggle_id']) && isset($_GET['current_status'])) {
-    $id = (int) $_GET['toggle_id'];
-    $new_status = ($_GET['current_status'] == 'Active') ? 'Inactive' : 'Active';
-    mysqli_query($conn, "UPDATE car_status SET car_status_status = '$new_status' WHERE car_id = $id");
+if (isset($_GET['ajax']) && isset($_GET['action']) && $_GET['action'] == 'copy_cars') {
+    header('Content-Type: application/json');
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (isset($input['car_ids']) && is_array($input['car_ids'])) {
+        try {
+            mysqli_begin_transaction($conn);
+            foreach ($input['car_ids'] as $old_id) {
+                $old_id = (int) $old_id;
+                $sql_copy_car = "INSERT INTO cars (
+                    car_type_id, location_id, car_brand, car_model, car_year, car_origin, car_plate, engine_type, 
+                    displacement, hp, torque, acceleration, transmission, drive_type, fuel_type, fuel_consumption, 
+                    battery_range, dimensions, wheelbase, boot_cap, fuel_tank, weight, seats, ext_color, int_color, 
+                    seat_mat, wheel_size, headlights, screen, feat_safety, feat_tech, feat_comf, description, 
+                    negotiable, monthly_installment, promotion_rebate, promo_valid_until, cylinders, top_speed, 
+                    co2_emissions, width_with_mirrors, ground_clearance, airbags_count, car_created_at
+                ) 
+                SELECT 
+                    car_type_id, location_id, car_brand, car_model, car_year, car_origin, NULL, engine_type, 
+                    displacement, hp, torque, acceleration, transmission, drive_type, fuel_type, fuel_consumption, 
+                    battery_range, dimensions, wheelbase, boot_cap, fuel_tank, weight, seats, ext_color, int_color, 
+                    seat_mat, wheel_size, headlights, screen, feat_safety, feat_tech, feat_comf, description, 
+                    negotiable, monthly_installment, promotion_rebate, promo_valid_until, cylinders, top_speed, 
+                    co2_emissions, width_with_mirrors, ground_clearance, airbags_count, NOW()
+                FROM cars WHERE car_id = $old_id";
+
+                mysqli_query($conn, $sql_copy_car) or throw new Exception(mysqli_error($conn));
+                $new_car_id = mysqli_insert_id($conn);
+                $sql_copy_status = "INSERT INTO car_status (car_id, car_status_price, car_status_stock_quantity, car_status_status, car_status_updated_at)
+                                    SELECT $new_car_id, car_status_price, 1, 'Draft', NOW() 
+                                    FROM car_status WHERE car_id = $old_id";
+                mysqli_query($conn, $sql_copy_status) or throw new Exception(mysqli_error($conn));
+                $sql_copy_img = "INSERT INTO car_image (car_id, car_image_url) 
+                                 SELECT $new_car_id, car_image_url FROM car_image WHERE car_id = $old_id";
+                mysqli_query($conn, $sql_copy_img);
+            }
+            mysqli_commit($conn);
+            echo json_encode(['status' => 'success', 'new_id' => $new_car_id]);
+        } catch (Exception $e) {
+            mysqli_rollback($conn);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'No IDs received.']);
+    }
+    exit();
+}
+
+if (isset($_GET['ajax']) && isset($_GET['action']) && $_GET['action'] == 'quick_view' && isset($_GET['car_id'])) {
+    $vid = (int) $_GET['car_id'];
+    $query = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, ct.car_type_name, loc.location_state, loc.location_city,
+              h.used_mileage, h.owners, h.accident, h.flood, h.service_hist, h.last_service, h.next_service, h.roadtax, h.puspakom, h.rem_warranty, h.defects,
+              (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('::', color_name, color_hex, quantity) SEPARATOR '||') FROM car_inventory WHERE car_id = $vid) as color_data
+              FROM cars c 
+              LEFT JOIN car_status stat ON c.car_id = stat.car_id 
+              LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
+              LEFT JOIN locations loc ON c.location_id = loc.location_id
+              LEFT JOIN car_history h ON c.car_id = h.car_id
+              WHERE c.car_id = $vid";
+
+    $q = mysqli_query($conn, $query);
+    if ($r = mysqli_fetch_assoc($q)) {
+        echo json_encode(['status' => 'success', 'data' => $r]);
+    } else {
+        echo json_encode(['status' => 'error']);
+    }
     exit();
 }
 
@@ -124,25 +186,32 @@ $offset_used = ($p_used - 1) * $limit_used;
 $pages_used = ceil($count_used / $limit_used);
 
 try {
-    $query_new = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, loc.location_state, loc.location_city, ct.car_type_name 
+    $query_new = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, 
+                  loc.location_state, loc.location_city, ct.car_type_name,
+                  GROUP_CONCAT(DISTINCT inv.variant_name SEPARATOR ', ') as all_variants,
+                  GROUP_CONCAT(DISTINCT CONCAT_WS('::', inv.color_name, inv.color_hex, inv.quantity) SEPARATOR '||') as color_data
                   FROM cars c 
                   LEFT JOIN car_status stat ON c.car_id = stat.car_id 
                   LEFT JOIN locations loc ON c.location_id = loc.location_id
                   LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
+                  LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
                   WHERE c.car_origin = 'New Car' $search_condition 
                   GROUP BY c.car_id 
-                  ORDER BY (CASE WHEN stat.car_status_stock_quantity <= 1 THEN 0 ELSE 1 END) ASC, c.car_id DESC 
+                  ORDER BY (CASE WHEN stat.car_status_stock_quantity <= 1 THEN 0 ELSE 1 END) ASC, c.car_brand ASC, c.car_model ASC, c.car_id DESC
                   LIMIT $limit_new OFFSET $offset_new";
     $result_new = mysqli_query($conn, $query_new);
-
-    $query_used = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, loc.location_state, loc.location_city, ct.car_type_name 
+    $query_used = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, 
+                   loc.location_state, loc.location_city, ct.car_type_name,
+                   GROUP_CONCAT(DISTINCT inv.variant_name SEPARATOR ', ') as all_variants,
+                   GROUP_CONCAT(DISTINCT CONCAT_WS('::', inv.color_name, inv.color_hex, inv.quantity) SEPARATOR '||') as color_data
                    FROM cars c 
                    LEFT JOIN car_status stat ON c.car_id = stat.car_id 
                    LEFT JOIN locations loc ON c.location_id = loc.location_id
                    LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
+                   LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
                    WHERE c.car_origin = 'Used Car' $search_condition 
                    GROUP BY c.car_id 
-                   ORDER BY FIELD(stat.car_status_status, 'Active', 'Inactive') ASC, c.car_id DESC 
+                   ORDER BY FIELD(stat.car_status_status, 'Active', 'Inactive') ASC, c.car_brand ASC, c.car_model ASC, c.car_id DESC
                    LIMIT $limit_used OFFSET $offset_used";
     $result_used = mysqli_query($conn, $query_used);
 } catch (Exception $e) {
@@ -159,70 +228,28 @@ try {
     <link rel="stylesheet" href="../../CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
-        @media print {
-            body {
-                background: white !important;
-                margin: 0;
-                padding: 0;
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
             }
 
-            .sidebar,
-            .topbar,
-            form,
-            .btn-add-blue,
-            .btn-export,
-            .print-hide,
-            .pagination-container,
-            .page-tabs {
-                display: none !important;
+            70% {
+                box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
             }
 
-            .main-content {
-                margin: 0 !important;
-                padding: 20px !important;
-                width: 100% !important;
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
             }
+        }
 
-            .table-card {
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-                width: 100% !important;
-                margin-bottom: 30px !important;
-            }
+        .pulse-warning {
+            animation: pulse-red 1.5s infinite;
+            border-color: #ef4444 !important;
+        }
 
-            table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                border: 2px solid #000 !important;
-            }
-
-            th,
-            td {
-                border: 1px solid #000 !important;
-                padding: 10px 8px !important;
-                color: #000 !important;
-                text-align: left !important;
-                font-size: 13px !important;
-            }
-
-            th {
-                background-color: #f3f4f6 !important;
-                -webkit-print-color-adjust: exact;
-                font-weight: bold !important;
-                text-transform: uppercase;
-            }
-
-            .badge,
-            .dot,
-            .status-cell span {
-                color: #000 !important;
-                background: none !important;
-            }
-
-            tr.no-print-row {
-                display: none !important;
-            }
+        .row-checkbox,
+        .selectAllColumn {
+            display: none;
         }
 
         .page-tabs {
@@ -332,8 +359,11 @@ try {
                 </select>
             </form>
             <div style="display: flex; gap: 12px;">
-                <button type="button" class="btn-export" onclick="printSelected()"><i class="fas fa-print"></i> Print
-                    Selected</button>
+                <button type="button" class="btn-export" id="copyBtn" onclick="toggleCopyMode()"><i
+                        class="fas fa-copy"></i> Copy Selected</button>
+                <button type="button" class="btn-export" id="cancelCopyBtn" onclick="cancelCopyMode()"
+                    style="display: none; background-color: #64748b; color: white; border-color: #64748b;"><i
+                        class="fas fa-times"></i> Cancel</button>
                 <a href="edit_car_details.php" class="btn-add-blue"
                     style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box;">
                     <i class="fas fa-plus"></i> Add Car
@@ -406,10 +436,39 @@ try {
                                     } else {
                                         echo "<strong style='color: #111827; font-size: 13px; margin-bottom:2px;'>" . htmlspecialchars($row['car_brand']) . "</strong>";
                                     }
-                                    echo "<span style='color: #6b7280; font-weight: normal; font-size: 12px;'>" . htmlspecialchars($row['car_model']) . "</span>
-                                                </div>
+                                    echo "<span style='color: #6b7280; font-weight: normal; font-size: 12px;'>" . htmlspecialchars($row['car_model']) . "</span>";
+                                    $variants_text = !empty($row['all_variants']) ? htmlspecialchars($row['all_variants']) : 'No Variants';
+                                    $color_html = "";
+                                    if (!empty($row['color_data'])) {
+                                        $color_items = explode('||', $row['color_data']);
+                                        foreach ($color_items as $c_item) {
+                                            $parts = explode('::', $c_item);
+                                            if (count($parts) === 3) {
+                                                $c_name = htmlspecialchars($parts[0]);
+                                                $c_hex = htmlspecialchars($parts[1]);
+                                                $c_qty = (int) $parts[2];
+                                                $warning_class = ($c_qty <= 2) ? "pulse-warning" : "";
+                                                $badge_bg = ($c_qty <= 2) ? "#ef4444" : "#6b7280";
+
+                                                $color_html .= "
+                                                <div style='position: relative; display: inline-block; margin-right: 12px; margin-top: 4px;' title='{$c_name} (Qty: {$c_qty})'>
+                                                    <div class='{$warning_class}' style='background-color: {$c_hex}; width: 18px; height: 18px; border-radius: 50%; border: 1px solid #d1d5db; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer;'></div>
+                                                    <span style='position: absolute; top: -8px; right: -8px; background: {$badge_bg}; color: white; font-size: 9px; font-weight: bold; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid white;'>{$c_qty}</span>
+                                                </div>";
+                                            }
+                                        }
+                                    } else {
+                                        $color_html = "<span style='color: #9ca3af; font-size: 11px;'>No Colors</span>";
+                                    }
+
+                                    echo "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 6px;'>
+                                            <div style='display: flex; flex-wrap: wrap;'>
+                                                <span style='background: #f3f4f6; color: #4b5563; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;' title='Variants'>
+                                                    <i class='fas fa-car-side' style='margin-right: 3px;'></i> {$variants_text}
+                                                </span>
                                             </div>
-                                          </td>";
+                                            <div style='display: flex; align-items: center; flex-wrap: wrap;'>{$color_html}</div>
+                                          </div>";
 
                                     echo "<td style='text-align: left;'>" . $type . "</td>";
                                     $badge_bg = $stock > 5 ? "#dcfce7" : ($stock > 1 ? "#fef3c7" : "#fee2e2");
@@ -424,11 +483,11 @@ try {
                                     $toggle_color = ($status == 'Active') ? '#ef4444' : '#10b981';
                                     echo "<td class='print-hide' style='text-align: center;'>
                                             <div style='display: flex; justify-content: center; gap: 12px;'>
-                                                <a href='edit_car_details.php?id={$row['car_id']}' style='color: #9ca3af;'><i class='fas fa-pen'></i></a>
-                                                <a href='javascript:void(0);' onclick='toggleStatus({$row['car_id']}, \"{$status}\", this)' style='color: {$toggle_color};'><i class='fas {$toggle_icon}'></i></a>
+                                                <a href='javascript:void(0);' onclick='quickView({$row['car_id']})' style='color: #3b82f6;' title='Quick View'><i class='fas fa-eye'></i></a>
+                                                <a href='edit_car_details.php?id={$row['car_id']}' style='color: #9ca3af;' title='Edit'><i class='fas fa-pen'></i></a>
+                                                <a href='javascript:void(0);' onclick='toggleStatus({$row['car_id']}, \"{$status}\", this)' style='color: {$toggle_color};' title='Toggle Status'><i class='fas {$toggle_icon}'></i></a>
                                             </div>
                                           </td>";
-                                    echo "</tr>";
                                 }
                             } else {
                                 echo "<tr><td colspan='9' style='text-align: center; padding: 40px; color: var(--text-muted);'>No new cars found.</td></tr>";
@@ -525,10 +584,39 @@ try {
                                     } else {
                                         echo "<strong style='color: #111827; font-size: 13px; margin-bottom:2px;'>" . htmlspecialchars($row['car_brand']) . "</strong>";
                                     }
-                                    echo "<span style='color: #6b7280; font-weight: normal; font-size: 12px;'>" . htmlspecialchars($row['car_model']) . "</span>
-                                                </div>
+                                    echo "<span style='color: #6b7280; font-weight: normal; font-size: 12px;'>" . htmlspecialchars($row['car_model']) . "</span>";
+                                    $variants_text = !empty($row['all_variants']) ? htmlspecialchars($row['all_variants']) : 'No Variants';
+                                    $color_html = "";
+                                    if (!empty($row['color_data'])) {
+                                        $color_items = explode('||', $row['color_data']);
+                                        foreach ($color_items as $c_item) {
+                                            $parts = explode('::', $c_item);
+                                            if (count($parts) === 3) {
+                                                $c_name = htmlspecialchars($parts[0]);
+                                                $c_hex = htmlspecialchars($parts[1]);
+                                                $c_qty = (int) $parts[2];
+                                                $warning_class = ($c_qty <= 2) ? "pulse-warning" : "";
+                                                $badge_bg = ($c_qty <= 2) ? "#ef4444" : "#6b7280";
+
+                                                $color_html .= "
+                                                <div style='position: relative; display: inline-block; margin-right: 12px; margin-top: 4px;' title='{$c_name} (Qty: {$c_qty})'>
+                                                    <div class='{$warning_class}' style='background-color: {$c_hex}; width: 18px; height: 18px; border-radius: 50%; border: 1px solid #d1d5db; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer;'></div>
+                                                    <span style='position: absolute; top: -8px; right: -8px; background: {$badge_bg}; color: white; font-size: 9px; font-weight: bold; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid white;'>{$c_qty}</span>
+                                                </div>";
+                                            }
+                                        }
+                                    } else {
+                                        $color_html = "<span style='color: #9ca3af; font-size: 11px;'>No Colors</span>";
+                                    }
+
+                                    echo "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 6px;'>
+                                            <div style='display: flex; flex-wrap: wrap;'>
+                                                <span style='background: #f3f4f6; color: #4b5563; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;' title='Variants'>
+                                                    <i class='fas fa-car-side' style='margin-right: 3px;'></i> {$variants_text}
+                                                </span>
                                             </div>
-                                          </td>";
+                                            <div style='display: flex; align-items: center; flex-wrap: wrap;'>{$color_html}</div>
+                                          </div>";
 
                                     echo "<td style='text-align: left;'>" . $type . "</td>";
                                     $badge_bg = ($stock > 0) ? "#dcfce7" : "#fee2e2";
@@ -547,11 +635,11 @@ try {
 
                                     echo "<td class='print-hide' style='text-align: center;'>
                                             <div style='display: flex; justify-content: center; gap: 12px;'>
-                                                <a href='edit_car_details.php?id={$row['car_id']}' style='color: #9ca3af;'><i class='fas fa-pen'></i></a>
-                                                <a href='javascript:void(0);' onclick='toggleStatus({$row['car_id']}, \"{$status}\", this)' style='color: {$toggle_color};'><i class='fas {$toggle_icon}'></i></a>
+                                                <a href='javascript:void(0);' onclick='quickView({$row['car_id']})' style='color: #3b82f6;' title='Quick View'><i class='fas fa-eye'></i></a>
+                                                <a href='edit_car_details.php?id={$row['car_id']}' style='color: #9ca3af;' title='Edit'><i class='fas fa-pen'></i></a>
+                                                <a href='javascript:void(0);' onclick='toggleStatus({$row['car_id']}, \"{$status}\", this)' style='color: {$toggle_color};' title='Toggle Status'><i class='fas {$toggle_icon}'></i></a>
                                             </div>
                                           </td>";
-                                    echo "</tr>";
                                 }
                             } else {
                                 echo "<tr><td colspan='11' style='text-align: center; padding: 40px; color: var(--text-muted);'>No used cars found.</td></tr>";

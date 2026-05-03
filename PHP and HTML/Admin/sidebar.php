@@ -21,8 +21,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a href="reservation.php" class="<?= ($current_page == 'reservation.php') ? 'active' : ''; ?>">
-                <i class="fas fa-calendar-alt"></i> <span>Reservations</span>
+            <a href="orders.php" class="<?= ($current_page == 'orders.php') ? 'active' : ''; ?>">
+                <i class="fas fa-shopping-cart"></i> <span>Orders</span>
             </a>
         </li>
         <li>
@@ -33,11 +33,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <li>
             <a href="chat.php" class="<?= ($current_page == 'chat.php') ? 'active' : ''; ?>">
                 <i class="fas fa-comments"></i> <span>Chat</span>
-            </a>
-        </li>
-        <li>
-            <a href="reservations history.php" class="<?= ($current_page == 'reservations history.php') ? 'active' : ''; ?>">
-                <i class="fas fa-history"></i> <span>Reservations History</span>
             </a>
         </li>
     </ul>
