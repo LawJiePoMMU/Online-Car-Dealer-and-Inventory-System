@@ -2,6 +2,15 @@
 session_start();
 include '../Config/database.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$admin_id = $_SESSION['user_id'] ?? 1;
+$sys_query = mysqli_query($conn, "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('default_dp_percent', 'default_loan_rate')");
+$sys_settings = [];
+while ($row = mysqli_fetch_assoc($sys_query)) {
+    $sys_settings[$row['setting_key']] = $row['setting_value'];
+}
+$dp_percent = $sys_settings['default_dp_percent'] ?? 10;
+$dp_rate = $dp_percent / 100;
+$loan_rate = $sys_settings['default_loan_rate'] ?? 3.00;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     ob_clean();
@@ -13,6 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         switch ($action) {
 
             case 'process_to_loan':
+                $order_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM reservations WHERE reservation_id = $res_id"));
+                $car_id = $order_info['car_id'];
+                $check_car = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_status_status FROM car_status WHERE car_id = $car_id"));
+                if ($check_car['car_status_status'] === 'Inactive') {
+                    echo json_encode(['success' => false, 'message' => 'Cannot process. This car model is currently Inactive.']);
+                    break;
+                }
                 mysqli_query($conn, "UPDATE reservations SET reservation_status='Loan Processing' WHERE reservation_id=$res_id");
                 $res = mysqli_fetch_assoc(mysqli_query(
                     $conn,
@@ -21,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                      JOIN car_status cs ON c.car_id = cs.car_id
                      WHERE r.reservation_id = $res_id"
                 ));
-                $dp = round($res['car_status_price'] * 0.10, 2);
+                $dp = round($res['car_status_price'] * $dp_rate, 2);
                 $exists = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id FROM down_payments WHERE reservation_id=$res_id"));
                 if (!$exists) {
                     mysqli_query($conn, "INSERT INTO down_payments (reservation_id, dp_amount, dp_status, dp_created_at) VALUES ($res_id, $dp, 'Pending', NOW())");
@@ -46,6 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     echo json_encode(['success' => false, 'message' => 'Down payment must be Approved before marking as Sold.']);
                     break;
                 }
+                $order_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM reservations WHERE reservation_id = $res_id"));
+                $car_id = $order_info['car_id'];
+                $check_car = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_status_status FROM car_status WHERE car_id = $car_id"));
+                if ($check_car['car_status_status'] !== 'Active') {
+                    echo json_encode(['success' => false, 'message' => 'Cannot sell. This car model has been marked as Inactive.']);
+                    break;
+                }
                 mysqli_query($conn, "UPDATE car_status cs JOIN reservations r ON r.car_id = cs.car_id SET cs.car_status_stock_quantity = cs.car_status_stock_quantity - 1 WHERE r.reservation_id = $res_id");
                 mysqli_query($conn, "UPDATE reservations SET reservation_status='Sold', reservation_sold_at=NOW() WHERE reservation_id=$res_id");
                 echo json_encode(['success' => true, 'message' => 'Marked as Sold. Stock deducted.']);
@@ -59,9 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             case 'update_plate':
                 $plate = mysqli_real_escape_string($conn, $_POST['plate'] ?? '');
-                $car = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM reservations WHERE reservation_id=$res_id"));
-                mysqli_query($conn, "UPDATE cars SET car_plate='$plate' WHERE car_id={$car['car_id']}");
-                echo json_encode(['success' => true, 'message' => 'Number plate updated.']);
+                mysqli_query($conn, "UPDATE reservations SET assigned_plate='$plate' WHERE reservation_id=$res_id");
+                echo json_encode(['success' => true, 'message' => 'Number plate assigned to this order.']);
                 break;
 
             case 'update_address':
@@ -160,8 +182,10 @@ $query = "
            COALESCE(u.user_city,    '') as user_city,
            COALESCE(u.user_state,   '') as user_state,
            COALESCE(u.user_postcode,'') as user_postcode,
-           c.car_brand, c.car_model, c.car_year, c.car_plate, c.car_origin,
-           'Standard' as car_variant, 'White' as car_color,
+           c.car_brand, c.car_model, c.car_year, c.car_origin,
+           c.variant as car_variant,
+           COALESCE(r.assigned_plate, c.car_plate) as car_plate, 
+           COALESCE(r.assigned_color, 'Pending Selection') as car_color,
            p.payment_amount, p.payment_status, p.payment_method, p.payment_date,
            cs.car_status_stock_quantity as stock,
            cs.car_status_price as price,
@@ -1018,11 +1042,12 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
 
                         <div class="finance-box">
                             <div class="finance-row">
-                                <span style="font-size:13px;font-weight:600;color:#6b7280;">OTR Price</span>
+                                <span style="font-size:13px;font-weight:600;color:#6b7280;">Price</span>
                                 <span id="detPrice" style="font-size:16px;font-weight:700;color:#111827;">RM 0.00</span>
                             </div>
                             <div class="finance-row">
-                                <span style="font-size:13px;font-weight:600;color:#6b7280;">Down Payment (10%)</span>
+                                <span style="font-size:13px;font-weight:600;color:#6b7280;">Down Payment
+                                    (<?= $sys_settings['default_dp_percent'] ?? 10 ?>%)</span>
                                 <span id="detDP" style="font-size:14px;font-weight:600;color:#dc2626;">- RM 0.00</span>
                             </div>
                             <div class="finance-row">
@@ -1042,7 +1067,7 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
                                             <option value="7">7 Yrs</option>
                                             <option value="9" selected>9 Yrs</option>
                                         </select>
-                                        @ 3% P.A.
+                                        @ <?= $loan_rate ?>% P.A.
                                     </span>
                                 </div>
                                 <span id="detMonthly" style="font-size:20px;font-weight:800;color:#2563eb;">RM 0.00 /
@@ -1182,6 +1207,10 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        window.GLOBAL_DP_RATE = <?= isset($dp_rate) ? $dp_rate : 0.10 ?>;
+        window.GLOBAL_LOAN_RATE = <?= isset($loan_rate) ? $loan_rate : 3.00 ?>;
+    </script>
     <script src="../../JAVA SCRIPT/orders.js?v=<?= time() ?>"></script>
 </body>
 
