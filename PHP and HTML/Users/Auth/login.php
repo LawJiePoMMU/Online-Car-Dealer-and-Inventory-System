@@ -3,7 +3,7 @@ session_start();
 
 // 如果已经登录，直接跳到 profile
 if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true){
-    header("location: ../homepage.php");
+    header("location: ../index.php");
     exit;
 }
 
