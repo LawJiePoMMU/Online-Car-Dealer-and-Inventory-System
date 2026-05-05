@@ -1,14 +1,15 @@
 /* =========================================
-   1. CSS Variables (统一颜色和设定)
+   1. CSS Variables (统一高级感配色)
    ========================================= */
 :root {
-    --primary-color: #007bff; /* Primary Blue */
-    --primary-hover: #0056b3;
-    --bg-color: #f4f7f6;      /* Light Grey Background */
-    --card-bg: #ffffff;       /* White Card */
-    --text-dark: #333333;
-    --text-light: #666666;
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --primary-color: #1e293b; /* 🔥 高级曜石青 (核心色) */
+    --primary-hover: #0f172a; /* 🔥 鼠标悬浮时的深色 */
+    --bg-color: #f8fafc;      /* 极浅冷灰背景 */
+    --card-bg: #ffffff;       /* 纯白卡片 */
+    --text-dark: #334155;     /* 深石板灰文字 */
+    --text-light: #64748b;    /* 次要辅助文字 */
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.3s ease;
 }
 
@@ -25,6 +26,7 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-dark);
+    line-height: 1.6;
 }
 
 .container {
@@ -33,55 +35,48 @@ body {
     padding: 0 20px;
 }
 
-/* Navbar */
 /* =========================================
-   3. Navbar (修正版🔥 真正居中)
+   3. Navbar (全屏伸缩，永远靠两边)
    ========================================= */
-
-/* Navbar */
 .navbar {
     background: #fff;
     position: sticky;
     top: 0;
     z-index: 1000;
-
-    border-bottom: 2px solid #e0e0e0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid #edf2f7;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    width: 100%; 
 }
 
-/* Container */
 .nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 15px 20px;
-
+    width: 100%;
+    max-width: 100%; 
+    padding: 15px 40px; 
     display: flex;
     align-items: center;
-
+    justify-content: space-between; 
     position: relative;
 }
 
-/* Logo */
 .nav-logo {
     font-size: 22px;
     font-weight: 700;
     color: var(--primary-color);
     text-decoration: none;
+    z-index: 10; 
+    letter-spacing: -0.5px;
 }
 
-/* 中间菜单 */
 .nav-links {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-
     display: flex;
-    gap: 40px;
+    gap: 60px; 
     list-style: none;
     white-space: nowrap;
 }
 
-/* links */
 .nav-links a {
     text-decoration: none;
     color: var(--text-dark);
@@ -95,7 +90,6 @@ body {
     color: var(--primary-color);
 }
 
-/* underline animation */
 .nav-links a::after {
     content: "";
     position: absolute;
@@ -111,29 +105,36 @@ body {
     width: 100%;
 }
 
-/* 右侧按钮 */
 .nav-actions {
-    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 10; 
 }
 
 /* =========================================
-   4. Buttons (按钮统一样式)
+   4. Buttons (全站统一样式 - 高级感微动效)
    ========================================= */
 .btn-primary {
     background-color: var(--primary-color);
     color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 10px 24px;
+    border-radius: 8px;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
     border: none;
     cursor: pointer;
     transition: var(--transition);
-    display: inline-block;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: var(--shadow);
 }
 
 .btn-primary:hover {
     background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
 }
 
 /* =========================================
@@ -151,15 +152,16 @@ body {
    ========================================= */
 .card {
     background: var(--card-bg);
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: var(--shadow);
     transition: var(--transition);
+    border: 1px solid #f1f5f9;
 }
 
 .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 15px rgba(0,0,0,0.15);
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-hover);
 }
 
 .card img {
@@ -169,18 +171,18 @@ body {
 }
 
 .card-body {
-    padding: 15px;
+    padding: 20px;
 }
-
 .card-title {
     font-size: 18px;
     margin-bottom: 10px;
+    color: var(--text-dark);
 }
 
 .card-price {
     color: var(--primary-color);
     font-weight: 700;
-    font-size: 20px;
+    font-size: 22px;
     margin-bottom: 15px;
 }
 
@@ -192,68 +194,64 @@ body {
     margin: 50px auto;
     background: var(--card-bg);
     padding: 30px;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: var(--shadow);
 }
 
 .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     text-align: left;
-    /* Form group */
-
 }
 
-/* Password wrapper */
 .password-wrapper {
     position: relative;
 }
 
-/* Forgot password */
 .forgot-link {
      display: flex;
     justify-content: flex-end;
-
-    margin-top: -2px;   /* 🔥 拉上来 */
-    margin-bottom: 8px; /* 🔥 控制和按钮距离 */
-
+    margin-top: -2px;  
+    margin-bottom: 8px; 
 }
 
 .forgot-link a {
-    font-size: 15px;
-    color: #666;
+    font-size: 13px;
+    color: var(--text-light);
     text-decoration: none;
+    transition: var(--transition);
 }
 
 .forgot-link a:hover {
     color: var(--primary-color);
     text-decoration: underline;
 }
-}
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     font-weight: 500;
+    font-size: 14px;
+    color: var(--text-dark);
 }
 
 .form-control {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    padding: 12px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
     font-family: 'Poppins', sans-serif;
     transition: var(--transition);
+    outline: none;
 }
 
 .form-control:focus {
-    outline: none;
-    border-color: var(--primary-color);
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
 }
 
 /* =========================================
    8. Specific Page Layouts (特定页面排版)
    ========================================= */
-/* Car Details Page (左图右文) */
 .details-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -261,7 +259,7 @@ body {
     margin: 40px 0;
     background: var(--card-bg);
     padding: 30px;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: var(--shadow);
 }
 .details-img img {
@@ -275,7 +273,6 @@ body {
     justify-content: center;
 }
 
-/* Search Page (左过滤右列表) */
 .search-layout {
     display: grid;
     grid-template-columns: 250px 1fr;
@@ -285,7 +282,7 @@ body {
 .filter-card {
     background: var(--card-bg);
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: var(--shadow);
     height: fit-content;
 }
@@ -294,177 +291,703 @@ body {
    9. Utility & Footer (工具类与底部)
    ========================================= */
 .text-center { text-align: center; }
-.section-title { margin: 40px 0 20px; font-size: 28px; }
+.section-title { margin: 40px 0 20px; font-size: 28px; color: var(--text-dark); }
 
 .footer { 
     background: white; 
     padding: 20px; 
     margin-top: 50px; 
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.02); 
+    border-top: 1px solid #edf2f7;
 }
 
 /* =========================================
-   10. Responsive Design (简单响应式)
+   10. Responsive Design (通用响应式)
    ========================================= */
 @media (max-width: 768px) {
-    .nav-container { flex-direction: column; gap: 15px; }
+    .nav-container { flex-direction: column; gap: 15px; padding: 15px 20px; }
+    .nav-links { position: static; transform: none; flex-wrap: wrap; justify-content: center; gap: 20px; }
     .details-layout, .search-layout { grid-template-columns: 1fr; }
 }
 
 /* =========================================
-   11. Authentication Pages (Login / Register)
+   11. Authentication Pages (Login / Register) - Premium Edition
    ========================================= */
-
-/* SMART CSS: If the page contains '.auth-wrapper', automatically stretch the header! */
 body:has(.auth-wrapper) {
-    background-color: #ffffff;
+    background-color: var(--bg-color);
     min-height: 100vh;
 }
 
 body:has(.auth-wrapper) .navbar {
     box-shadow: none !important; 
-    border-bottom: 1px solid #eee;
-    width: 100% !important;
-    max-width: 100% !important;
+    border-bottom: 1px solid #edf2f7;
     background-color: #ffffff !important;
 }
 
-body:has(.auth-wrapper) .nav-container {
-    width: 100% !important;
-    max-width: none !important; /* Destroys the 1200px limit */
-    padding-left: 40px !important; /* Pushes Logo to left edge */
-    padding-right: 40px !important; /* Pushes Button to right edge */
-}
-
-/* Main Container */
 .auth-wrapper {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    min-height: 80vh;
-    padding-top: 80px;
-    background-color: #ffffff;
+    align-items: center;
+    min-height: calc(100vh - 80px);
+    padding: 40px 20px;
+    background-color: var(--bg-color);
 }
 
 .auth-container {
-    max-width: 350px;
+    max-width: 400px;
     width: 100%;
-    text-align: center;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: var(--shadow-hover);
+    border: 1px solid #f1f5f9;
+    text-align: left;
+    box-sizing: border-box;
 }
 
-/* Typography */
+/* Register 页面的特定宽度 */
+.auth-container.register-container {
+    max-width: 750px !important;
+}
+
 .auth-title {
     font-weight: 600;
-    margin-bottom: 40px;
-    font-size: 34px;
-    color: #111;
-    text-align: left;
+    margin-bottom: 30px;
+    font-size: 28px;
+    color: var(--primary-color);
+    letter-spacing: -0.5px;
 }
 
 .auth-label {
     display: block;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     font-weight: 500;
-    color: #533;
-    font-size: 14px;
-    text-align: left;
+    color: var(--text-light);
+    font-size: 13px;
 }
 
-/* Form Inputs */
 .auth-input {
     width: 100%;
-    padding: 14px;
-    border: 1px solid #e0e0e0;   /* 🔥 很淡的边框 */
-    border-radius: 6px;
-    font-size: 15px;
+    padding: 12px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
     box-sizing: border-box;
-    background-color: #f0f0f0;
-    color: #111;
+    background-color: #ffffff;
+    color: var(--text-dark);
     outline: none;
-    margin-bottom: 20px;
+    transition: all 0.3s ease;
     font-family: 'Poppins', sans-serif;
 }
 
+.auth-input::placeholder { color: #cbd5e1; }
 .auth-input:focus {
-    background-color: #e8e8e8;
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
 }
 
-/* Buttons */
 .auth-btn {
     width: 100%;
     padding: 14px;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.2s ease;
     text-align: center;
-    display: inline-block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     box-sizing: border-box;
     text-decoration: none;
     font-family: 'Poppins', sans-serif;
 }
 
 .auth-btn-primary {
-    background-color: #3e6ae1;
+    background-color: var(--primary-color); 
     color: white;
+    box-shadow: var(--shadow);
 }
-
 .auth-btn-primary:hover {
-    background-color: #3457b2;
+    background-color: var(--primary-hover); 
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
 }
 
-  .auth-btn-secondary {
-    background-color: #e2e2e2;  /* 🔥 比 #f4f4f4 深一点 */
-    color: #111;               /* 🔥 文字更清楚 */
-
-    width: 100%;
-    padding: 12px 0;
-
-    display: block;
-    text-align: center;
-
+.auth-btn-secondary {
+    background-color: transparent; 
+    color: var(--text-light);              
+    border: 1.5px solid #cbd5e1; 
     margin-top: 10px;
-
-    border: 1px solid #d0d0d0; /* 🔥 加边框更清晰 */
-    border-radius: 4px;
-
 }
-
 .auth-btn-secondary:hover {
-    background-color: #d0d0d0;  /* 🔥 hover 变深 */
-    color: #000;
+    background-color: var(--bg-color);  
+    color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
-/* Extras */
 .auth-error {
-    color: #d9534f;
-    padding: 10px 0;
-    margin-bottom: 20px;
-    text-align: left;
-    font-size: 14px;
-}
-
-.auth-links a {
-    color: #5c5e62;
-    text-decoration: underline;
-    font-size: 14px;
+    background-color: #fef2f2;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border-left: 4px solid #ef4444;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .auth-divider {
-    margin: 40px 0;
-    border-top: 1px solid #e2e3e3;
+    margin: 30px 0;
+    border-top: 1px solid #e2e8f0;
     position: relative;
+    text-align: center;
 }
-
 .auth-divider span {
     position: absolute;
     top: -10px;
     left: 50%;
     transform: translateX(-50%);
-    background: #fff;
-    padding: 0 15px;
-    color: #5c5e62;
+    background: #ffffff;
+    padding: 0 16px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* =========================================
+   🔥 Register Page Specific Grid & Tracker
+   ========================================= */
+.register-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    gap: 16px 24px; 
+}
+.register-grid .form-group {
+    margin-bottom: 0 !important; 
+    position: relative;
+}
+.pwd-input { padding-right: 40px !important; }
+
+.register-grid .auth-error-msg {
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    font-size: 11px;
+    color: #e53e3e;
+}
+
+.full-width { grid-column: 1 / -1; }
+.three-col-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    gap: 24px;
+    margin-top: 5px;
+}
+
+.pwd-toggle {
+    position: absolute;
+    right: 12px;
+    top: 36px;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: color 0.2s;
+}
+.pwd-toggle:hover { color: var(--primary-color); }
+
+.pwd-tracker {
+    display: none;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 8px;
     font-size: 13px;
+    color: #718096; 
+    box-shadow: var(--shadow-hover);
+    position: absolute;
+    z-index: 10;
+    width: 100%;
+    box-sizing: border-box;
+}
+.req-item { 
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px; 
+    transition: color 0.3s ease; 
+}
+.req-item:last-child { margin-bottom: 0; }
+
+.req-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
+    border-radius: 50%;
+    border: 1.5px solid #cbd5e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+.req-icon svg {
+    width: 10px;
+    height: 10px;
+    stroke-width: 3;
+    stroke: #ffffff;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.req-item.valid { color: #38a169; }
+.req-item.valid .req-icon {
+    background: #38a169;
+    border-color: #38a169;
+}
+.req-item.valid .req-icon svg { opacity: 1; }
+
+@media (max-width: 600px) {
+    .register-grid, .three-col-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================
+   12. Logged-in User Menu (头像与爱心图标)
+   ========================================= */
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 20px; 
+}
+.icon-link {
+    color: var(--text-light); 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.icon-link:hover {
+    color: var(--primary-color);
+    transform: translateY(-2px); 
+}
+
+.icon-link[title="My Wishlist"]:hover {
+    color: #ef4444; 
+}
+
+/* =========================================
+   13. Home Page / Hero Section (主页大图设计)
+   ========================================= */
+.hero-section {
+    height: 70vh; 
+    min-height: 500px;
+    background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.4)), url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+}
+
+.hero-content h1 {
+    font-size: 52px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5); 
+}
+
+.hero-content p {
+    font-size: 20px;
+    margin-bottom: 40px;
+    color: #f1f5f9;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-btn {
+    padding: 15px 35px;
+    font-size: 18px;
+    border-radius: 8px;
+}
+
+.search-bar-container {
+    margin-top: -40px; 
+    position: relative;
+    z-index: 10;
+}
+.quick-search-form {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-hover);
+    display: flex;
+    gap: 15px;
+}
+
+.quick-search-form .form-control {
+    flex: 1;
+}
+
+/* =========================================
+   14. Why Choose Us (信任板块设计)
+   ========================================= */
+.features-section {
+    background: #ffffff;
+    padding: 60px 0;
+    margin-top: 60px;
+    border-top: 1px solid #edf2f7;
+}
+
+.feature-box {
+    text-align: center;
+    padding: 20px;
+}
+
+.feature-icon {
+    font-size: 45px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .quick-search-form { flex-direction: column; }
+    .hero-content h1 { font-size: 36px; }
+}
+
+/* =========================================
+   15. Profile Page (个人主页设计)
+   ========================================= */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr; 
+    gap: 30px;
+    margin-top: 40px;
+    margin-bottom: 60px;
+}
+
+.profile-sidebar {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 30px 20px;
+    box-shadow: var(--shadow);
+    height: fit-content; 
+    text-align: center;
+    border: 1px solid #f1f5f9;
+}
+
+.profile-avatar {
+    width: 90px;
+    height: 90px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 600;
+    margin: 0 auto 15px;
+    box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25);
+}
+
+.profile-menu {
+    list-style: none;
+    margin-top: 30px;
+    text-align: left;
+}
+
+.profile-menu li a {
+    display: block;
+    padding: 12px 15px;
+    color: var(--text-dark);
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: var(--transition);
+    font-weight: 500;
+    background: var(--bg-color);
+}
+
+.profile-menu li a:hover,
+.profile-menu li a.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow);
+}
+
+.profile-menu li a[href="logout.php"]:hover {
+    background: #ef4444; 
+    color: white !important;
+}
+
+.profile-content {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: var(--shadow);
+    border: 1px solid #f1f5f9;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.info-box {
+    background: var(--bg-color);
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.info-label {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.info-value {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+@media (max-width: 768px) {
+    .profile-layout { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+}
+/* =========================================
+   16. Cars Inventory Page (Premium Flat Design - 终极高级版)
+   ========================================= */
+.inventory-page {
+    background-color: #f8fafc; /* 极浅的高级灰底色，衬托白卡片 */
+    min-height: 100vh;
+    padding-bottom: 80px;
+    font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+}
+
+.inventory-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+/* --- 顶部导航 (Categories & Filter) --- */
+.inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 40px;
+    padding-top: 30px;
+}
+
+.category-tabs {
+    display: flex;
+    gap: 40px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.category-tab {
+    padding-bottom: 15px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.category-tab.active, .category-tab:hover {
+    color: #0f172a; /* 极深的藏青色，比纯黑更高级 */
+    border-bottom-color: var(--primary-color, #e11d48); 
+}
+
+.filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 15px;
+    cursor: pointer;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+}
+
+.filter-btn:hover { color: var(--primary-color, #e11d48); }
+
+/* --- 主体内容布局 (左右分栏) --- */
+.inventory-body {
+    display: flex;
+    gap: 50px;
+    align-items: flex-start;
+}
+
+/* --- 左侧 Sidebar (Brands) --- */
+.inventory-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+}
+
+/* 🔥 核心修改：左侧菜单下划线设计 */
+.brand-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    padding: 0;
+    align-items: flex-start; /* 关键：让下划线只有文字那么宽 */
+}
+
+.brand-item {
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding-bottom: 8px; /* 给下划线留出一点距离 */
+    border-bottom: 3px solid transparent; /* 默认透明占位 */
+}
+
+.brand-item.active, .brand-item:hover {
+    color: #0f172a; 
+    background-color: transparent; /* 去掉黑色背景块 */
+    border-bottom-color: var(--primary-color, #e11d48); /* 变成底部红线 */
+    transform: none; /* 取消右移动画 */
+}
+
+/* --- 右侧车辆网格 --- */
+.inventory-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    align-items: stretch;
+}
+
+/* =========================================
+   🔥 核心：高级车辆卡片设计
+   ========================================= */
+.flat-car-card {
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff; /* 纯白无暇的底色 */
+    border-radius: 16px; /* 更圆润的现代感边角 */
+    padding: 18px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); /* 极致柔和的阴影 */
+    border: 1px solid #f1f5f9;
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+    text-decoration: none !important; /* 彻底消灭紫色超链接 */
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.flat-car-card:hover {
+    transform: translateY(-8px); /* 悬浮时优雅上浮 */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08); /* 阴影扩大，立体感拉满 */
+}
+
+/* 1. 图片规范 */
+.flat-car-img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover; /* 自动裁切，拒绝变形 */
+    border-radius: 10px;
+    margin-bottom: 18px;
+    background-color: #f1f5f9; 
+    display: block;
+}
+
+/* 2. 标题排版 */
+.flat-car-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #0f172a !important; /* 深沉的标题色 */
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.flat-car-title span {
+    font-weight: 500;
+    color: #94a3b8 !important; /* 淡淡的型号分隔线 */
+}
+
+/* 3. 价格排版 */
+.flat-car-price {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary-color, #e11d48) !important; /* 显眼的主色调价格 */
+    margin: 0 0 18px 0;
+    letter-spacing: -0.5px;
+}
+
+/* 4. 年份与状态标签 */
+.card-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.badge-primary {
+    background-color: #0f172a;
+    color: #ffffff !important;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.badge-secondary {
+    background-color: #f1f5f9;
+    color: #475569 !important;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* 5. 底部类型与地点 (永远对齐底边) */
+.flat-car-footer {
+    margin-top: auto; /* 魔法推底功能 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 16px;
+    font-size: 13px;
+    color: #64748b !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- 响应式手机端适配 --- */
+@media (max-width: 992px) {
+    .inventory-body { flex-direction: column; gap: 30px; }
+    .inventory-sidebar { width: 100%; position: static; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; }
+    .brand-list { flex-direction: row; overflow-x: auto; gap: 15px; padding-bottom: 10px;}
+    .brand-item { white-space: nowrap; }
 }
