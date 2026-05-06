@@ -9,6 +9,6 @@ $_SESSION = array();
 session_destroy();
 
 // 4. 重定向回登录页面 (或者你想让他退出后回到主页 index.php 也可以)
-header("location: login.php");
+header("location: index.php");
 exit;
 ?>
