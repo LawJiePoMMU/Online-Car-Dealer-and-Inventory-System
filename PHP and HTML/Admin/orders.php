@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../Config/database.php';
+include '../Config/functions.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $admin_id = $_SESSION['user_id'] ?? 1;
 $sys_query = mysqli_query($conn, "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('default_dp_percent', 'default_loan_rate')");
@@ -71,6 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 mysqli_query($conn, "UPDATE car_status cs JOIN reservations r ON r.car_id = cs.car_id SET cs.car_status_stock_quantity = cs.car_status_stock_quantity - 1 WHERE r.reservation_id = $res_id");
                 mysqli_query($conn, "UPDATE reservations SET reservation_status='Sold', reservation_sold_at=NOW() WHERE reservation_id=$res_id");
+                $stock_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT c.car_brand, c.car_model, cs.car_status_stock_quantity FROM car_status cs JOIN cars c ON cs.car_id = c.car_id WHERE cs.car_id = $car_id"));
+                $current_stock = (int) $stock_info['car_status_stock_quantity'];
+                $threshold = (int) get_system_setting($conn, 'low_stock_threshold');
+
+                if ($current_stock <= $threshold) {
+                    $car_name = $stock_info['car_brand'] . ' ' . $stock_info['car_model'];
+                    $msg = "Stock Alert: {$car_name} is running low. Only {$current_stock} unit(s) left!";
+                    broadcast_notification_to_admins($conn, $msg);
+                }
+
                 echo json_encode(['success' => true, 'message' => 'Marked as Sold. Stock deducted.']);
                 break;
 
@@ -120,6 +131,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $web_url = '../../uploads/documents/' . $filename;
                 move_uploaded_file($_FILES['doc_file']['tmp_name'], $filepath);
                 mysqli_query($conn, "UPDATE reservations SET {$doc_type}_url='$web_url' WHERE reservation_id=$res_id");
+                if (get_system_setting($conn, 'alert_doc_verification') === '1') {
+                    $formatted_doc_type = ucwords(str_replace('_', ' ', $doc_type));
+                    $msg = "Document Uploaded: A customer uploaded {$formatted_doc_type} for Order #ORD" . str_pad($res_id, 3, '0', STR_PAD_LEFT) . ".";
+                    broadcast_notification_to_admins($conn, $msg);
+                }
+
                 echo json_encode(['success' => true, 'message' => 'Document uploaded.', 'file_url' => $web_url]);
                 break;
 
@@ -133,6 +150,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $new_res_id = mysqli_insert_id($conn);
                 mysqli_query($conn, "INSERT INTO payments (reservation_id, payment_amount, payment_status, payment_method, payment_date) VALUES ($new_res_id, $amount, 'Paid', '$method', NOW())");
                 mysqli_commit($conn);
+                if (get_system_setting($conn, 'alert_new_booking') === '1') {
+                    $msg = "New Booking Alert! Order ID: #ORD" . str_pad($new_res_id, 3, '0', STR_PAD_LEFT);
+                    broadcast_notification_to_admins($conn, $msg);
+                }
+
                 echo json_encode(['success' => true, 'message' => 'ORD' . str_pad($new_res_id, 3, '0', STR_PAD_LEFT) . ' created successfully.']);
                 break;
 
@@ -219,7 +241,7 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Orders</title>
-    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         @media print {

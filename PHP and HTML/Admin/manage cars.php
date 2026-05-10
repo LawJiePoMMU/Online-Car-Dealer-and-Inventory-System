@@ -1,10 +1,45 @@
 <?php
 session_start();
 include '../Config/database.php';
+include '../Config/functions.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $threshold_query = mysqli_query($conn, "SELECT setting_value FROM system_settings WHERE setting_key = 'low_stock_threshold'");
 $res_threshold = mysqli_fetch_assoc($threshold_query);
 $low_stock_limit = isset($res_threshold['setting_value']) ? (int) $res_threshold['setting_value'] : 2;
+// Stock Alert 按車輛層級，合併顏色
+$low_stock_query = mysqli_query($conn, "
+    SELECT c.car_id, c.car_brand, c.car_model, c.variant,
+           GROUP_CONCAT(CONCAT(inv.color_name, ' (', inv.quantity, ' unit)') ORDER BY inv.color_name SEPARATOR ', ') as low_colors
+    FROM cars c
+    LEFT JOIN car_status stat ON c.car_id = stat.car_id
+    LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
+    WHERE c.car_origin = 'New Car'
+    AND inv.quantity <= $low_stock_limit
+    AND inv.quantity >= 0
+    GROUP BY c.car_id, c.car_brand, c.car_model, c.variant
+");
+
+while ($low_car = mysqli_fetch_assoc($low_stock_query)) {
+    $car_id_check = (int) $low_car['car_id'];
+
+    $existing = mysqli_query($conn, "
+        SELECT notification_id FROM notifications 
+        WHERE notification_message LIKE '%[car_id:{$car_id_check}]%'
+        AND notification_created_at >= NOW() - INTERVAL 24 HOUR
+        LIMIT 1
+    ");
+    if (mysqli_num_rows($existing) > 0)
+        continue;
+
+    $brand = mysqli_real_escape_string($conn, $low_car['car_brand']);
+    $model = mysqli_real_escape_string($conn, $low_car['car_model']);
+    $variant = !empty($low_car['variant']) ? mysqli_real_escape_string($conn, $low_car['variant']) : '';
+    $low_colors = $low_car['low_colors'];
+
+    $variant_part = !empty($variant) ? " ({$variant})" : '';
+    $msg = "Stock Alert [car_id:{$car_id_check}]: {$brand} {$model}{$variant_part} - low stock on {$low_colors}.";
+    broadcast_notification_to_admins($conn, $msg);
+}
 mysqli_query($conn, "INSERT IGNORE INTO car_types (car_type_id, car_type_name) VALUES 
 (1, 'Sedan'), (2, 'SUV'), (3, 'Hatchback'), (4, 'EV'), (5, 'Exora (MPV)')");
 if (isset($_GET['ajax']) && isset($_GET['action']) && $_GET['action'] == 'copy_cars') {
@@ -204,9 +239,9 @@ try {
                   LIMIT $limit_new OFFSET $offset_new";
     $result_new = mysqli_query($conn, $query_new);
     $query_used = "SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_stock_quantity, 
-                   loc.location_state, loc.location_city, ct.car_type_name,
-                   GROUP_CONCAT(DISTINCT inv.variant_name SEPARATOR ', ') as all_variants,
-                   GROUP_CONCAT(DISTINCT CONCAT_WS('::', inv.color_name, inv.color_hex, inv.quantity) SEPARATOR '||') as color_data
+               loc.location_state, loc.location_city, ct.car_type_name,
+               c.variant as all_variants,
+               c.ext_color as color_data
                    FROM cars c 
                    LEFT JOIN car_status stat ON c.car_id = stat.car_id 
                    LEFT JOIN locations loc ON c.location_id = loc.location_id
@@ -228,7 +263,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Cars</title>
-    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         @keyframes pulse-red {
@@ -461,7 +496,7 @@ try {
                                             }
                                         }
                                     } else {
-                                        $color_html = "<span style='color: #9ca3af; font-size: 11px;'>No Colors</span>";
+                                        $color_html = "<span style='background: #f3f4f6; color: #9ca3af; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px dashed #d1d5db;'>No Colors</span>";
                                     }
 
                                     echo "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 6px;'>
@@ -600,26 +635,36 @@ try {
                                     echo "<span style='color: #6b7280; font-weight: normal; font-size: 12px;'>" . htmlspecialchars($row['car_model']) . "</span>";
                                     $variants_text = !empty($row['all_variants']) ? htmlspecialchars($row['all_variants']) : 'No Variants';
                                     $color_html = "";
+                                    $ext_color_map = [
+                                        'Solid White' => '#ffffff',
+                                        'Pearl White' => '#f8fafc',
+                                        'Silver' => '#d1d5db',
+                                        'Meteor Grey' => '#6b7280',
+                                        'Black' => '#111827',
+                                        'Matte Black' => '#1f2937',
+                                        'Ruby Red' => '#ef4444',
+                                        'Maroon' => '#991b1b',
+                                        'Orange' => '#f97316',
+                                        'Yellow' => '#eab308',
+                                        'Champagne Gold' => '#d97706',
+                                        'Bronze' => '#b45309',
+                                        'Ocean Blue' => '#3b82f6',
+                                        'Cyan' => '#0ea5e9',
+                                        'Navy Blue' => '#1e3a8a',
+                                        'Green' => '#22c55e',
+                                        'Dark Green' => '#064e3b',
+                                        'Purple' => '#8b5cf6'
+                                    ];
                                     if (!empty($row['color_data'])) {
-                                        $color_items = explode('||', $row['color_data']);
-                                        foreach ($color_items as $c_item) {
-                                            $parts = explode('::', $c_item);
-                                            if (count($parts) === 3) {
-                                                $c_name = htmlspecialchars($parts[0]);
-                                                $c_hex = htmlspecialchars($parts[1]);
-                                                $c_qty = (int) $parts[2];
-                                                $warning_class = ($c_qty <= $low_stock_limit) ? "pulse-warning" : "";
-                                                $badge_bg = ($c_qty <= $low_stock_limit) ? "#ef4444" : "#6b7280";
-
-                                                $color_html .= "
-                                                <div style='position: relative; display: inline-block; margin-right: 12px; margin-top: 4px;' title='{$c_name} (Qty: {$c_qty})'>
-                                                    <div class='{$warning_class}' style='background-color: {$c_hex}; width: 18px; height: 18px; border-radius: 50%; border: 1px solid #d1d5db; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer;'></div>
-                                                    <span style='position: absolute; top: -8px; right: -8px; background: {$badge_bg}; color: white; font-size: 9px; font-weight: bold; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid white;'>{$c_qty}</span>
-                                                </div>";
-                                            }
-                                        }
+                                        $c_name = htmlspecialchars($row['color_data']);
+                                        $c_hex = isset($ext_color_map[$c_name]) ? $ext_color_map[$c_name] : '#d1d5db';
+                                        $color_html = "
+                                         <div style='display: inline-flex; align-items: center; background: #f8fafc; padding: 3px 10px; border-radius: 20px; border: 1px solid #e2e8f0; gap: 6px; margin-top: 4px;'>
+                                         <div style='width: 12px; height: 12px; border-radius: 50%; background-color: {$c_hex}; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0;'></div>
+                                         <span style='font-size: 11px; color: #374151; font-weight: 500;'>{$c_name}</span>
+                                         </div>";
                                     } else {
-                                        $color_html = "<span style='color: #9ca3af; font-size: 11px;'>No Colors</span>";
+                                        $color_html = "<span style='background: #f3f4f6; color: #9ca3af; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px dashed #d1d5db;'>No Colors</span>";
                                     }
 
                                     echo "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 6px;'>

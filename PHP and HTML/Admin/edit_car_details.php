@@ -231,7 +231,7 @@ if (isset($_POST['save_all_details'])) {
         }
 
         if ($origin === 'New Car') {
-            $total_stock = 0; 
+            $total_stock = 0;
             mysqli_query($conn, "DELETE FROM car_inventory WHERE car_id = $target_car_id");
 
             if (isset($_POST['inv_color']) && is_array($_POST['inv_color'])) {
@@ -254,7 +254,7 @@ if (isset($_POST['save_all_details'])) {
             $final_stock = $total_stock;
         } else {
             mysqli_query($conn, "DELETE FROM car_inventory WHERE car_id = $target_car_id");
-            $final_stock = max(0, (int) ($_POST['stock'] ?? 1));
+            $final_stock = 1;
         }
         $check_stat = mysqli_query($conn, "SELECT 1 FROM car_status WHERE car_id = $target_car_id");
         if (mysqli_num_rows($check_stat) > 0) {
@@ -336,7 +336,7 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $is_edit ? 'Edit' : 'Add' ?> Details - CAR<?= $display_id ?></title>
-    <link rel="stylesheet" href="../../CSS/admin.css">
+    <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         #inventory-container {
@@ -748,7 +748,7 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                                 name="promo_valid_until" class="form-control"
                                 value="<?= htmlspecialchars($car['promo_valid_until'] ?? '') ?>"></div>
                         <div class="form-group" id="stock_group"><label>Stock Available (units)</label><input
-                                type="number" min="0" name="stock" class="form-control"
+                                type="number" min="0" max="1" name="stock" class="form-control"
                                 value="<?= htmlspecialchars($car['car_status_stock_quantity'] ?? 1) ?>"></div>
                     </div>
                 </div>
@@ -871,9 +871,71 @@ $saved_comf = explode(',', $car['feat_comf'] ?? '');
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-fill-drip"></i> Exterior & Interior</h3>
                     <div class="grid-3">
-                        <div class="form-group" id="ext_color_group"><label>Exterior Colour</label><input type="text"
-                                name="ext_color" class="form-control"
-                                value="<?= htmlspecialchars($car['ext_color'] ?? '') ?>"></div>
+                        <div class="form-group" id="ext_color_group">
+                            <label>Exterior Colour</label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="custom-color-picker" style="flex-shrink: 0;">
+                                    <input type="hidden" id="ext_color_hex" value="#ffffff">
+                                    <div class="selected-color-circle" id="ext_color_circle"
+                                        style="background: #ffffff; width: 42px; height: 42px;"
+                                        onclick="toggleColorPalette(this)" title="Click to pick a colour"></div>
+                                    <div class="color-palette-popup">
+                                        <div class="palette-swatch" style="background: #ffffff;"
+                                            onclick="selectExtColor(this, '#ffffff', 'Solid White')"
+                                            title="Solid White"></div>
+                                        <div class="palette-swatch"
+                                            style="background: radial-gradient(circle, #ffffff 0%, #f3f4f6 100%);"
+                                            onclick="selectExtColor(this, '#f8fafc', 'Pearl White')"
+                                            title="Pearl White"></div>
+                                        <div class="palette-swatch"
+                                            style="background: linear-gradient(135deg, #f3f4f6, #9ca3af);"
+                                            onclick="selectExtColor(this, '#d1d5db', 'Silver')" title="Silver"></div>
+                                        <div class="palette-swatch" style="background: #6b7280;"
+                                            onclick="selectExtColor(this, '#6b7280', 'Meteor Grey')"
+                                            title="Meteor Grey"></div>
+                                        <div class="palette-swatch" style="background: #111827;"
+                                            onclick="selectExtColor(this, '#111827', 'Black')" title="Black"></div>
+                                        <div class="palette-swatch"
+                                            style="background: radial-gradient(circle, #374151 0%, #111827 100%);"
+                                            onclick="selectExtColor(this, '#1f2937', 'Matte Black')"
+                                            title="Matte Black"></div>
+                                        <div class="palette-swatch" style="background: #ef4444;"
+                                            onclick="selectExtColor(this, '#ef4444', 'Ruby Red')" title="Ruby Red">
+                                        </div>
+                                        <div class="palette-swatch" style="background: #991b1b;"
+                                            onclick="selectExtColor(this, '#991b1b', 'Maroon')" title="Maroon"></div>
+                                        <div class="palette-swatch" style="background: #f97316;"
+                                            onclick="selectExtColor(this, '#f97316', 'Orange')" title="Orange"></div>
+                                        <div class="palette-swatch" style="background: #eab308;"
+                                            onclick="selectExtColor(this, '#eab308', 'Yellow')" title="Yellow"></div>
+                                        <div class="palette-swatch"
+                                            style="background: linear-gradient(135deg, #fde047, #d97706);"
+                                            onclick="selectExtColor(this, '#d97706', 'Champagne Gold')"
+                                            title="Champagne Gold"></div>
+                                        <div class="palette-swatch" style="background: #b45309;"
+                                            onclick="selectExtColor(this, '#b45309', 'Bronze')" title="Bronze"></div>
+                                        <div class="palette-swatch" style="background: #3b82f6;"
+                                            onclick="selectExtColor(this, '#3b82f6', 'Ocean Blue')" title="Ocean Blue">
+                                        </div>
+                                        <div class="palette-swatch" style="background: #0ea5e9;"
+                                            onclick="selectExtColor(this, '#0ea5e9', 'Cyan')" title="Cyan"></div>
+                                        <div class="palette-swatch" style="background: #1e3a8a;"
+                                            onclick="selectExtColor(this, '#1e3a8a', 'Navy Blue')" title="Navy Blue">
+                                        </div>
+                                        <div class="palette-swatch" style="background: #22c55e;"
+                                            onclick="selectExtColor(this, '#22c55e', 'Green')" title="Green"></div>
+                                        <div class="palette-swatch" style="background: #064e3b;"
+                                            onclick="selectExtColor(this, '#064e3b', 'Dark Green')" title="Dark Green">
+                                        </div>
+                                        <div class="palette-swatch" style="background: #8b5cf6;"
+                                            onclick="selectExtColor(this, '#8b5cf6', 'Purple')" title="Purple"></div>
+                                    </div>
+                                </div>
+                                <input type="text" name="ext_color" id="ext_color_input" class="form-control"
+                                    placeholder="e.g., Silver" value="<?= htmlspecialchars($car['ext_color'] ?? '') ?>"
+                                    style="flex: 1; margin-bottom: 0;">
+                            </div>
+                        </div>
                         <div class="form-group"><label>Interior Colour</label><input type="text" name="int_color"
                                 class="form-control" value="<?= htmlspecialchars($car['int_color'] ?? '') ?>"></div>
                         <div class="form-group"><label>Seat Material</label>

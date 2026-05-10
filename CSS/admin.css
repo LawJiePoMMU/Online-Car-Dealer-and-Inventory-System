@@ -149,7 +149,6 @@ body {
     display: none;
 }
 
-/* 3. 顶部 Header 居中，去掉 padding */
 .sidebar.collapsed .sidebar-brand {
     justify-content: center !important;
     padding: 0 10px;
@@ -172,15 +171,6 @@ body {
 
 .sidebar.collapsed .logout-btn i {
     margin-right: 0;
-}
-
-.main-content {
-    transition: margin-left 0.3s ease, width 0.3s ease;
-}
-
-.main-content.collapsed-main {
-    margin-left: 80px !important;
-    width: calc(100% - 80px) !important;
 }
 
 .logout-btn:hover {

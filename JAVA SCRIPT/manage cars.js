@@ -27,6 +27,44 @@ document.addEventListener("DOMContentLoaded", function () {
         window.history.replaceState(null, null, cleanUrl);
     }
 
+    const highlightId = urlParams.get('highlight');
+    if (highlightId) {
+        cleanUrlParams(['highlight']);
+        setTimeout(() => {
+            let targetRow = null;
+
+            document.querySelectorAll('tbody .data-row').forEach(row => {
+                const carIdCell = row.querySelector('td:nth-child(2)');
+                if (carIdCell) {
+                    const rowCarId = carIdCell.textContent.trim().replace('CAR', '').replace(/^0+/, '');
+                    if (rowCarId === highlightId) {
+                        targetRow = row;
+                    }
+                }
+            });
+
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                let count = 0;
+                const originalBg = targetRow.style.backgroundColor;
+
+                const flash = setInterval(() => {
+                    if (count % 2 === 0) {
+                        targetRow.style.backgroundColor = '#fef3c7';
+                        targetRow.style.transition = 'background-color 0.3s ease';
+                    } else {
+                        targetRow.style.backgroundColor = originalBg;
+                    }
+                    count++;
+                    if (count >= 6) {
+                        clearInterval(flash);
+                        targetRow.style.backgroundColor = originalBg;
+                    }
+                }, 400);
+            }
+        }, 500);
+    }
+
     let selectAllColumns = document.querySelectorAll('.selectAllColumn');
     selectAllColumns.forEach(box => {
         box.addEventListener('change', function () {
@@ -140,9 +178,9 @@ function toggleCopyMode() {
 function cancelCopyMode() {
     isCopyMode = false;
     const copyBtn = document.getElementById('copyBtn');
-    document.querySelectorAll('.row-checkbox').forEach(cb => { 
-        cb.style.display = 'none'; 
-        cb.checked = false; 
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+        cb.style.display = 'none';
+        cb.checked = false;
     });
     copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Selected';
     copyBtn.style.backgroundColor = '';

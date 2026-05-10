@@ -238,9 +238,8 @@ if ($action !== '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Management</title>
-    <link rel="stylesheet" href="../../CSS/Admin.css">
+    <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/Admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .chat-container {
             display: flex;
@@ -259,7 +258,7 @@ if ($action !== '') {
             flex-direction: column;
             background: #ffffff;
         }
-
+        
         .chat-search-wrap {
             padding: 16px;
             border-bottom: 1px solid #e5e7eb;
@@ -271,7 +270,7 @@ if ($action !== '') {
             align-items: center;
             margin-bottom: 12px;
         }
-
+        
         .chat-tabs {
             display: flex;
             gap: 8px;
@@ -279,7 +278,7 @@ if ($action !== '') {
             padding-bottom: 4px;
             align-items: center;
         }
-
+        
         .chat-tab-btn {
             padding: 6px 12px;
             border-radius: 16px;
@@ -292,12 +291,12 @@ if ($action !== '') {
             transition: 0.2s;
             white-space: nowrap;
         }
-
+        
         .chat-tab-btn.active {
             background: #1e3a8a;
             color: #fff;
         }
-
+        
         .chat-tab-btn:hover:not(.active) {
             background: #e5e7eb;
         }
@@ -320,7 +319,7 @@ if ($action !== '') {
         .contact-item:hover {
             background: #f3f4f6;
         }
-
+        
         .contact-item.active {
             background: #e0e7ff;
             border-left: 4px solid #1e3a8a;
@@ -330,7 +329,7 @@ if ($action !== '') {
             position: relative;
             margin-right: 12px;
         }
-
+        
         .unread-badge {
             position: absolute;
             right: 16px;
@@ -351,7 +350,7 @@ if ($action !== '') {
             background: #f8fafc;
             position: relative;
         }
-
+        
         .chat-header {
             padding: 16px 24px;
             background: #fff;
@@ -362,7 +361,7 @@ if ($action !== '') {
             cursor: pointer;
             transition: background 0.2s;
         }
-
+        
         .chat-header:hover {
             background: #f9fafb;
         }
@@ -379,21 +378,21 @@ if ($action !== '') {
             background-color: #f8fafc;
             opacity: 0.95;
         }
-
+        
         .message-row {
             display: flex;
             max-width: 75%;
         }
-
+        
         .message-row.incoming {
             align-self: flex-start;
         }
-
+        
         .message-row.outgoing {
             align-self: flex-end;
             flex-direction: row-reverse;
         }
-
+        
         .message-bubble {
             padding: 10px 14px;
             border-radius: 12px;
@@ -402,19 +401,19 @@ if ($action !== '') {
             position: relative;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
-
+        
         .incoming .message-bubble {
             background: #ffffff;
             border: 1px solid #e5e7eb;
             border-top-left-radius: 0;
         }
-
+        
         .outgoing .message-bubble {
             background: #1e3a8a;
             color: #ffffff;
             border-top-right-radius: 0;
         }
-
+        
         .message-time {
             font-size: 11px;
             opacity: 0.7;
@@ -422,7 +421,7 @@ if ($action !== '') {
             text-align: right;
             display: block;
         }
-
+        
         .chat-input-area {
             padding: 16px 24px;
             background: #fff;
@@ -441,7 +440,7 @@ if ($action !== '') {
             font-size: 14px;
             background: #f9fafb;
         }
-
+        
         .btn-send {
             background: #1e3a8a;
             color: white;
@@ -456,12 +455,12 @@ if ($action !== '') {
             transition: 0.2s;
             flex-shrink: 0;
         }
-
+        
         .btn-send:hover {
             background: #1e40af;
             transform: scale(1.05);
         }
-
+        
         .profile-sidebar {
             width: 320px;
             background: #fff;
@@ -474,12 +473,12 @@ if ($action !== '') {
             display: flex;
             animation: slideIn 0.3s ease-out;
         }
-
+        
         @keyframes slideIn {
             from {
                 margin-right: -320px;
             }
-
+            
             to {
                 margin-right: 0;
             }
@@ -493,7 +492,7 @@ if ($action !== '') {
             gap: 15px;
             font-weight: bold;
         }
-
+        
         .profile-content {
             padding: 24px;
             text-align: center;
@@ -507,7 +506,7 @@ if ($action !== '') {
             gap: 8px;
             margin-top: 12px;
         }
-
+        
         .media-item {
             width: 100%;
             aspect-ratio: 1;
@@ -541,14 +540,14 @@ if ($action !== '') {
                 <h1 style="font-size: 24px; font-weight: 700; color: #111827;">Chats</h1>
             </div>
         </header>
-
+        
         <div class="chat-container">
             <div class="chat-sidebar">
                 <div class="chat-search-wrap">
                     <div class="search-bar-row">
                         <input type="text" id="searchContact" class="form-control" placeholder="Search contacts...">
                         <button class="btn-add-blue" onclick="openNewChatModal()"
-                            style="padding: 10px; border-radius: 8px;" title="New Chat"><i
+                        style="padding: 10px; border-radius: 8px;" title="New Chat"><i
                                 class="fas fa-plus"></i></button>
                     </div>
                     <div class="chat-tabs">
@@ -556,9 +555,9 @@ if ($action !== '') {
                         <button class="chat-tab-btn" onclick="switchTab('unread', this)">Unread</button>
                         <button class="chat-tab-btn" onclick="switchTab('group', this)">Groups</button>
                         <button class="chat-tab-btn"
-                            style="margin-left:auto; background:transparent; color:#1e3a8a; border: 1px solid #1e3a8a;"
-                            onclick="openCreateGroupModal()"><i class="fas fa-users" style="margin-right:4px;"></i>+
-                            Group</button>
+                        style="margin-left:auto; background:transparent; color:#1e3a8a; border: 1px solid #1e3a8a;"
+                        onclick="openCreateGroupModal()"><i class="fas fa-users" style="margin-right:4px;"></i>+
+                        Group</button>
                     </div>
                 </div>
                 <div class="contact-list" id="chatList"></div>
@@ -576,26 +575,26 @@ if ($action !== '') {
                     <div class="action-icons" style="display:flex; gap: 15px; align-items: center;">
                         <a href="javascript:void(0)" onclick="event.stopPropagation(); dismissNotification()"
                             title="Dismiss Unread"><i id="notifBellIcon" class="fas fa-bell"
-                                style="color: #f59e0b; font-size: 16px;"></i></a>
+                            style="color: #f59e0b; font-size: 16px;"></i></a>
                         <a href="javascript:void(0)" onclick="event.stopPropagation(); confirmAction('clear')"
-                            title="Clear Messages"><i class="fas fa-eraser"
+                        title="Clear Messages"><i class="fas fa-eraser"
                                 style="color: #f59e0b; font-size: 16px;"></i></a>
                         <a href="javascript:void(0)" onclick="event.stopPropagation(); confirmAction('delete')"
                             title="Delete/Leave Chat"><i class="fas fa-trash"
-                                style="color: #ef4444; font-size: 16px;"></i></a>
+                            style="color: #ef4444; font-size: 16px;"></i></a>
+                        </div>
                     </div>
-                </div>
-
-                <div class="chat-history" id="messagesArea"></div>
+                    
+                    <div class="chat-history" id="messagesArea"></div>
                 <div id="filePreviewContainer"
-                    style="display: none; padding: 12px 24px; background: #f3f4f6; border-top: 1px solid #e5e7eb; gap: 12px; overflow-x: auto;">
+                style="display: none; padding: 12px 24px; background: #f3f4f6; border-top: 1px solid #e5e7eb; gap: 12px; overflow-x: auto;">
                 </div>
-
+                
                 <div class="chat-input-area">
                     <button class="btn-outline"
-                        style="border:none; padding: 8px; cursor: pointer; background:transparent;"
-                        onclick="document.getElementById('fileInput').click()">
-                        <i class="fas fa-paperclip" style="font-size: 20px; color: #9ca3af;"></i>
+                    style="border:none; padding: 8px; cursor: pointer; background:transparent;"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-paperclip" style="font-size: 20px; color: #9ca3af;"></i>
                     </button>
                     <input type="file" id="fileInput" multiple style="display:none;">
                     <input type="text" id="messageInput" placeholder="Type a message...">
@@ -609,29 +608,29 @@ if ($action !== '') {
                     <h3 style="color: #4b5563;">Select a contact or group to start messaging</h3>
                 </div>
             </div>
-
+            
             <div class="profile-sidebar" id="profileSidebar">
                 <div class="profile-header">
                     <i class="fas fa-times" style="cursor: pointer; color: #6b7280;"
-                        onclick="toggleProfileSidebar()"></i>
+                    onclick="toggleProfileSidebar()"></i>
                     <span>Contact Info</span>
                 </div>
                 <div class="profile-content">
                     <div id="profileAvatarContainer" style="display:flex; justify-content:center; margin-bottom:16px;">
-                    </div>
+                        </div>
                     <h3 id="profileName">Name</h3>
                     <p id="profilePhone">Phone</p>
                     <div style="text-align: left; margin-top: 24px;">
                         <h4 style="font-size: 14px; color: #4b5563; margin-bottom: 10px;">Media</h4>
                         <div class="media-grid" id="profileMediaGrid"></div>
-
+                        
                         <h4 style="font-size: 14px; color: #4b5563; margin-top: 15px; margin-bottom: 10px;">Docs</h4>
                         <div id="profileDocsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
                     </div>
                     <div style="text-align: left; margin-top: 24px;">
                         <h4 id="profileDynamicTitle" style="font-size: 14px; color: #4b5563; margin-bottom: 10px;">
                             Groups in common</h4>
-                        <div id="profileDynamicList"
+                            <div id="profileDynamicList"
                             style="padding: 12px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280;">
                             No data available.
                         </div>
@@ -640,89 +639,90 @@ if ($action !== '') {
             </div>
         </div>
     </div>
-
+    
     <div id="newChatModal" class="modal">
         <div class="modal-content"
-            style="width: 450px; display: flex; flex-direction: column; max-height: 80vh; padding: 0; overflow: hidden;">
-            <div style="padding: 20px 20px 10px 20px; border-bottom: 1px solid #e5e7eb;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="font-size: 18px; font-weight: 700; color: #111827;">Start New Chat</h3>
+        style="width: 450px; display: flex; flex-direction: column; max-height: 80vh; padding: 0; overflow: hidden;">
+        <div style="padding: 20px 20px 10px 20px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="font-size: 18px; font-weight: 700; color: #111827;">Start New Chat</h3>
                     <i class="fas fa-times" style="cursor: pointer; color: #9ca3af; font-size: 18px;"
-                        onclick="closeNewChatModal()"></i>
+                    onclick="closeNewChatModal()"></i>
                 </div>
                 <input type="text" id="newContactSearch" class="form-control" placeholder="Search by name or phone..."
                     style="margin-bottom: 15px;">
-                <div class="chat-tabs" style="gap: 15px;">
-                    <button class="chat-tab-btn active" id="tabDirAdmin" onclick="switchDirectoryTab('Admin')"
+                    <div class="chat-tabs" style="gap: 15px;">
+                        <button class="chat-tab-btn active" id="tabDirAdmin" onclick="switchDirectoryTab('Admin')"
                         style="flex:1; border-radius: 8px;">Admins</button>
                     <button class="chat-tab-btn" id="tabDirCustomer" onclick="switchDirectoryTab('Customer')"
-                        style="flex:1; border-radius: 8px;">Customers</button>
+                    style="flex:1; border-radius: 8px;">Customers</button>
                 </div>
             </div>
             <div id="newContactList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
         </div>
     </div>
-
+    
     <div id="createGroupModal" class="modal">
         <div class="modal-content"
-            style="width: 450px; display: flex; flex-direction: column; max-height: 80vh; padding: 0; overflow: hidden;">
-            <div style="padding: 20px 20px 10px 20px; border-bottom: 1px solid #e5e7eb;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        style="width: 450px; display: flex; flex-direction: column; max-height: 80vh; padding: 0; overflow: hidden;">
+        <div style="padding: 20px 20px 10px 20px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="font-size: 18px; font-weight: 700;">Create Group</h3>
                     <i class="fas fa-times" style="cursor: pointer; color: #9ca3af; font-size: 18px;"
-                        onclick="closeCreateGroupModal()"></i>
+                    onclick="closeCreateGroupModal()"></i>
                 </div>
                 <input type="text" id="groupNameInput" class="form-control" placeholder="Group Name (e.g. Project Team)"
-                    style="margin-bottom: 15px;">
-
+                style="margin-bottom: 15px;">
+                
                 <div class="chat-tabs" style="gap: 15px;">
                     <button class="chat-tab-btn active" id="tabGroupAdmin" onclick="switchGroupTab('Admin')"
-                        style="flex:1; border-radius: 8px;">Admins</button>
+                    style="flex:1; border-radius: 8px;">Admins</button>
                     <button class="chat-tab-btn" id="tabGroupCustomer" onclick="switchGroupTab('Customer')"
-                        style="flex:1; border-radius: 8px;">Customers</button>
+                    style="flex:1; border-radius: 8px;">Customers</button>
                 </div>
             </div>
-
+            
             <div id="groupMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
-
+            
             <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                 <button class="btn-add-blue" style="width: 100%; justify-content: center;"
-                    onclick="submitCreateGroup()">Create Group</button>
+                onclick="submitCreateGroup()">Create Group</button>
             </div>
         </div>
     </div>
     <div id="addMemberModal" class="modal">
         <div class="modal-content"
-            style="width: 450px; display: flex; flex-direction: column; max-height: 80vh; padding: 0; overflow: hidden;">
-            <div style="padding: 20px 20px 10px 20px; border-bottom: 1px solid #e5e7eb;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="font-size: 18px; font-weight: 700;">Add Members</h3>
-                    <i class="fas fa-times" style="cursor: pointer; color: #9ca3af; font-size: 18px;"
-                        onclick="closeAddMemberModal()"></i>
-                </div>
+        style="width: 450px; display: flex; flex-direction: column; max-height: 80vh; padding: 0; overflow: hidden;">
+        <div style="padding: 20px 20px 10px 20px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="font-size: 18px; font-weight: 700;">Add Members</h3>
+                <i class="fas fa-times" style="cursor: pointer; color: #9ca3af; font-size: 18px;"
+                onclick="closeAddMemberModal()"></i>
+            </div>
                 <div class="chat-tabs" style="gap: 15px;">
                     <button class="chat-tab-btn active" id="tabAddAdmin" onclick="switchAddMemberTab('Admin')"
-                        style="flex:1; border-radius: 8px;">Admins</button>
+                    style="flex:1; border-radius: 8px;">Admins</button>
                     <button class="chat-tab-btn" id="tabAddCustomer" onclick="switchAddMemberTab('Customer')"
-                        style="flex:1; border-radius: 8px;">Customers</button>
+                    style="flex:1; border-radius: 8px;">Customers</button>
                 </div>
             </div>
             <div id="addMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
             <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                 <button class="btn-add-blue" style="width: 100%; justify-content: center;"
-                    onclick="submitAddMembers()">Add to Group</button>
+                onclick="submitAddMembers()">Add to Group</button>
             </div>
         </div>
     </div>
-
+    
     <input type="hidden" id="myUserId" value="<?php echo $my_id; ?>">
     <input type="hidden" id="currentChatId" value="">
     <input type="hidden" id="currentChatType" value="user">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../../JAVA SCRIPT/chat.js?v=<?php echo time(); ?>"></script>
     <div id="imageLightbox"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; flex-direction:column; backdrop-filter: blur(5px);">
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; flex-direction:column; backdrop-filter: blur(5px);">
         <span onclick="document.getElementById('imageLightbox').style.display='none'"
-            style="position:absolute; top:25px; right:40px; color:white; font-size:35px; cursor:pointer; font-weight:bold;">&times;</span>
+        style="position:absolute; top:25px; right:40px; color:white; font-size:35px; cursor:pointer; font-weight:bold;">&times;</span>
         <img id="lightboxImg" src=""
             style="max-width:90%; max-height:80%; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
         <a id="lightboxDownload" href="" download class="btn-add-blue" style="margin-top:20px; text-decoration:none;"><i

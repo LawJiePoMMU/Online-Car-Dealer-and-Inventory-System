@@ -96,7 +96,7 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
 <head>
     <meta charset="UTF-8">
     <title>System Settings</title>
-    <link rel="stylesheet" href="../../CSS/Admin.css">
+    <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         .settings-layout {
