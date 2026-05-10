@@ -2,6 +2,9 @@
 session_start();
 include '../Config/database.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$threshold_query = mysqli_query($conn, "SELECT setting_value FROM system_settings WHERE setting_key = 'low_stock_threshold'");
+$res_threshold = mysqli_fetch_assoc($threshold_query);
+$low_stock_limit = isset($res_threshold['setting_value']) ? (int) $res_threshold['setting_value'] : 2;
 mysqli_query($conn, "INSERT IGNORE INTO car_types (car_type_id, car_type_name) VALUES 
 (1, 'Sedan'), (2, 'SUV'), (3, 'Hatchback'), (4, 'EV'), (5, 'Exora (MPV)')");
 if (isset($_GET['ajax']) && isset($_GET['action']) && $_GET['action'] == 'copy_cars') {
@@ -447,8 +450,8 @@ try {
                                                 $c_name = htmlspecialchars($parts[0]);
                                                 $c_hex = htmlspecialchars($parts[1]);
                                                 $c_qty = (int) $parts[2];
-                                                $warning_class = ($c_qty <= 2) ? "pulse-warning" : "";
-                                                $badge_bg = ($c_qty <= 2) ? "#ef4444" : "#6b7280";
+                                                $warning_class = ($c_qty <= $low_stock_limit) ? "pulse-warning" : "";
+                                                $badge_bg = ($c_qty <= $low_stock_limit) ? "#ef4444" : "#6b7280";
 
                                                 $color_html .= "
                                                 <div style='position: relative; display: inline-block; margin-right: 12px; margin-top: 4px;' title='{$c_name} (Qty: {$c_qty})'>
@@ -471,8 +474,18 @@ try {
                                           </div>";
 
                                     echo "<td style='text-align: left;'>" . $type . "</td>";
-                                    $badge_bg = $stock > 5 ? "#dcfce7" : ($stock > 1 ? "#fef3c7" : "#fee2e2");
-                                    $badge_text = $stock > 5 ? "#166534" : ($stock > 1 ? "#92400e" : "#991b1b");
+                                    $limit = isset($low_stock_limit) ? $low_stock_limit : 2;
+
+                                    if ($stock == 0) {
+                                        $badge_bg = "#fee2e2";
+                                        $badge_text = "#991b1b";
+                                    } elseif ($stock <= $limit) {
+                                        $badge_bg = "#fef3c7";
+                                        $badge_text = "#92400e";
+                                    } else {
+                                        $badge_bg = "#dcfce7";
+                                        $badge_text = "#166534";
+                                    }
                                     echo "<td style='text-align: center;'><span style='background:{$badge_bg}; color:{$badge_text}; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:700;'>{$stock} Units</span></td>";
 
                                     echo "<td style='text-align: left;'>" . htmlspecialchars($row['car_year']) . "</td>";
@@ -595,8 +608,8 @@ try {
                                                 $c_name = htmlspecialchars($parts[0]);
                                                 $c_hex = htmlspecialchars($parts[1]);
                                                 $c_qty = (int) $parts[2];
-                                                $warning_class = ($c_qty <= 2) ? "pulse-warning" : "";
-                                                $badge_bg = ($c_qty <= 2) ? "#ef4444" : "#6b7280";
+                                                $warning_class = ($c_qty <= $low_stock_limit) ? "pulse-warning" : "";
+                                                $badge_bg = ($c_qty <= $low_stock_limit) ? "#ef4444" : "#6b7280";
 
                                                 $color_html .= "
                                                 <div style='position: relative; display: inline-block; margin-right: 12px; margin-top: 4px;' title='{$c_name} (Qty: {$c_qty})'>
@@ -666,6 +679,9 @@ try {
         <?php endif; ?>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        window.GLOBAL_LOW_STOCK = <?= $low_stock_limit ?>;
+    </script>
     <script src="../../JAVA SCRIPT/manage cars.js?v=<?php echo time(); ?>"></script>
 </body>
 
