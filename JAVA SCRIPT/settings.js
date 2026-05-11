@@ -11,13 +11,13 @@ function setupTabs() {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             cards.forEach(c => c.classList.remove('active'));
-
             tab.classList.add('active');
             const targetId = tab.getAttribute('data-target');
             document.getElementById(targetId).classList.add('active');
         });
     });
 }
+
 async function loadSettings() {
     try {
         const response = await fetch('settings.php?ajax=1', { cache: 'no-store' });
@@ -36,11 +36,11 @@ async function loadSettings() {
             }
 
             if (data.user) {
-                const userNameInput = document.getElementById('user_name');
-                const userEmailInput = document.getElementById('user_email');
+                const n = document.getElementById('user_name');
+                const e = document.getElementById('user_email');
+                if (n) n.value = data.user.user_name || '';
+                if (e) e.value = data.user.user_email || '';
 
-                if (userNameInput) userNameInput.value = data.user.user_name || '';
-                if (userEmailInput) userEmailInput.value = data.user.user_email || '';
                 if (data.user.user_avatar) {
                     const img = document.getElementById('avatar_preview_img');
                     const icon = document.getElementById('avatar_icon');
@@ -53,7 +53,7 @@ async function loadSettings() {
             }
         }
     } catch (error) {
-        console.error("Load Failed:", error);
+        console.error('Load Failed:', error);
     }
 }
 
@@ -63,23 +63,18 @@ async function saveSettings(formId) {
     let hasError = false;
 
     form.querySelectorAll('input, select, textarea').forEach(input => {
-        if (input.name) {
-            input.style.borderColor = '';
+        if (!input.name) return;
+        input.style.borderColor = '';
 
-            if (input.type === 'number') {
-                const val = parseFloat(input.value);
-                if (val < 0 || isNaN(val)) {
-                    hasError = true;
-                    input.style.borderColor = 'red';
-                }
-            }
-
-            if (input.type === 'checkbox') {
-                settingsData[input.name] = input.checked ? '1' : '0';
-            } else {
-                settingsData[input.name] = input.value;
+        if (input.type === 'number') {
+            const val = parseFloat(input.value);
+            if (isNaN(val) || val < 0) {
+                hasError = true;
+                input.style.borderColor = 'red';
             }
         }
+
+        settingsData[input.name] = (input.type === 'checkbox') ? (input.checked ? '1' : '0') : input.value;
     });
 
     if (hasError) {
@@ -90,42 +85,27 @@ async function saveSettings(formId) {
     const fd = new FormData();
     fd.append('action', 'update_settings');
     fd.append('settings_data', JSON.stringify(settingsData));
-
-    await executeSave(fd, 'System Logic Updated!');
+    await executeSave(fd, 'Settings Updated!');
 }
 
 async function saveProfile(formId) {
     const form = document.getElementById(formId);
     const fd = new FormData(form);
     fd.append('action', 'update_profile');
-
     await executeSave(fd, 'Profile Updated!');
 
-    const newPasswordInput = form.querySelector('input[name="new_password"]');
-    if (newPasswordInput) {
-        newPasswordInput.value = '';
-    }
+    const pwd = form.querySelector('input[name="new_password"]');
+    if (pwd) pwd.value = '';
     await loadSettings();
 }
 
 async function executeSave(formData, successMsg) {
     try {
-        const response = await fetch('settings.php', {
-            method: 'POST',
-            body: formData
-        });
-
+        const response = await fetch('settings.php', { method: 'POST', body: formData });
         const result = await response.json();
 
         if (result.success) {
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: successMsg,
-                showConfirmButton: false,
-                timer: 1500
-            });
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: successMsg, showConfirmButton: false, timer: 1500 });
         } else {
             Swal.fire('Error', result.message, 'error');
         }
@@ -137,14 +117,12 @@ async function executeSave(formData, successMsg) {
 
 function previewAvatar(event) {
     const reader = new FileReader();
-    reader.onload = function() {
+    reader.onload = function () {
         const img = document.getElementById('avatar_preview_img');
         const icon = document.getElementById('avatar_icon');
         img.src = reader.result;
         img.style.display = 'block';
         if (icon) icon.style.display = 'none';
-    }
-    if (event.target.files[0]) {
-        reader.readAsDataURL(event.target.files[0]);
-    }
+    };
+    if (event.target.files[0]) reader.readAsDataURL(event.target.files[0]);
 }

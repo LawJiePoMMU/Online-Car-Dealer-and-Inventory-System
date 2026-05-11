@@ -356,6 +356,12 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
                 <span>Chat</span>
             </a>
         </li>
+        <li>
+            <a href="sales_report.php" class="<?= $current_page == 'sales_report.php' ? 'active' : '' ?>">
+                <i class="fas fa-chart-bar"></i>
+                <span>Sales Report</span>
+            </a>
+        </li>
     </ul>
 
     <div class="sb-section">General</div>
