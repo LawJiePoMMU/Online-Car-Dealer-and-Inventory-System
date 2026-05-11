@@ -27,27 +27,27 @@ $errors = [];
 if (isset($_POST['pay_now'])) {
     $method = $_POST['pay_method'] ?? '';
 
-    if ($method === 'fpx') {
-        $bank = $_POST['fpx_bank'] ?? '';
-        if (empty($bank)) $errors[] = "Please select your bank.";
-        $_SESSION['pay_method'] = 'Online Banking (FPX)';
-        $_SESSION['pay_bank']   = $bank;
-    } elseif ($method === 'card') {
-        $card_name   = trim($_POST['card_name']   ?? '');
-        $card_number = trim($_POST['card_number'] ?? '');
-        $card_expiry = trim($_POST['card_expiry'] ?? '');
-        $card_cvv    = trim($_POST['card_cvv']    ?? '');
-        $card_type   = $_POST['card_type']        ?? 'Visa';
-        if (empty($card_name))  $errors[] = "Please enter cardholder name.";
-        if (strlen(preg_replace('/\s/','',$card_number)) < 16) $errors[] = "Please enter a valid 16-digit card number.";
-        if (empty($card_expiry)) $errors[] = "Please enter card expiry date.";
-        if (strlen($card_cvv) < 3) $errors[] = "Please enter a valid CVV.";
-        $_SESSION['pay_method']     = 'Credit/Debit Card';
-        $_SESSION['pay_card_type']  = $card_type;
-        $_SESSION['pay_card_last4'] = substr(preg_replace('/\s/','',$card_number), -4);
-    } else {
-        $errors[] = "Please select a payment method.";
-    }
+    $card_name   = trim($_POST['card_name'] ?? '');
+$card_number = trim($_POST['card_number'] ?? '');
+$card_expiry = trim($_POST['card_expiry'] ?? '');
+$card_cvv    = trim($_POST['card_cvv'] ?? '');
+$card_type   = $_POST['card_type'] ?? 'Visa';
+
+if (empty($card_name))
+    $errors[] = "Please enter cardholder name.";
+
+if (strlen(preg_replace('/\\s/','',$card_number)) < 16)
+    $errors[] = "Please enter a valid 16-digit card number.";
+
+if (empty($card_expiry))
+    $errors[] = "Please enter card expiry date.";
+
+if (strlen($card_cvv) < 3)
+    $errors[] = "Please enter a valid CVV.";
+
+$_SESSION['pay_method']     = 'Credit/Debit Card';
+$_SESSION['pay_card_type']  = $card_type;
+$_SESSION['pay_card_last4'] = substr(preg_replace('/\\s/','',$card_number), -4);
 
     if (empty($errors)) {
         if ($source === 'reservation') {
@@ -172,71 +172,61 @@ if (isset($_POST['pay_now'])) {
 
         <div class="section-card">
             <h2>Select Payment Method</h2>
+<input type="hidden" name="pay_method" value="card"/>
 
-            <div class="method-group">
-                <label class="method-option">
-                    <input type="radio" name="pay_method" value="fpx" onchange="showMethod('fpx')" checked/>
-                    <span>&#127981; Online Banking (FPX)</span>
-                </label>
-                <label class="method-option">
-                    <input type="radio" name="pay_method" value="card" onchange="showMethod('card')"/>
-                    <span>&#128179; Credit / Debit Card</span>
-                </label>
-            </div>
+<h3>Card Details</h3>
 
-            <!-- FPX -->
-            <div id="section-fpx">
-                <h3>Select Your Bank</h3>
-                <div class="form-group">
-                    <select id="fpx_bank" name="fpx_bank" class="form-control">
-                        <option value="">-- Select Bank --</option>
-                        <option value="Maybank2u">Maybank2u</option>
-                        <option value="CIMB Clicks">CIMB Clicks</option>
-                        <option value="Public Bank PBe">Public Bank PBe</option>
-                        <option value="RHB Bank">RHB Bank</option>
-                        <option value="Hong Leong Bank">Hong Leong Bank</option>
-                        <option value="AmBank">AmBank</option>
-                        <option value="Bank Islam">Bank Islam</option>
-                        <option value="Bank Rakyat">Bank Rakyat</option>
-                        <option value="BSN">BSN</option>
-                        <option value="Affin Bank">Affin Bank</option>
-                    </select>
-                </div>
-                <p style="font-size:13px; color:var(--text-light);">You will be redirected to your bank's secure page to complete payment.</p>
-            </div>
+<div class="form-group">
+    <label class="auth-label">Cardholder Name</label>
+    <input type="text" name="card_name" class="form-control"
+           placeholder="As printed on card" required/>
+</div>
 
-            <!-- Card -->
-            <div id="section-card" style="display:none;">
-                <h3>Card Details</h3>
-                <div class="form-group">
-                    <label class="auth-label">Cardholder Name</label>
-                    <input type="text" name="card_name" class="form-control" placeholder="As printed on card"/>
-                </div>
-                <div class="form-group">
-                    <label class="auth-label">Card Number</label>
-                    <input type="text" id="card_number" name="card_number" class="form-control"
-                           placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCardNum(this)"/>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="auth-label">Expiry Date</label>
-                        <input type="text" id="card_expiry" name="card_expiry" class="form-control"
-                               placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)"/>
-                    </div>
-                    <div class="form-group">
-                        <label class="auth-label">CVV</label>
-                        <input type="password" name="card_cvv" class="form-control" placeholder="***" maxlength="3"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="auth-label">Card Type</label>
-                    <select name="card_type" class="form-control">
-                        <option value="Visa">Visa</option>
-                        <option value="Mastercard">Mastercard</option>
-                        <option value="American Express">American Express</option>
-                    </select>
-                </div>
-            </div>
+<div class="form-group">
+    <label class="auth-label">Card Number</label>
+    <input type="text" id="card_number" name="card_number"
+           class="form-control"
+           placeholder="1234 5678 9012 3456"
+           maxlength="19"
+           oninput="formatCardNum(this)"
+           required/>
+</div>
+
+<div class="form-row">
+
+    <div class="form-group">
+        <label class="auth-label">Expiry Date</label>
+        <input type="text"
+               id="card_expiry"
+               name="card_expiry"
+               class="form-control"
+               placeholder="MM/YY"
+               maxlength="5"
+               oninput="formatExpiry(this)"
+               required/>
+    </div>
+
+    <div class="form-group">
+        <label class="auth-label">CVV</label>
+        <input type="password"
+               name="card_cvv"
+               class="form-control"
+               placeholder="***"
+               maxlength="3"
+               required/>
+    </div>
+
+</div>
+
+<div class="form-group">
+    <label class="auth-label">Card Type</label>
+
+    <select name="card_type" class="form-control">
+        <option value="Visa">Visa</option>
+        <option value="Mastercard">Mastercard</option>
+        <option value="American Express">American Express</option>
+    </select>
+</div>
 
             <button type="submit" name="pay_now" value="1" class="btn-primary"
                     style="width:100%; padding:15px; font-size:16px; margin-top:10px;">
@@ -252,10 +242,7 @@ if (isset($_POST['pay_now'])) {
 </footer>
 
 <script>
-    function showMethod(m) {
-        document.getElementById('section-fpx').style.display  = m==='fpx'  ? 'block':'none';
-        document.getElementById('section-card').style.display = m==='card' ? 'block':'none';
-    }
+    
     function formatCardNum(input) {
         let v = input.value.replace(/\D/g,'').substring(0,16);
         input.value = v.replace(/(.{4})/g,'$1 ').trim();

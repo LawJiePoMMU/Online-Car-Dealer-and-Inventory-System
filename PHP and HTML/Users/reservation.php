@@ -35,10 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         $_SESSION['res_car_id'] = $car_id;
         $_SESSION['res_date']   = $reservation_date;
-        $_SESSION['res_name']   = $user['user_name'];
-        $_SESSION['res_ic']     = $user['user_ic'];
-        $_SESSION['res_phone']  = $user['user_phone'];
-        $_SESSION['res_email']  = $user['user_email'];
+        $_SESSION['res_name']  = $_POST['res_name'];
+$_SESSION['res_ic']    = $_POST['res_ic'];
+$_SESSION['res_phone'] = $_POST['res_phone'];
+$_SESSION['res_email'] = $_POST['res_email'];
         $_SESSION['res_brand']  = $car['car_brand']  ?? '';
         $_SESSION['res_model']  = $car['car_model']  ?? '';
         $_SESSION['res_year']   = $car['car_year']   ?? '';
@@ -176,12 +176,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="section-card">
             <h2>Your Information</h2>
             <div class="user-info-box">
-                <table class="info-table">
-                    <tr><td>Full Name</td><td><?php echo htmlspecialchars($user['user_name']); ?></td></tr>
-                    <tr><td>IC Number</td><td><?php echo htmlspecialchars($user['user_ic']); ?></td></tr>
-                    <tr><td>Phone Number</td><td><?php echo htmlspecialchars($user['user_phone']); ?></td></tr>
-                    <tr><td>Email Address</td><td><?php echo htmlspecialchars($user['user_email']); ?></td></tr>
-                </table>
+                <div class="form-group">
+    <label class="auth-label">Full Name</label>
+    <input type="text" 
+           name="res_name"
+           class="form-control"
+           value="<?php echo htmlspecialchars($user['user_name']); ?>"
+           required>
+</div>
+
+<div class="form-group">
+    <label class="auth-label">IC Number</label>
+    <input type="text"
+           name="res_ic"
+           class="form-control"
+           value="<?php echo htmlspecialchars($user['user_ic']); ?>"
+           required>
+</div>
+
+<div class="form-group">
+    <label class="auth-label">Phone Number</label>
+    <input type="text"
+           name="res_phone"
+           class="form-control"
+           value="<?php echo htmlspecialchars($user['user_phone']); ?>"
+           required>
+</div>
+
+<div class="form-group">
+    <label class="auth-label">Email Address</label>
+    <input type="email"
+           name="res_email"
+           class="form-control"
+           value="<?php echo htmlspecialchars($user['user_email']); ?>"
+           required>
+</div>
                 <p>*Details pulled from your account. <a href="profile.php">Update profile</a> if needed.</p>
             </div>
         </div>
