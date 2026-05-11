@@ -203,19 +203,64 @@ document.addEventListener('DOMContentLoaded', function () {
             if (stockGroup) stockGroup.style.display = 'block';
             if (extColorGroup) extColorGroup.style.display = 'block';
 
+            const stockInput = document.querySelector('input[name="stock"]');
+            if (stockInput) {
+                stockInput.value = 1;
+                stockInput.max = 1;
+            }
+
             originSelect.className = 'badge badge-used';
         }
     }
 
     toggleHistoryTab();
+    toggleHistoryTab();
     if (originSelect) originSelect.addEventListener('change', toggleHistoryTab);
 
+    const extColorInput = document.getElementById('ext_color_input');
+    const extColorCircle = document.getElementById('ext_color_circle');
+    const extColorMap = {
+        'Solid White': '#ffffff', 'Pearl White': '#f8fafc', 'Silver': '#d1d5db',
+        'Meteor Grey': '#6b7280', 'Black': '#111827', 'Matte Black': '#1f2937',
+        'Ruby Red': '#ef4444', 'Maroon': '#991b1b', 'Orange': '#f97316',
+        'Yellow': '#eab308', 'Champagne Gold': '#d97706', 'Bronze': '#b45309',
+        'Ocean Blue': '#3b82f6', 'Cyan': '#0ea5e9', 'Navy Blue': '#1e3a8a',
+        'Green': '#22c55e', 'Dark Green': '#064e3b', 'Purple': '#8b5cf6'
+    };
+    if (extColorInput && extColorCircle && extColorMap[extColorInput.value]) {
+        extColorCircle.style.background = extColorMap[extColorInput.value];
+    }
     const saveBtn = document.querySelector('button[name="save_all_details"]');
     const mainForm = document.getElementById('mainCarForm');
-
     if (saveBtn && mainForm) {
-        saveBtn.addEventListener('click', function () {
+        saveBtn.addEventListener('click', function (e) {
+            const originSelect = document.getElementById('car_origin_select');
+            if (originSelect && originSelect.value === 'New Car') {
+                const colorInputs = document.querySelectorAll('.color-name-input');
+                let hasEmpty = false;
+                colorInputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        hasEmpty = true;
+                        input.style.border = '2px solid #ef4444';
+                    } else {
+                        input.style.border = '';
+                    }
+                });
+                if (hasEmpty) {
+                    e.preventDefault();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            toast: true, position: 'top-end', icon: 'warning',
+                            title: 'Please fill in all color names',
+                            showConfirmButton: false, timer: 3000
+                        });
+                    }
+                    return;
+                }
+            }
+
             if (!mainForm.checkValidity()) {
+                e.preventDefault();
                 const firstInvalidInput = mainForm.querySelector(':invalid');
                 if (firstInvalidInput) {
                     const parentTab = firstInvalidInput.closest('.tab-content');
@@ -325,7 +370,7 @@ function addInventoryRow(colorName = '', colorHex = '#ffffff', qty = 1) {
         </div>
 
         <div>
-            <input type="text" name="inv_color[]" class="form-control color-name-input" placeholder="Color Name" value="${colorName}" style="width: 100%; font-weight: 600; margin-bottom: 0;" required>
+            <input type="text" name="inv_color[]" class="form-control color-name-input" placeholder="Color Name" value="${colorName}" style="width: 100%; font-weight: 600; margin-bottom: 0;">
         </div>
 
         <div class="qty-control">
@@ -353,6 +398,27 @@ function selectPresetColor(swatchElement, hexCode, presetName) {
     const hiddenInput = circle.previousElementSibling;
     const row = popup.closest('.color-inv-row');
     const nameInput = row.querySelector('.color-name-input');
+    const allColorInputs = document.querySelectorAll('.color-name-input');
+    let isDuplicate = false;
+    allColorInputs.forEach(input => {
+        if (input !== nameInput && input.value.trim() === presetName) {
+            isDuplicate = true;
+        }
+    });
+
+    if (isDuplicate) {
+        popup.classList.remove('active');
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: `${presetName} is already added.`,
+            showConfirmButton: false,
+            timer: 2500
+        });
+        return;
+    }
+
     circle.style.background = swatchElement.style.background;
     hiddenInput.value = hexCode;
     if (nameInput) {
@@ -360,6 +426,16 @@ function selectPresetColor(swatchElement, hexCode, presetName) {
     }
 
     popup.classList.remove('active');
+}
+
+function selectExtColor(swatchElement, hexCode, presetName) {
+    const circle = document.getElementById('ext_color_circle');
+    const input = document.getElementById('ext_color_input');
+    const popup = swatchElement.closest('.color-palette-popup');
+
+    if (circle) circle.style.background = swatchElement.style.background;
+    if (input) input.value = presetName;
+    if (popup) popup.classList.remove('active');
 }
 
 document.addEventListener('click', function (e) {
