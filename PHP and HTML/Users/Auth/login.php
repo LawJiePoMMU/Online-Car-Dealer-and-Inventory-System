@@ -1,5 +1,8 @@
 <?php
-session_start();
+// 🔥 最安全的 Session 启动方式
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // 如果已经登录，直接跳去 index
 if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true){
@@ -53,7 +56,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
                             // 登录成功
                             $_SESSION["loggedin"] = true;
-                            $_SESSION["id"] = $db_id;
+                            $_SESSION["id"] = $db_id; // 🔥 我们统一使用这个 id
                             $_SESSION["email"] = $db_email;
                             $_SESSION["role"] = $db_role;
 

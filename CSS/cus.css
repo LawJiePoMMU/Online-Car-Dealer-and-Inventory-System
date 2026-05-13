@@ -659,14 +659,15 @@ body:has(.auth-wrapper) .navbar {
 }
 
 /* =========================================
-   15. Profile Page (个人主页设计)
+   15. Profile Page (个人主页与编辑页面设计)
    ========================================= */
 .profile-layout {
     display: grid;
     grid-template-columns: 280px 1fr; 
     gap: 30px;
-    margin-top: 40px;
-    margin-bottom: 60px;
+    max-width: 1100px; /* 🔥 限制整个版面的最大宽度，不要拉得太长 */
+    width: 100%;       /* 🔥 占满可用空间 */
+    margin: 40px auto 60px auto; /* 🔥 关键：左右设置为 auto，它就会乖乖呆在正中间！ */
 }
 
 .profile-sidebar {
@@ -692,12 +693,20 @@ body:has(.auth-wrapper) .navbar {
     font-weight: 600;
     margin: 0 auto 15px;
     box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25);
+    overflow: hidden; /* 🔥 新增：如果你以后放图片头像，不会超出圆形 */
+}
+
+.profile-avatar img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
 }
 
 .profile-menu {
     list-style: none;
     margin-top: 30px;
     text-align: left;
+    padding: 0;
 }
 
 .profile-menu li a {
@@ -719,7 +728,8 @@ body:has(.auth-wrapper) .navbar {
     box-shadow: var(--shadow);
 }
 
-.profile-menu li a[href="logout.php"]:hover {
+/* 🔥 修复登出按钮变红的兼容性 */
+.profile-menu li a[href*="logout"]:hover {
     background: #ef4444; 
     color: white !important;
 }
@@ -730,6 +740,35 @@ body:has(.auth-wrapper) .navbar {
     padding: 40px;
     box-shadow: var(--shadow);
     border: 1px solid #f1f5f9;
+}
+
+/* 🔥 新增：顶部标题和 Edit 按钮的左右排版 */
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 15px;
+}
+
+.content-header h2 {
+    margin: 0;
+}
+
+.btn-edit-link {
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.btn-edit-link:hover {
+    opacity: 0.85;
 }
 
 .info-grid {
@@ -743,6 +782,11 @@ body:has(.auth-wrapper) .navbar {
     padding: 15px 20px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
+}
+
+/* 🔥 新增：让街道地址霸占整整一行的宽度 */
+.info-box.full-width {
+    grid-column: span 2;
 }
 
 .info-label {
@@ -760,234 +804,364 @@ body:has(.auth-wrapper) .navbar {
     color: var(--text-dark);
 }
 
+/* =========================================
+   🔥 新增：Edit Profile 表单专属设计
+   ========================================= */
+.edit-form .form-row { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 20px; 
+    margin-bottom: 15px; 
+}
+
+.edit-form .form-group { 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.edit-form .form-group label { 
+    font-size: 13px; 
+    font-weight: 700; 
+    color: var(--text-light); 
+    margin-bottom: 8px; 
+}
+
+.edit-form .form-group input { 
+    padding: 12px; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 8px; 
+    outline: none; 
+    font-size: 14px;
+    background: #fff;
+    color: var(--text-dark);
+    transition: var(--transition);
+}
+
+.edit-form .form-group input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+}
+
+/* 手机端适配加强 */
 @media (max-width: 768px) {
     .profile-layout { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
+    .info-box.full-width { grid-column: span 1; } /* 手机上恢复单列 */
+    .edit-form .form-row { grid-template-columns: 1fr; }
+    .content-header { flex-direction: column; align-items: flex-start; gap: 15px; }
 }
 /* =========================================
-   16. Cars Inventory Page (Premium Flat Design - 终极高级版)
+   16. Cars Inventory Page (Pro Dealer Layout - 全屏极限紧凑版)
    ========================================= */
 .inventory-page {
-    background-color: #f8fafc; /* 极浅的高级灰底色，衬托白卡片 */
+    background-color: #f4f6f8; 
     min-height: 100vh;
-    padding-bottom: 80px;
+    padding: 40px 0;
     font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
 }
 
+/* --- 让网页全屏铺满 --- */
 .inventory-wrapper {
-    max-width: 1400px;
+    max-width: 98%; 
+    width: 100%;
     margin: 0 auto;
-    padding: 0 40px;
+    padding: 0 20px;
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
 }
 
-/* --- 顶部导航 (Categories & Filter) --- */
-.inventory-header {
+/* --- 左侧专业 Sidebar --- */
+.inventory-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    position: sticky;
+    top: 90px;
+}
+
+.sidebar-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group { margin-bottom: 30px; }
+
+.checkbox-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.checkbox-item input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* --- 右侧主内容区 --- */
+.inventory-main {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 顶部搜索与分类栏 */
+.top-action-bar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.search-sort-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    border-bottom: 1px solid #e2e8f0;
-    margin-bottom: 40px;
-    padding-top: 30px;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 20px;
+}
+
+.search-bar {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+.search-bar button {
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 0 25px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sort-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #475569;
+}
+
+.sort-dropdown select {
+    padding: 10px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
 }
 
 .category-tabs {
     display: flex;
-    gap: 40px;
+    gap: 30px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 15px;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
 .category-tab {
-    padding-bottom: 15px;
+    padding-bottom: 10px;
     color: #64748b;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
     cursor: pointer;
     border-bottom: 3px solid transparent;
-    transition: all 0.3s ease;
 }
 
 .category-tab.active, .category-tab:hover {
-    color: #0f172a; /* 极深的藏青色，比纯黑更高级 */
+    color: #0f172a;
     border-bottom-color: var(--primary-color, #e11d48); 
 }
 
-.filter-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 15px;
-    cursor: pointer;
-    color: #0f172a;
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: color 0.2s;
-}
-
-.filter-btn:hover { color: var(--primary-color, #e11d48); }
-
-/* --- 主体内容布局 (左右分栏) --- */
-.inventory-body {
-    display: flex;
-    gap: 50px;
-    align-items: flex-start;
-}
-
-/* --- 左侧 Sidebar (Brands) --- */
-.inventory-sidebar {
-    width: 220px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 100px;
-}
-
-/* 🔥 核心修改：左侧菜单下划线设计 */
-.brand-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-    padding: 0;
-    align-items: flex-start; /* 关键：让下划线只有文字那么宽 */
-}
-
-.brand-item {
-    color: #64748b;
-    font-size: 15px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    padding-bottom: 8px; /* 给下划线留出一点距离 */
-    border-bottom: 3px solid transparent; /* 默认透明占位 */
-}
-
-.brand-item.active, .brand-item:hover {
-    color: #0f172a; 
-    background-color: transparent; /* 去掉黑色背景块 */
-    border-bottom-color: var(--primary-color, #e11d48); /* 变成底部红线 */
-    transform: none; /* 取消右移动画 */
-}
-
-/* --- 右侧车辆网格 --- */
+/* --- 车辆网格 (全屏自动排满 5-6 辆) --- */
 .inventory-grid {
-    flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 30px;
-    align-items: stretch;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
 }
 
-/* =========================================
-   🔥 核心：高级车辆卡片设计
-   ========================================= */
-.flat-car-card {
+/* --- 全新紧凑型卡片 --- */
+.pro-car-card {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none !important;
     display: flex;
     flex-direction: column;
-    background-color: #ffffff; /* 纯白无暇的底色 */
-    border-radius: 16px; /* 更圆润的现代感边角 */
-    padding: 18px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); /* 极致柔和的阴影 */
-    border: 1px solid #f1f5f9;
-    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
-    text-decoration: none !important; /* 彻底消灭紫色超链接 */
-    height: 100%;
-    box-sizing: border-box;
 }
 
-.flat-car-card:hover {
-    transform: translateY(-8px); /* 悬浮时优雅上浮 */
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08); /* 阴影扩大，立体感拉满 */
+.pro-car-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
 
-/* 1. 图片规范 */
-.flat-car-img {
+/* 🔥 必须加 relative，里面的标签才能在内部定位 */
+.card-img-container {
+    position: relative; 
     width: 100%;
-    height: 190px;
-    object-fit: cover; /* 自动裁切，拒绝变形 */
-    border-radius: 10px;
-    margin-bottom: 18px;
-    background-color: #f1f5f9; 
+    height: 160px; 
+}
+
+.card-img-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #f8fafc;
     display: block;
 }
 
-/* 2. 标题排版 */
-.flat-car-title {
-    font-size: 19px;
+/* 🔥 NEW / USED 标签 (左下角) */
+.badge-condition {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #0f172a;
+    font-size: 11px;
     font-weight: 800;
-    color: #0f172a !important; /* 深沉的标题色 */
-    margin: 0 0 8px 0;
-    line-height: 1.3;
+    padding: 4px 8px;
+    border-radius: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.flat-car-title span {
-    font-weight: 500;
-    color: #94a3b8 !important; /* 淡淡的型号分隔线 */
-}
-
-/* 3. 价格排版 */
-.flat-car-price {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--primary-color, #e11d48) !important; /* 显眼的主色调价格 */
-    margin: 0 0 18px 0;
-    letter-spacing: -0.5px;
-}
-
-/* 4. 年份与状态标签 */
-.card-badges {
+/* 🔥 爱心按钮 (右下角)：隐藏，Hover 时显示，透明底线框 */
+.btn-wishlist {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: transparent; 
+    border: none;
+    color: #ffffff; /* 白色线条 */
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    opacity: 0; /* 默认完全隐形 */
     display: flex;
-    gap: 8px;
-    margin-bottom: 22px;
-    flex-wrap: wrap;
-}
-
-.badge-primary {
-    background-color: #0f172a;
-    color: #ffffff !important;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-.badge-secondary {
-    background-color: #f1f5f9;
-    color: #475569 !important;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-/* 5. 底部类型与地点 (永远对齐底边) */
-.flat-car-footer {
-    margin-top: auto; /* 魔法推底功能 */
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 16px;
-    font-size: 13px;
-    color: #64748b !important;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    justify-content: center;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); /* 黑色阴影防止白线看不清 */
 }
 
-/* --- 响应式手机端适配 --- */
-@media (max-width: 992px) {
-    .inventory-body { flex-direction: column; gap: 30px; }
-    .inventory-sidebar { width: 100%; position: static; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; }
-    .brand-list { flex-direction: row; overflow-x: auto; gap: 15px; padding-bottom: 10px;}
-    .brand-item { white-space: nowrap; }
+/* 鼠标指到卡片上，爱心才会浮现 */
+.pro-car-card:hover .btn-wishlist {
+    opacity: 1; 
+}
+
+.btn-wishlist:hover {
+    transform: scale(1.15); /* 鼠标指到爱心上微微放大 */
+}
+
+/* 🔥 收藏后的状态：永远显示、变成空心红边框！ */
+.btn-wishlist.liked {
+    opacity: 1;
+    color: #ef4444; /* 让线条变成红色 */
+}
+.btn-wishlist.liked svg {
+    fill: none !important; /* 🔥 关键：强制保持里面是空的，绝对不填满！ */
+    stroke-width: 2.5; /* 顺便把线条加粗一点点，让红心更明显更好看 */
+}
+
+/* 内容区紧凑化缩减 Padding */
+.card-content {
+    padding: 12px 15px; 
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.card-title {
+    font-size: 15px; 
+    font-weight: 800;
+    color: #0f172a !important;
+    margin: 0 0 4px 0; 
+    text-transform: uppercase;
+    line-height: 1.3;
+}
+
+.card-price {
+    font-size: 17px;
+    font-weight: 800;
+    color: #dc2626 !important;
+    margin: 0 0 10px 0;
+}
+
+.card-specs {
+    font-size: 13px;
+    color: #334155 !important; /* 加深颜色 */
+    font-weight: 600; /* 加粗 */
+    display: flex;
+    flex-direction: column;
+    gap: 4px; 
+    margin-bottom: 12px;
+}
+
+.spec-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spec-dot {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.card-footer {
+    margin-top: auto;
+    border-top: none; /* 去掉横线 */
+    padding-top: 0; 
+    font-size: 13px;
+    color: #334155 !important;
+    display: flex;
+    align-items: center;
+    text-transform: capitalize;
+    font-weight: 600;
+}
+
+/* 响应式：屏幕太小时，Sidebar 变窄 */
+@media (max-width: 1024px) {
+    .inventory-wrapper { flex-direction: column; }
+    .inventory-sidebar { width: 100%; position: static; margin-bottom: 20px; }
+    .search-sort-row { flex-direction: column; align-items: stretch; }
+    .checkbox-list { flex-direction: row; flex-wrap: wrap; }
 }
