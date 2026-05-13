@@ -8,7 +8,7 @@ $_SESSION = [];
 // 销毁 Session
 session_destroy();
 
-// 跳转回登录页面
-header("Location: /Online-Car-Dealer-and-Inventory-System/PHP%20AND%20HTML/Users/Auth/login.php");
-exit();
+// 4. 重定向回登录页面 (或者你想让他退出后回到主页 index.php 也可以)
+header("location: index.php");
+exit;
 ?>
