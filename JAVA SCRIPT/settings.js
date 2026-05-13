@@ -115,14 +115,30 @@ async function executeSave(formData, successMsg) {
     }
 }
 
-function previewAvatar(event) {
+function previewLogo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = function () {
-        const img = document.getElementById('avatar_preview_img');
-        const icon = document.getElementById('avatar_icon');
+        const img = document.getElementById('logoPreview');
+        const placeholder = document.getElementById('logoPlaceholder');
         img.src = reader.result;
         img.style.display = 'block';
-        if (icon) icon.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'none';
     };
-    if (event.target.files[0]) reader.readAsDataURL(event.target.files[0]);
+    reader.readAsDataURL(file);
+
+    const fd = new FormData();
+    fd.append('action', 'upload_logo');
+    fd.append('logo_file', file);
+    fetch('settings.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Logo uploaded!', showConfirmButton: false, timer: 1500 });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(e => console.error(e));
 }

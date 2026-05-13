@@ -76,6 +76,29 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                 }
                 exit;
             }
+            if ($action === 'upload_logo') {
+                if (!isset($_FILES['logo_file']) || $_FILES['logo_file']['error'] !== UPLOAD_ERR_OK) {
+                    echo json_encode(['success' => false, 'message' => 'Upload failed.']);
+                    exit;
+                }
+                $ext = strtolower(pathinfo($_FILES['logo_filae']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    echo json_encode(['success' => false, 'message' => 'Only JPG, PNG, WEBP allowed.']);
+                    exit;
+                }
+                $uploadDir = '../../Images/Uploads/';
+                if (!is_dir($uploadDir))
+                    mkdir($uploadDir, 0777, true);
+                $filename = 'company_logo.' . $ext;
+                $targetPath = $uploadDir . $filename;
+                move_uploaded_file($_FILES['logo_file']['tmp_name'], $targetPath);
+                $web_path = '../../Images/Uploads/' . $filename;
+                $stmt = mysqli_prepare($conn, "INSERT INTO system_settings (setting_key, setting_value) VALUES ('company_logo', ?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
+                mysqli_stmt_bind_param($stmt, "s", $web_path);
+                mysqli_stmt_execute($stmt);
+                echo json_encode(['success' => true, 'path' => $web_path]);
+                exit;
+            }
         }
     } catch (Exception $e) {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -468,6 +491,40 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                         </h3>
                     </div>
                     <form id="form-business">
+                        <div class="setting-group">
+                            <label>Company Logo</label>
+                            <div style="display:flex; align-items:center; gap:20px; margin-bottom:8px;">
+                                <input type="file" id="company_logo_file" accept="image/*" style="display:none;"
+                                    onchange="previewLogo(event)">
+                                <div onclick="document.getElementById('company_logo_file').click();"
+                                    style="width:120px; height:90px; border-radius:12px; border:2px dashed #d1d5db; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; transition:0.2s; flex-shrink:0;"
+                                    onmouseover="this.style.borderColor='#1e3a8a'"
+                                    onmouseout="this.style.borderColor='#d1d5db'">
+                                    <img id="logoPreview" src=""
+                                        style="width:100%; height:100%; object-fit:contain; display:none; border-radius:10px;">
+                                    <div id="logoPlaceholder" style="text-align:center; color:#9ca3af;">
+                                        <i class="fas fa-image"
+                                            style="font-size:28px; display:block; margin-bottom:6px;"></i>
+                                        <span style="font-size:11px; font-weight:600;">Click to Upload</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size:13px; font-weight:600; color:#374151; margin-bottom:4px;">
+                                        Company Logo</div>
+                                    <div style="font-size:12px; color:#6b7280; line-height:1.6;">
+                                        Recommended: PNG with transparent background<br>
+                                        Size: 300 x 200px or larger
+                                    </div>
+                                    <button type="button"
+                                        onclick="document.getElementById('company_logo_file').click();"
+                                        style="margin-top:10px; background:#eff6ff; color:#1e3a8a; border:none; padding:7px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">
+                                        <i class="fas fa-upload" style="margin-right:4px;"></i> Change Logo
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="helper-text"><i class="fas fa-info-circle"></i> Logo will appear on printed
+                                invoices.</div>
+                        </div>
                         <div class="setting-group">
                             <label>Company Display Name</label>
                             <input type="text" id="company_name" name="company_name"

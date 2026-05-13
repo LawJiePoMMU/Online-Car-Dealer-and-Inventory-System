@@ -228,18 +228,16 @@ $stmt->close();
                         $msg = $note['notification_message'];
                         $is_unread = ($note['notification_status'] === 'unread');
 
-                        // 預設樣式
                         $icon = 'fa-bell';
                         $icon_bg = '#f3f4f6';
                         $icon_color = '#6b7280';
                         $module_name = 'System Alert';
                         $target_url = '#';
 
-                        // 動態解析字串，賦予不同模組對應的 UI 與跳轉路徑
                         if (strpos($msg, 'New Booking') !== false) {
                             $icon = 'fa-shopping-cart';
-                            $icon_bg = '#eff6ff'; // 藍底
-                            $icon_color = '#3b82f6'; // 藍圖標
+                            $icon_bg = '#eff6ff'; 
+                            $icon_color = '#3b82f6'; 
                             $module_name = 'Orders Module';
                             $target_url = 'orders.php?tab=bookings';
                         } elseif (strpos($msg, 'Stock Alert') !== false) {
@@ -247,23 +245,21 @@ $stmt->close();
                             $icon_bg = '#fef2f2';
                             $icon_color = '#ef4444';
                             $module_name = 'Inventory Module';
-                            $target_url = 'manage cars.php?tab=all';
+                            $target_url = 'manage cars.php';
 
-                            // 解析 car_id
                             if (preg_match('/\[car_id:(\d+)\]/', $msg, $matches)) {
                                 $highlight_id = $matches[1];
-                                $target_url = 'manage cars.php?tab=all&highlight=' . $highlight_id;
+                                $target_url = 'manage cars.php?highlight=' . $highlight_id;
                             }
                         } elseif (strpos($msg, 'Document') !== false) {
                             $icon = 'fa-file-pdf';
-                            $icon_bg = '#faf5ff'; // 紫底
-                            $icon_color = '#a855f7'; // 紫圖標
+                            $icon_bg = '#faf5ff';
+                            $icon_color = '#a855f7'; 
                             $module_name = 'Verification Module';
                             $target_url = 'orders.php?tab=bookings';
                         }
                         ?>
 
-                        <!-- 渲染卡片：強制套用 CSS，禁止顯示藍色底線 -->
                         <a href="<?= $target_url ?>" class="notification-card <?= $is_unread ? 'unread' : '' ?>"
                             data-id="<?= $note['notification_id'] ?>">
                             <div class="noti-icon-wrapper"

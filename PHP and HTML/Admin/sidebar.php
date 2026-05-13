@@ -1,5 +1,3 @@
-Copy
-
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_user_id = $_SESSION['user_id'] ?? 0;
@@ -338,12 +336,20 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
                 <span>Manage Cars</span>
             </a>
         </li>
+
+        <li>
+            <a href="test_drives.php" class="<?= $current_page == 'test_drives.php' ? 'active' : '' ?>">
+                <i class="fas fa-road"></i>
+                <span>Test Drive</span>
+            </a>
+        </li>
         <li>
             <a href="orders.php" class="<?= $current_page == 'orders.php' ? 'active' : '' ?>">
                 <i class="fas fa-shopping-cart"></i>
                 <span>Orders</span>
             </a>
         </li>
+
         <li>
             <a href="users.php" class="<?= $current_page == 'users.php' ? 'active' : '' ?>">
                 <i class="fas fa-users"></i>
@@ -388,7 +394,7 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
     </ul>
 
     <div class="sidebar-footer">
-        <a href="../logout.php" class="logout-btn">
+        <a href="Auth/logout.php" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
             <span>Log Out</span>
         </a>
