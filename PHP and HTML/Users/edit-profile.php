@@ -70,7 +70,7 @@ include 'Includes/header.php';
                     
                     <?php if($success): ?>
                         <div style="background: #dcfce7; color: #166534; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600;">
-                            ✅ <?php echo $success; ?>
+                             <?php echo $success; ?>
                         </div>
                     <?php endif; ?>
 
