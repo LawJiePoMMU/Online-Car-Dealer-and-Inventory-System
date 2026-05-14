@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 include 'Includes/header.php'; 
 require_once "../Config/database.php";
 
-// 🔥 使用 $_SESSION['id'] 判断登录
+// 检查是否登录
 if (!isset($_SESSION['id'])) {
     echo "<script>alert('Please login to view your wishlist.'); window.location.href='Auth/login.php';</script>";
     exit;
@@ -48,7 +48,7 @@ try {
         <main class="inventory-main">
             <div class="top-action-bar" style="margin-bottom: 30px;">
                 <h1 style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0;">MY WISHLIST</h1>
-                <p style="color: #64748b; font-size: 14px; margin-top: 5px;">You have <?php echo count($wishlist_cars); ?> saved vehicles.</p>
+                <p id="wishlist-count-text" style="color: #64748b; font-size: 14px; margin-top: 5px;">You have <?php echo count($wishlist_cars); ?> saved vehicles.</p>
             </div>
 
             <div class="inventory-grid" id="wishlist-container">
@@ -110,7 +110,8 @@ try {
 <script>
     function removeFromWishlist(event, btnElement, carId) {
         event.preventDefault();
-        if(!confirm('Remove this car from your wishlist?')) return;
+        
+        // 🔥 已经把 confirm() 弹窗删掉了，现在一点击就直接执行删除！
 
         fetch('toggle_wishlist.php', {
             method: 'POST',
@@ -124,11 +125,22 @@ try {
                 card.style.opacity = '0';
                 card.style.transform = 'scale(0.9)';
                 setTimeout(() => {
+                    // 1. 删掉卡片
                     card.remove();
-                    if(document.querySelectorAll('.pro-car-card').length === 0) {
+                    
+                    // 2. 动态计算剩下的卡片数量，并更新上面的文字
+                    let remainingCars = document.querySelectorAll('.pro-car-card').length;
+                    let countTextElement = document.getElementById('wishlist-count-text');
+                    
+                    if(countTextElement) {
+                        countTextElement.innerText = "You have " + remainingCars + " saved vehicles.";
+                    }
+
+                    // 如果删光了，刷新页面显示 Empty 状态
+                    if(remainingCars === 0) {
                         location.reload();
                     }
-                }, 300);
+                }, 300); // 300毫秒的丝滑消失动画
             }
         })
         .catch(error => console.error('Error:', error));
