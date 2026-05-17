@@ -1,199 +1,150 @@
+
 <?php
 session_start();
 require 'db.php';
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['pay_ref'])) { header("Location: index.php"); exit(); }
+// 1. Ensure the user is logged in and actually just completed a payment
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
 
-$source     = $_SESSION['pay_source']         ?? '';
-$amount     = $_SESSION['pay_amount']         ?? '0.00';
-$label      = $_SESSION['pay_label']          ?? 'Payment';
-$method     = $_SESSION['pay_method']         ?? '-';
-$ref        = $_SESSION['pay_ref']            ?? 'N/A';
-$date       = $_SESSION['pay_date']           ?? '-';
-$bank       = $_SESSION['pay_bank']           ?? null;
-$card_type  = $_SESSION['pay_card_type']      ?? null;
-$card_last4 = $_SESSION['pay_card_last4']     ?? null;
-$expiry     = date('d F Y', strtotime('+7 days'));
+if (!isset($_SESSION['pay_ref']) || !isset($_SESSION['pay_reservation_id'])) {
+    // Prevent direct access to confirmation page if no payment transaction exists
+    header("Location: index.php");
+    exit();
+}
+
+// 2. Fetch the newly created reservation and payment details from the database 
+// to ensure accuracy (even though we have session backups)
+try {
+    $stmt = $pdo->prepare("
+        SELECT r.*, p.payment_amount, p.payment_method, p.payment_status, p.payment_date 
+        FROM reservations r
+        JOIN payments p ON r.reservation_id = p.reservation_id
+        WHERE r.reservation_id = ? AND r.user_id = ?
+    ");
+    $stmt->execute([$_SESSION['pay_reservation_id'], $_SESSION['user_id']]);
+    $db_data = $stmt->fetch();
+
+    if (!$db_data) {
+        throw new Exception("Transaction record not found in system storage.");
+    }
+
+    // Decode our compiled snapshot payload to extract structural display variables
+    $snapshot = json_decode($db_data['snapshot_data'], true);
+
+} catch (Exception $e) {
+    die("Error retrieving confirmation details: " . $e->getMessage());
+}
+
+// 3. Keep variables handy for display
+$txn_ref        = $_SESSION['pay_ref'];
+$payment_amount = $db_data['payment_amount'];
+$car_model      = $snapshot['car_model'] ?? 'Selected Vehicle';
+$car_brand      = $snapshot['car_brand'] ?? '';
+$payment_label  = $_SESSION['pay_label'] ?? 'Payment Complete';
+
+// 4. CLEANUP WORKFLOW: Clear payment wizard sessions so they can't form-resubmit,
+// but keep user details intact for application navigation
+unset($_SESSION['pay_source']);
+unset($_SESSION['pay_car_id']);
+unset($_SESSION['pay_amount']);
+unset($_SESSION['pay_label']);
+unset($_SESSION['pay_detail_price']);
+unset($_SESSION['pay_detail_loan']);
+unset($_SESSION['pay_detail_monthly']);
+unset($_SESSION['pay_detail_tenure']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Payment Confirmation</title>
+    <title>Payment Successful</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="styles.css"/>
     <style>
-        .success-hero {
-            background: linear-gradient(135deg, #28a745, #1e7e34);
-            color: white; padding: 50px 0 40px; margin-bottom: 30px; text-align: center;
-        }
-        .success-icon {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 70px; height: 70px; border-radius: 50%;
-            background: rgba(255,255,255,0.25); font-size: 36px;
-            margin-bottom: 16px;
-        }
-        .success-hero h1 { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
-        .success-hero p  { opacity: 0.9; font-size: 15px; }
-
-        .section-card { background: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow); padding: 28px; margin-bottom: 24px; }
-        .section-card h2 { font-size: 18px; margin-bottom: 18px; color: var(--primary-color); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-
-        .info-table { width: 100%; border-collapse: collapse; }
-        .info-table td { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
-        .info-table td:first-child { color: var(--text-light); font-weight: 500; width: 200px; }
-
-        .ref-box { background: #f0f7ff; border: 1px solid #c8e0ff; border-radius: 6px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
-        .ref-box span:first-child { font-size: 13px; color: var(--text-light); }
-        .ref-box strong { font-size: 18px; color: var(--primary-color); font-family: monospace; letter-spacing: 1px; }
-
-        .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; }
-        .status-success { background: #d4edda; color: #155724; }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-danger  { background: #f8d7da; color: #721c24; }
-
-        .steps-list { list-style: none; padding: 0; }
-        .steps-list li { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: var(--text-dark); }
-        .steps-list li:last-child { border-bottom: none; }
-        .step-num { min-width: 28px; height: 28px; background: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
-
-        .car-thumb-small { height: 60px; border-radius: 6px; object-fit: cover; margin-right: 10px; vertical-align: middle; }
-
-        .btn-group { display: flex; gap: 12px; flex-wrap: wrap; }
-        .btn-outline { background: white; color: var(--primary-color); border: 2px solid var(--primary-color); padding: 11px 22px; border-radius: 5px; font-family: 'Poppins', sans-serif; font-weight: 500; cursor: pointer; transition: var(--transition); text-decoration: none; display: inline-block; }
-        .btn-outline:hover { background: var(--primary-color); color: white; }
-
-        @media (max-width:600px) { .btn-group { flex-direction: column; } .ref-box { flex-direction: column; gap: 4px; } }
+        .success-wrapper { max-width: 600px; margin: 60px auto; padding: 0 20px; text-align: center; }
+        .success-card { background: #ffffff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); padding: 40px; border-top: 6px solid #28a745; }
+        
+        .success-icon { width: 80px; height: 80px; background: #d4edda; color: #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 24px; }
+        
+        h1 { font-size: 26px; color: #333; margin-bottom: 8px; font-weight: 700; }
+        .subtitle { color: #6c757d; font-size: 15px; margin-bottom: 30px; }
+        
+        .receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; text-align: left; background: #f8f9fa; border-radius: 8px; overflow: hidden; }
+        .receipt-table td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid #eef0f2; }
+        .receipt-table tr:last-child td { border-bottom: none; }
+        .receipt-table td:first-child { color: #6c757d; width: 40%; }
+        .receipt-table td:last-child { font-weight: 600; color: #333; text-align: right; }
+        
+        .badge-paid { background: #28a745; color: white; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: 600; text-transform: uppercase; display: inline-block; }
+        
+        .btn-status { display: block; background: #2b6cb0; color: white; padding: 15px; border-radius: 6px; font-weight: 600; text-decoration: none; font-size: 16px; transition: background 0.2s ease; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(43, 108, 176, 0.2); }
+        .btn-status:hover { background: #1a446c; }
+        .btn-home { display: inline-block; color: #2b6cb0; text-decoration: none; font-size: 14px; font-weight: 500; }
+        .btn-home:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
-<!-- NAVBAR -->
 <nav class="navbar">
     <div class="nav-container">
         <a href="index.php" class="nav-logo">AutoDeal</a>
         <ul class="nav-links">
             <li><a href="index.php">Home</a></li>
             <li><a href="downpayment.php">Down Payment</a></li>
-            <li><a href="reservation.php">Reservation</a></li>
+            <li><a href="booking.php">Reservation</a></li>
             <li><a href="view_status.php">View Status</a></li>
         </ul>
-        <div class="nav-actions"></div>
     </div>
 </nav>
 
-<!-- SUCCESS HERO -->
-<div class="success-hero">
-    <div class="container">
-        <div class="success-icon">&#10003;</div>
-        <h1>Payment Successful!</h1>
-        <?php if ($source === 'downpayment'): ?>
-            <p>Your down payment has been received successfully.</p>
-        <?php else: ?>
-            <p>Your car reservation has been confirmed!</p>
-        <?php endif; ?>
-    </div>
-</div>
-
-<div class="container">
-
-    <!-- Reference Number -->
-    <div class="ref-box">
-        <span>Transaction Reference</span>
-        <strong><?php echo htmlspecialchars($ref); ?></strong>
-    </div>
-
-    <!-- Transaction Details -->
-    <div class="section-card">
-        <h2>Transaction Details</h2>
-        <table class="info-table">
-            <tr><td>Reference Number</td><td><strong><?php echo htmlspecialchars($ref); ?></strong></td></tr>
-            <tr><td>Date &amp; Time</td><td><?php echo htmlspecialchars($date); ?></td></tr>
-            <tr><td>Description</td><td><?php echo htmlspecialchars($label); ?></td></tr>
-            <tr><td>Amount Paid</td><td><strong style="color:var(--primary-color); font-size:18px;">RM <?php echo number_format((float)$amount, 2); ?></strong></td></tr>
-            <tr><td>Payment Method</td><td><?php echo htmlspecialchars($method); ?></td></tr>
-            <?php if ($method === 'Online Banking (FPX)' && $bank): ?>
-            <tr><td>Bank</td><td><?php echo htmlspecialchars($bank); ?></td></tr>
-            <?php elseif ($method === 'Credit/Debit Card' && $card_last4): ?>
-            <tr><td>Card</td><td><?php echo htmlspecialchars($card_type); ?> ending in <?php echo htmlspecialchars($card_last4); ?></td></tr>
-            <?php endif; ?>
-            <tr><td>Status</td><td><span class="status-badge status-success">PAID</span></td></tr>
-        </table>
-    </div>
-
-    <!-- Down Payment Loan Summary -->
-    <?php if ($source === 'downpayment'): ?>
-    <div class="section-card">
-        <h2>Loan Summary</h2>
-        <table class="info-table">
-            <tr><td>Car Price</td><td><?php echo htmlspecialchars($_SESSION['pay_detail_price']   ?? '-'); ?></td></tr>
-            <tr><td>Loan Amount</td><td><?php echo htmlspecialchars($_SESSION['pay_detail_loan']    ?? '-'); ?></td></tr>
-            <tr><td>Monthly Instalment</td><td><?php echo htmlspecialchars($_SESSION['pay_detail_monthly'] ?? '-'); ?></td></tr>
-            <tr><td>Loan Tenure</td><td><?php echo htmlspecialchars($_SESSION['pay_detail_tenure']  ?? '-'); ?></td></tr>
-        </table>
-    </div>
-    <?php endif; ?>
-
-    <!-- Reservation Summary -->
-    <?php if ($source === 'reservation'): ?>
-    <div class="section-card">
-        <h2>Reservation Details</h2>
-        <table class="info-table">
-            <?php if (!empty($_SESSION['res_image'])): ?>
+<div class="success-wrapper">
+    <div class="success-card">
+        <div class="success-icon">✓</div>
+        <h1>Payment Confirmed!</h1>
+        <p class="subtitle">Your transaction completed successfully and your request has been logged.</p>
+        
+        <table class="receipt-table">
             <tr>
-                <td>Car</td>
-                <td>
-                    <img src="<?php echo htmlspecialchars($_SESSION['res_image']); ?>" class="car-thumb-small" alt="Car"/>
-                    <?php echo htmlspecialchars(($_SESSION['res_brand']??'').' '.($_SESSION['res_model']??'')); ?>
-                </td>
+                <td>Transaction Ref</td>
+                <td><?php echo htmlspecialchars($txn_ref); ?></td>
             </tr>
-            <?php else: ?>
-            <tr><td>Car</td><td><?php echo htmlspecialchars(($_SESSION['res_brand']??'').' '.($_SESSION['res_model']??'')); ?></td></tr>
-            <?php endif; ?>
-            <tr><td>Registered Name</td><td><?php echo htmlspecialchars($_SESSION['res_name']  ?? '-'); ?></td></tr>
-            <tr><td>Visit Date</td><td><?php echo htmlspecialchars($_SESSION['res_date']  ?? '-'); ?></td></tr>
-            <tr><td>Reservation Valid Until</td><td><strong><?php echo $expiry; ?></strong></td></tr>
+            <tr>
+                <td>Description</td>
+                <td><?php echo htmlspecialchars($payment_label); ?></td>
+            </tr>
+            <tr>
+                <td>Vehicle</td>
+                <td><?php echo htmlspecialchars($car_brand . ' ' . $car_model); ?></td>
+            </tr>
+            <tr>
+                <td>Amount Charged</td>
+                <td style="color: #2b6cb0; font-size: 16px;">RM <?php echo number_format((float)$payment_amount, 2); ?></td>
+            </tr>
+            <tr>
+                <td>Payment Method</td>
+                <td><?php echo htmlspecialchars($db_data['payment_method']); ?></td>
+            </tr>
+            <tr>
+                <td>Transaction Date</td>
+                <td><?php echo date('d M Y, h:i A', strtotime($db_data['payment_date'])); ?></td>
+            </tr>
+            <tr>
+                <td>Payment Status</td>
+                <td><span class="badge-paid"><?php echo htmlspecialchars($db_data['payment_status']); ?></span></td>
+            </tr>
         </table>
-        <p style="font-size:13px; color:var(--text-light); margin-top:12px;">
-            Our sales team will contact you within 1 working day to finalise your purchase.
-        </p>
+        
+        <a href="view_status.php" class="btn-status">
+            Track Loan Approval Status &rarr;
+        </a>
+        
+        <a href="index.php" class="btn-home">Return to Homepage</a>
     </div>
-    <?php endif; ?>
-
-    <!-- Next Steps -->
-    <div class="section-card">
-        <h2>What's Next?</h2>
-        <?php if ($source === 'downpayment'): ?>
-        <ul class="steps-list">
-            <li><div class="step-num">1</div> Our finance team will review your loan application.</li>
-            <li><div class="step-num">2</div> A confirmation email will be sent to <strong><?php echo htmlspecialchars($_SESSION['res_email'] ?? ''); ?></strong>.</li>
-            <li><div class="step-num">3</div> Visit the showroom within 3 working days with your IC and supporting documents.</li>
-            <li><div class="step-num">4</div> Track your application status on the <a href="view_status.php" style="color:var(--primary-color);">View Status</a> page.</li>
-        </ul>
-        <?php else: ?>
-        <ul class="steps-list">
-            <li><div class="step-num">1</div> Your reservation is confirmed until <strong><?php echo $expiry; ?></strong>.</li>
-            <li><div class="step-num">2</div> A confirmation email will be sent to <strong><?php echo htmlspecialchars($_SESSION['res_email'] ?? ''); ?></strong>.</li>
-            <li><div class="step-num">3</div> Visit the showroom on <strong><?php echo htmlspecialchars($_SESSION['res_date'] ?? ''); ?></strong> to complete your purchase.</li>
-            <li><div class="step-num">4</div> Track your reservation on the <a href="view_status.php" style="color:var(--primary-color);">View Status</a> page.</li>
-        </ul>
-        <?php endif; ?>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="btn-group" style="margin-bottom:48px;">
-        <button onclick="window.print()" class="btn-outline">&#128438; Print Receipt</button>
-        <a href="view_status.php" class="btn-primary" style="padding:12px 24px; text-decoration:none;">View My Status</a>
-        <a href="index.php" class="btn-outline">Back to Home</a>
-    </div>
-
 </div>
 
-<footer class="footer text-center">
-    <p>&copy; 2025 AutoDeal. All rights reserved.</p>
-</footer>
-
-<?php unset($_SESSION['pay_ref'], $_SESSION['pay_date'], $_SESSION['pay_method'], $_SESSION['pay_bank'], $_SESSION['pay_card_type'], $_SESSION['pay_card_last4']); ?>
 </body>
 </html>
