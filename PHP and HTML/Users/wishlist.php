@@ -17,21 +17,20 @@ try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    // 🔥 完美适配最新数据库：移除了 car_history，使用子查询获取图片，并用 wishlist_id 排序
     $sql = "
         SELECT 
             c.car_id, c.car_brand, c.car_model, c.car_year, c.car_origin,
-            c.transmission, c.fuel_type,
-            t.car_type_name, l.location_city, i.car_image_url, s.car_status_price,
-            h.used_mileage
+            c.transmission, c.fuel_type, c.car_mileage,
+            t.car_type_name, l.location_city, s.car_status_price,
+            (SELECT car_image_url FROM car_image WHERE car_id = c.car_id LIMIT 1) as car_image_url
         FROM wishlist w
         JOIN cars c ON w.car_id = c.car_id
         LEFT JOIN car_types t ON c.car_type_id = t.car_type_id
         LEFT JOIN locations l ON c.location_id = l.location_id
         LEFT JOIN car_status s ON c.car_id = s.car_id
-        LEFT JOIN car_history h ON c.car_id = h.car_id
-        LEFT JOIN (SELECT car_id, MIN(car_image_url) as car_image_url FROM car_image GROUP BY car_id) i ON c.car_id = i.car_id
         WHERE w.user_id = ?
-        ORDER BY w.created_at DESC
+        ORDER BY w.wishlist_id DESC
     ";
 
     $stmt = $pdo->prepare($sql);
@@ -79,7 +78,7 @@ try {
                                     
                                     <div class="card-specs">
                                         <div class="spec-row">
-                                            <span><?php echo $car['car_year']; ?></span> <span class="spec-dot">•</span> <span><?php echo number_format($car['used_mileage']); ?> KM</span>
+                                            <span><?php echo $car['car_year']; ?></span> <span class="spec-dot">•</span> <span><?php echo number_format($car['car_mileage']); ?> KM</span>
                                         </div>
                                         <div class="spec-row">
                                             <span><?php echo $car['transmission']; ?></span> <span class="spec-dot">•</span> <span><?php echo $car['fuel_type']; ?></span>
@@ -88,7 +87,7 @@ try {
                                     
                                     <div class="card-footer">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; margin-bottom: 2px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                        <span><?php echo htmlspecialchars($car['location_city']); ?></span>
+                                        <span><?php echo htmlspecialchars($car['location_city'] ?? 'N/A'); ?></span>
                                     </div>
                                 </div>
                             </a>
@@ -111,8 +110,6 @@ try {
     function removeFromWishlist(event, btnElement, carId) {
         event.preventDefault();
         
-        // 🔥 已经把 confirm() 弹窗删掉了，现在一点击就直接执行删除！
-
         fetch('toggle_wishlist.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -125,10 +122,8 @@ try {
                 card.style.opacity = '0';
                 card.style.transform = 'scale(0.9)';
                 setTimeout(() => {
-                    // 1. 删掉卡片
                     card.remove();
                     
-                    // 2. 动态计算剩下的卡片数量，并更新上面的文字
                     let remainingCars = document.querySelectorAll('.pro-car-card').length;
                     let countTextElement = document.getElementById('wishlist-count-text');
                     
@@ -136,11 +131,10 @@ try {
                         countTextElement.innerText = "You have " + remainingCars + " saved vehicles.";
                     }
 
-                    // 如果删光了，刷新页面显示 Empty 状态
                     if(remainingCars === 0) {
                         location.reload();
                     }
-                }, 300); // 300毫秒的丝滑消失动画
+                }, 300); 
             }
         })
         .catch(error => console.error('Error:', error));

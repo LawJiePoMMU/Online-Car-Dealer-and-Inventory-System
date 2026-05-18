@@ -15,22 +15,20 @@ $category = isset($_POST['category']) ? $_POST['category'] : 'All';
 $brand = isset($_POST['brand']) ? $_POST['brand'] : 'AllBrands';
 $search = isset($_POST['search']) ? trim($_POST['search']) : '';
 
-// 🔥 修复：统一使用 $_SESSION['id']
+// 统一使用 $_SESSION['id'] 作为用户 ID
 $user_id = isset($_SESSION['id']) ? intval($_SESSION['id']) : 0;
 
 $sql = "
     SELECT 
         c.car_id, c.car_brand, c.car_model, c.car_year, c.car_origin,
-        c.transmission, c.fuel_type,
-        t.car_type_name, l.location_city, i.car_image_url, s.car_status_price,
-        h.used_mileage,
+        c.transmission, c.fuel_type, c.car_mileage, c.body_type,
+        t.car_type_name, l.location_city, s.car_status_price,
+        (SELECT car_image_url FROM car_image WHERE car_id = c.car_id LIMIT 1) as car_image_url,
         (SELECT COUNT(*) FROM wishlist WHERE user_id = $user_id AND car_id = c.car_id) as is_liked
     FROM cars c
     LEFT JOIN car_types t ON c.car_type_id = t.car_type_id
     LEFT JOIN locations l ON c.location_id = l.location_id
     LEFT JOIN car_status s ON c.car_id = s.car_id
-    LEFT JOIN car_history h ON c.car_id = h.car_id
-    LEFT JOIN (SELECT car_id, MIN(car_image_url) as car_image_url FROM car_image GROUP BY car_id) i ON c.car_id = i.car_id
     WHERE 1=1 
     AND s.car_status_status = 'Active'
 ";
@@ -66,17 +64,18 @@ if (count($cars) > 0) {
         
         $location = !empty($car['location_city']) ? htmlspecialchars($car['location_city']) : 'N/A';
         $price = !empty($car['car_status_price']) ? number_format($car['car_status_price'], 0) : 'TBA';
-        $mileage = !empty($car['used_mileage']) ? number_format($car['used_mileage']) . ' KM' : '0 KM';
+        
+        $mileage = !empty($car['car_mileage']) ? number_format($car['car_mileage']) . ' KM' : '0 KM';
         $transmission = !empty($car['transmission']) ? htmlspecialchars($car['transmission']) : 'Auto';
         $fuel = !empty($car['fuel_type']) ? htmlspecialchars($car['fuel_type']) : 'Petrol';
         
         $img = !empty($car['car_image_url']) ? htmlspecialchars($car['car_image_url']) : 'https://images.unsplash.com/photo-1550486014-9f88c39d8dc9?auto=format&fit=crop&w=800&q=80';
 
-        // 🔥 如果已经点过收藏，直接赋予 liked 属性
         $likedClass = ($car['is_liked'] > 0) ? 'liked' : '';
 
+        // 🔥 唯一修改的地方：把 href 改成了 onclick 触发 JavaScript
         echo '
-        <a href="car_details.php?id='.$id.'" class="pro-car-card">
+        <a href="javascript:void(0);" onclick="openCarDetails('.$id.')" class="pro-car-card">
             <div class="card-img-container">
                 <img src="'.$img.'" alt="'.$title.'" onerror="this.onerror=null; this.src=\'https://images.unsplash.com/photo-1550486014-9f88c39d8dc9?auto=format&fit=crop&w=800&q=80\';">
                 <span class="badge-condition">'.$condition.'</span>
