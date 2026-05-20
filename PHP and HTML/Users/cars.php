@@ -8,792 +8,369 @@ include 'Includes/header.php';
 <style>
 
 /* ==================== SIDEBAR ==================== */
-
 .side-drawer {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    max-width: 520px;
-    height: 100vh;
-    background: #ffffff;
-    box-shadow: -10px 0 40px rgba(15, 23, 42, 0.12);
-    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    z-index: 9999;
-    overflow: visible;
-    border-left: 1px solid #e2e8f0;
+    position: fixed; top: 0; right: -100%; width: 100%; max-width: 520px;
+    height: 100vh; background: #ffffff; box-shadow: -10px 0 40px rgba(15, 23, 42, 0.12);
+    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1); z-index: 9999;
+    overflow: visible; border-left: 1px solid #e2e8f0;
 }
-
-.side-drawer.open {
-    right: 0;
-}
-
-/* ==================== CONTENT ==================== */
-
+.side-drawer.open { right: 0; }
 .drawer-content {
-    padding: 28px;
-    position: relative;
-    height: 100vh;
-    overflow-y: auto;
-    box-sizing: border-box;
-    background: linear-gradient(to bottom, #ffffff, #f8fafc);
+    padding: 28px; position: relative; height: 100vh;
+    overflow-y: auto; box-sizing: border-box; background: linear-gradient(to bottom, #ffffff, #f8fafc);
 }
-
-/* ==================== OVERLAY ==================== */
-
 .drawer-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(15, 23, 42, 0.35);
-    backdrop-filter: blur(5px);
-    z-index: 9998;
-    opacity: 0;
-    visibility: hidden;
-    transition: 0.3s ease;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(5px);
+    z-index: 9998; opacity: 0; visibility: hidden; transition: 0.3s ease;
 }
-
-.drawer-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* ==================== TOGGLE BTN ==================== */
-
+.drawer-overlay.show { opacity: 1; visibility: visible; }
 .toggle-drawer-edge-btn {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-    color: #475569;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10005;
+    position: absolute; top: 20px; left: 20px; width: 40px; height: 40px;
+    border-radius: 50%; border: 1px solid #e2e8f0; background: #ffffff;
+    color: #475569; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10005;
 }
-
 .toggle-drawer-edge-btn:hover {
-    transform: scale(1.08);
-    color: #0f172a;
-    background: #f8fafc;
+    transform: scale(1.08); color: #0f172a; background: #f8fafc;
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
-/* ==================== GALLERY ==================== */
+/* ==================== GALLERY & HEADINGS & GRID ==================== */
+.gallery-main img { width: 100%; height: 300px; object-fit: cover; border-radius: 24px; border: 1px solid #e2e8f0; background: #f1f5f9; }
+.gallery-main { margin-top: 50px !important; }
+.gallery-thumbs { display: flex; gap: 10px; margin-top: 14px; overflow-x: auto; padding-bottom: 6px; }
+.gallery-thumbs img { width: 85px; height: 65px; object-fit: cover; border-radius: 14px; cursor: pointer; border: 2px solid transparent; transition: 0.25s ease; }
+.gallery-thumbs img:hover { border-color: #0f172a; transform: translateY(-2px); }
+h2 { font-size: 32px !important; font-weight: 900 !important; line-height: 1.1; color: #0f172a !important; }
+h3 { color: #0f172a !important; font-size: 18px !important; font-weight: 800 !important; margin-bottom: 18px !important; }
+.car-details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 18px; }
+.grid-item { background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; transition: 0.25s ease; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+.grid-item:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,23,42,0.08); }
+.grid-item span { color: #64748b; display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.grid-item strong { color: #0f172a; font-size: 15px; font-weight: 700; }
+hr { border: 0 !important; border-top: 1px solid #e2e8f0 !important; margin: 30px 0 !important; }
+button { transition: 0.25s ease; }
+button:hover { transform: translateY(-2px); }
+.drawer-content::-webkit-scrollbar { width: 7px; }
+.drawer-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
 
-.gallery-main img {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-    border-radius: 24px;
-    border: 1px solid #e2e8f0;
-    background: #f1f5f9;
-}
-
-.gallery-main {
-    margin-top: 50px !important;
-}
-
-.gallery-thumbs {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-    overflow-x: auto;
-    padding-bottom: 6px;
-}
-
-.gallery-thumbs img {
-    width: 85px;
-    height: 65px;
-    object-fit: cover;
-    border-radius: 14px;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: 0.25s ease;
-}
-
-.gallery-thumbs img:hover {
-    border-color: #0f172a;
-    transform: translateY(-2px);
-}
-
-/* ==================== HEADINGS ==================== */
-
-h2 {
-    font-size: 32px !important;
-    font-weight: 900 !important;
-    line-height: 1.1;
-    color: #0f172a !important;
-}
-
-h3 {
-    color: #0f172a !important;
-    font-size: 18px !important;
-    font-weight: 800 !important;
-    margin-bottom: 18px !important;
-}
-
-/* ==================== GRID ==================== */
-
-.car-details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-    margin-top: 18px;
-}
-
-.grid-item {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 16px;
-    transition: 0.25s ease;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
-}
-
-.grid-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(15,23,42,0.08);
-}
-
-.grid-item span {
-    color: #64748b;
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-}
-
-.grid-item strong {
-    color: #0f172a;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-/* ==================== SECTION SPACING ==================== */
-
-hr {
-    border: 0 !important;
-    border-top: 1px solid #e2e8f0 !important;
-    margin: 30px 0 !important;
-}
-
-/* ==================== BUTTONS ==================== */
-
-button {
-    transition: 0.25s ease;
-}
-
-button:hover {
-    transform: translateY(-2px);
-}
-
-/* ==================== SCROLLBAR ==================== */
-
-.drawer-content::-webkit-scrollbar {
-    width: 7px;
-}
-
-.drawer-content::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 20px;
-}
-
-/* ================= MODEL TABS (更新优化版) ================= */
-
+/* ================= MODEL TABS (上方无边框分类) ================= */
 .category-tabs {
-    display: flex;
-    flex-wrap: wrap; 
-    gap: 8px;       
-    margin-top: 15px;
-    margin-bottom: 25px;
-    align-items: center;
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; margin-bottom: 25px; align-items: center;
+}
+.category-tab {
+    padding: 8px 18px; background-color: transparent; border: 1px solid transparent;
+    border-radius: 8px; font-size: 14px; font-weight: 600; color: #64748b;
+    cursor: pointer; transition: all 0.25s ease; user-select: none;
+}
+.category-tab:hover {
+    background-color: #f1f5f9; color: #0f172a; transform: translateY(-2px);
+}
+.category-tab.active {
+    background-color: #0f172a; color: #ffffff; border-color: #0f172a;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 
-.category-tab {
-    padding: 8px 18px;
-    background-color: transparent; /* 去掉默认多余底色 */
-    border: 1px solid transparent;   /* 去掉默认的框框 */
-    border-radius: 8px; 
+/* ================= SIDEBAR FILTER (打勾风格 Tick Boxes) ================= */
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px; /* 选项之间的行距 */
+}
+
+.custom-tick {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    color: #64748b; /* 未选中时使用温和的灰蓝色 */
-    cursor: pointer;
-    transition: all 0.25s ease;
-    user-select: none;
-}
-
-.category-tab:hover {
-    background-color: #f1f5f9; /* 悬停时淡淡的灰色反馈 */
-    color: #0f172a;
-    transform: translateY(-2px); 
-}
-
-.category-tab.active {
-    background-color: #0f172a; 
-    color: #ffffff;
-    border-color: #0f172a;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); 
-}
-
-/* ================= SIDEBAR BODY TYPE FILTER (更新优化版) ================= */
-
-.checkbox-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr; 
-    gap: 10px;
-    padding: 0;
-    margin: 0;
-}
-
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 5px;
-    background-color: #ffffff; /* 干净纯白底 */
-    border: 1px solid #cbd5e1; /* 柔和的边框线 */
-    border-radius: 30px; 
-    font-size: 13px;
-    font-weight: 600;
     color: #475569;
-    cursor: pointer;
-    transition: all 0.25s ease;
     user-select: none;
-    text-align: center;
+    transition: 0.2s ease;
 }
 
-/* 完美排版平衡：让第一个 "All" 按钮横跨两个格子 */
-.checkbox-item:first-child {
-    grid-column: span 2;
-}
-
-.checkbox-item input[type="radio"] {
-    display: none;
-}
-
-.checkbox-item:hover {
-    background-color: #f8fafc;
-    border-color: #94a3b8;
+.custom-tick:hover {
     color: #0f172a;
-    transform: translateY(-2px);
 }
 
-.checkbox-item:has(input[type="radio"]:checked) {
+/* 隐藏原本的圆点 */
+.custom-tick input[type="radio"] {
+    display: none; 
+}
+
+/* 绘制未选中的方形框 */
+.custom-tick .box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px; /* 微圆角的正方形，看起来现代 */
+    margin-right: 12px;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+}
+
+/* 选中时的方形框（变成深蓝色，带有白色打勾 SVG 图标） */
+.custom-tick input[type="radio"]:checked + .box {
     background-color: #0f172a;
-    color: #ffffff;
     border-color: #0f172a;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-size: 14px;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
 }
 
-.checkbox-item input[type="radio"]:checked + span {
-    color: white;
+/* 选中时文字也变深 */
+.custom-tick input[type="radio"]:checked ~ span {
+    color: #0f172a;
+    font-weight: 700;
 }
 
-/* ==================== FULLSCREEN MODE ==================== */
 
-#car-details-sidebar[style*="max-width: 100%"] {
-    max-width: 100% !important;
-}
-
-#car-details-sidebar[style*="max-width: 100%"] .drawer-content {
-    max-width: 1600px;
-    margin: auto;
-}
-
-#car-details-sidebar[style*="max-width: 100%"] .car-details-grid {
-    grid-template-columns: repeat(4, 1fr);
-}
-
-/* ==================== MOBILE ==================== */
-
+/* ==================== FULLSCREEN & MOBILE ==================== */
+#car-details-sidebar[style*="max-width: 100%"] { max-width: 100% !important; }
+#car-details-sidebar[style*="max-width: 100%"] .drawer-content { max-width: 1600px; margin: auto; }
+#car-details-sidebar[style*="max-width: 100%"] .car-details-grid { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 768px) {
-
-    .side-drawer {
-        max-width: 100%;
-    }
-
-    .car-details-grid {
-        grid-template-columns: 1fr;
-    }
-
-    h2 {
-        font-size: 26px !important;
-    }
-
+    .side-drawer { max-width: 100%; }
+    .car-details-grid { grid-template-columns: 1fr; }
+    h2 { font-size: 26px !important; }
 }
-
 </style>
 
 <div class="inventory-page">
-
     <div class="inventory-wrapper">
 
         <aside class="inventory-sidebar">
-
-            <div class="filter-group">
-                <div class="sidebar-title">
+            <div class="filter-group" style="margin-bottom: 30px;">
+                <div class="sidebar-title" style="font-weight: 900; font-size: 16px;">
                     🚗 PROTON FILTER
                 </div>
             </div>
 
-            <div class="filter-group">
-
-                <div class="sidebar-title">
+            <div class="filter-group" style="margin-bottom: 30px;">
+                <div class="sidebar-title" style="font-size: 12px; color: #64748b; font-weight: 800; margin-bottom: 16px; letter-spacing: 1px;">
                     BODY TYPE
                 </div>
-
-                <div class="checkbox-list">
-
-                    <label class="checkbox-item">
-                        <input type="radio" name="bodyTypeFilter" value="All" checked>
-                        <span>All</span>
-                    </label>
-
-                    <label class="checkbox-item">
-                        <input type="radio" name="bodyTypeFilter" value="Sedan">
-                        <span>Sedan</span>
-                    </label>
-
-                    <label class="checkbox-item">
-                        <input type="radio" name="bodyTypeFilter" value="SUV">
-                        <span>SUV</span>
-                    </label>
-
-                    <label class="checkbox-item">
-                        <input type="radio" name="bodyTypeFilter" value="Hatchback">
-                        <span>Hatchback</span>
-                    </label>
-
-                    <label class="checkbox-item">
-                        <input type="radio" name="bodyTypeFilter" value="EV">
-                        <span>EV</span>
-                    </label>
-
+                <div class="filter-options">
+                    <label class="custom-tick"><input type="radio" name="bodyTypeFilter" value="All" checked><div class="box"></div><span>All</span></label>
+                    <label class="custom-tick"><input type="radio" name="bodyTypeFilter" value="Sedan"><div class="box"></div><span>Sedan</span></label>
+                    <label class="custom-tick"><input type="radio" name="bodyTypeFilter" value="SUV"><div class="box"></div><span>SUV</span></label>
+                    <label class="custom-tick"><input type="radio" name="bodyTypeFilter" value="Hatchback"><div class="box"></div><span>Hatchback</span></label>
+                    <label class="custom-tick"><input type="radio" name="bodyTypeFilter" value="MPV"><div class="box"></div><span>MPV</span></label>
+                    <label class="custom-tick"><input type="radio" name="bodyTypeFilter" value="EV"><div class="box"></div><span>EV</span></label>
                 </div>
-
             </div>
 
-            <button onclick="resetFilters()" style="width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 25px;">
+            <div class="filter-group" style="margin-bottom: 30px;">
+                <div class="sidebar-title" style="font-size: 12px; color: #64748b; font-weight: 800; margin-bottom: 16px; letter-spacing: 1px;">
+                    CONDITION
+                </div>
+                <div class="filter-options">
+                    <label class="custom-tick"><input type="radio" name="conditionFilter" value="All" checked><div class="box"></div><span>All</span></label>
+                    <label class="custom-tick"><input type="radio" name="conditionFilter" value="New Car"><div class="box"></div><span>New Car</span></label>
+                    <label class="custom-tick"><input type="radio" name="conditionFilter" value="Used Car"><div class="box"></div><span>Used Car</span></label>
+                </div>
+            </div>
+
+            <div class="filter-group" style="margin-bottom: 30px;">
+                <div class="sidebar-title" style="font-size: 12px; color: #64748b; font-weight: 800; margin-bottom: 16px; letter-spacing: 1px;">
+                    TRANSMISSION
+                </div>
+                <div class="filter-options">
+                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="All" checked><div class="box"></div><span>All</span></label>
+                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="Auto"><div class="box"></div><span>Auto</span></label>
+                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="Manual"><div class="box"></div><span>Manual</span></label>
+                </div>
+            </div>
+
+            <button onclick="resetFilters()" style="width: 100%; padding: 12px; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 10px;">
                 RESET FILTER
             </button>
-
         </aside>
 
         <main class="inventory-main">
-
             <div class="top-action-bar">
-
+                
                 <div class="search-sort-row">
-
                     <div class="search-bar">
-
                         <input type="text" id="searchInput" placeholder="Search Proton model...">
-
-                        <button onclick="fetchFilteredCars()">
-                            Search
-                        </button>
-
+                        <button onclick="fetchFilteredCars()">Search</button>
                     </div>
-
                     <div class="sort-dropdown">
-
                         <span>Sort by:</span>
-
                         <select id="sortSelect" onchange="fetchFilteredCars()">
-
-                            <option value="Latest">
-                                Latest
-                            </option>
-
-                            <option value="Price: Low to High">
-                                Price: Low to High
-                            </option>
-
-                            <option value="Price: High to Low">
-                                Price: High to Low
-                            </option>
-
+                            <option value="Latest">Latest</option>
+                            <option value="Price: Low to High">Price: Low to High</option>
+                            <option value="Price: High to Low">Price: High to Low</option>
                         </select>
-
                     </div>
-
                 </div>
 
                 <div class="category-tabs" id="model-tabs">
-
-                    <div class="category-tab active" data-filter="AllModels">
-                        ALL
-                    </div>
-
-                    <div class="category-tab" data-filter="Saga">
-                        SAGA
-                    </div>
-
-                    <div class="category-tab" data-filter="Persona">
-                        PERSONA
-                    </div>
-
-                    <div class="category-tab" data-filter="Iriz">
-                        IRIZ
-                    </div>
-
-                    <div class="category-tab" data-filter="S70">
-                        S70
-                    </div>
-
-                    <div class="category-tab" data-filter="X50">
-                        X50
-                    </div>
-
-                    <div class="category-tab" data-filter="X70">
-                        X70
-                    </div>
-
-                    <div class="category-tab" data-filter="X90">
-                        X90
-                    </div>
-
-                    <div class="category-tab" data-filter="e.MAS 7">
-                        e.MAS 7
-                    </div>
-
+                    <div class="category-tab active" data-filter="AllModels">ALL</div>
+                    <div class="category-tab" data-filter="Saga">SAGA</div>
+                    <div class="category-tab" data-filter="Persona">PERSONA</div>
+                    <div class="category-tab" data-filter="Iriz">IRIZ</div>
+                    <div class="category-tab" data-filter="S70">S70</div>
+                    <div class="category-tab" data-filter="X50">X50</div>
+                    <div class="category-tab" data-filter="X70">X70</div>
+                    <div class="category-tab" data-filter="X90">X90</div>
+                    <div class="category-tab" data-filter="e.MAS 7">e.MAS 7</div>
                 </div>
-
             </div>
 
             <div class="inventory-grid" id="cars-container">
-
                 <div style="text-align:center; color:#64748b; width: 100%; padding: 50px;">
                     Loading vehicles...
                 </div>
-
             </div>
-
         </main>
 
     </div>
-
 </div>
 
 <div id="drawerOverlay" class="drawer-overlay" onclick="closeCarDetails()"></div>
 
 <div id="car-details-sidebar" class="side-drawer">
-
     <button class="toggle-drawer-edge-btn" onclick="toggleMainSidebarSize()" title="Toggle Fullscreen">
-
         <svg id="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
         </svg>
-
     </button>
-
     <div class="drawer-content" id="drawer-content"></div>
-
 </div>
 
 <script>
-
     let currentModel = 'AllModels';
 
+    /* ================= MAIN FETCH LOGIC ================= */
     function fetchFilteredCars() {
-
         const container = document.getElementById('cars-container');
-
         container.innerHTML = `
-            <div style="text-align:center; color:#64748b; padding: 50px; width: 100%;">
-                Loading...
+            <div style="grid-column: 1 / -1; text-align:center; color:#64748b; padding: 50px;">
+                Loading vehicles... 🚗💨
             </div>
         `;
 
-        let bodyType =
-            document.querySelector('input[name="bodyTypeFilter"]:checked').value;
-
-        let searchQuery =
-            document.getElementById('searchInput').value;
-
-        let sortValue =
-            document.getElementById('sortSelect').value;
+        // 收集所有过滤条件
+        let bodyType = document.querySelector('input[name="bodyTypeFilter"]:checked').value;
+        let condition = document.querySelector('input[name="conditionFilter"]:checked').value;
+        let transmission = document.querySelector('input[name="transmissionFilter"]:checked').value;
+        let searchQuery = document.getElementById('searchInput').value;
+        let sortValue = document.getElementById('sortSelect').value;
 
         fetch('fetch_cars.php', {
-
             method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-
-            body:
-                `model=${encodeURIComponent(currentModel)}
-                &bodyType=${encodeURIComponent(bodyType)}
-                &search=${encodeURIComponent(searchQuery)}
-                &sort=${encodeURIComponent(sortValue)}`
-
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `model=${encodeURIComponent(currentModel)}&bodyType=${encodeURIComponent(bodyType)}&condition=${encodeURIComponent(condition)}&transmission=${encodeURIComponent(transmission)}&search=${encodeURIComponent(searchQuery)}&sort=${encodeURIComponent(sortValue)}`
         })
-
         .then(response => response.text())
-
         .then(html => {
             container.innerHTML = html;
         })
-
         .catch(error => console.error('Error:', error));
-
     }
 
-    /* ================= MODEL TABS ================= */
-
-    const modelTabs =
-        document.querySelectorAll('.category-tab');
-
+    /* ================= EVENT LISTENERS ================= */
+    // Model Tabs
+    const modelTabs = document.querySelectorAll('.category-tab');
     modelTabs.forEach(tab => {
-
         tab.addEventListener('click', function() {
-
-            modelTabs.forEach(t =>
-                t.classList.remove('active')
-            );
-
+            modelTabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-
-            currentModel =
-                this.getAttribute('data-filter');
-
+            currentModel = this.getAttribute('data-filter');
             fetchFilteredCars();
-
         });
-
     });
 
-    /* ================= BODY TYPE FILTER ================= */
-
-    const bodyTypeRadios =
-        document.querySelectorAll('input[name="bodyTypeFilter"]');
-
-    bodyTypeRadios.forEach(radio => {
-
+    // All Radio Buttons in Sidebar
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
         radio.addEventListener('change', fetchFilteredCars);
-
     });
 
-    /* ================= SEARCH ================= */
+    // Search Bar
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { fetchFilteredCars(); }
+    });
 
-    document.getElementById('searchInput')
-        .addEventListener('keypress', function(e) {
-
-            if (e.key === 'Enter') {
-                fetchFilteredCars();
-            }
-
-        });
-
-    /* ================= RESET ================= */
-
+    /* ================= RESET FILTERS ================= */
     function resetFilters() {
-
         currentModel = 'AllModels';
-
-        modelTabs.forEach(t =>
-            t.classList.remove('active')
-        );
-
+        modelTabs.forEach(t => t.classList.remove('active'));
         modelTabs[0].classList.add('active');
 
-        document.querySelector(
-            'input[name="bodyTypeFilter"][value="All"]'
-        ).checked = true;
+        document.querySelector('input[name="bodyTypeFilter"][value="All"]').checked = true;
+        document.querySelector('input[name="conditionFilter"][value="All"]').checked = true;
+        document.querySelector('input[name="transmissionFilter"][value="All"]').checked = true;
 
         document.getElementById('searchInput').value = '';
-
         document.getElementById('sortSelect').value = 'Latest';
 
         fetchFilteredCars();
-
     }
 
-    /* ================= WISHLIST ================= */
-
+    /* ================= WISHLIST & SIDEBAR UI ================= */
     function addToWishlist(event, btnElement, carId) {
-
         event.preventDefault();
-
         event.stopPropagation();
-
         fetch('toggle_wishlist.php', {
-
             method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `car_id=${carId}`
-
         })
-
         .then(response => response.json())
-
         .then(data => {
-
-            if (data.status === 'added') {
-
-                btnElement.classList.add('liked');
-
-            }
-
-            else if (data.status === 'removed') {
-
-                btnElement.classList.remove('liked');
-
-            }
-
-            else if (data.status === 'not_logged_in') {
-
-                window.location.href = 'Auth/login.php';
-
-            }
-
-            else if (data.status === 'error') {
-
-                alert(data.message);
-
-            }
-
+            if (data.status === 'added') btnElement.classList.add('liked');
+            else if (data.status === 'removed') btnElement.classList.remove('liked');
+            else if (data.status === 'not_logged_in') window.location.href = 'Auth/login.php';
+            else alert(data.message);
         })
-
         .catch(error => console.error('Error:', error));
-
     }
-
-    /* ================= OPEN SIDEBAR ================= */
 
     function openCarDetails(carId) {
-
-        const drawer =
-            document.getElementById('car-details-sidebar');
-
-        const content =
-            document.getElementById('drawer-content');
-
-        const overlay =
-            document.getElementById('drawerOverlay');
-
-        const iconContainer =
-            document.getElementById('expand-icon');
+        const drawer = document.getElementById('car-details-sidebar');
+        const content = document.getElementById('drawer-content');
+        const overlay = document.getElementById('drawerOverlay');
+        const iconContainer = document.getElementById('expand-icon');
 
         drawer.style.maxWidth = '520px';
-
-        if (iconContainer) {
-
-            iconContainer.innerHTML =
-                '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
-
-        }
-
+        if(iconContainer) iconContainer.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+        
         drawer.classList.add('open');
-
         overlay.classList.add('show');
-
-        content.innerHTML = `
-            <div style="text-align: center; padding: 100px; color:#64748b;">
-                Loading details... 🚗💨
-            </div>
-        `;
+        content.innerHTML = `<div style="text-align: center; padding: 100px; color:#64748b;">Loading details... 🚗💨</div>`;
 
         fetch('fetch_car_details_sidebar.php?id=' + carId)
-
         .then(response => response.text())
-
-        .then(html => {
-
-            content.innerHTML = html;
-
-        })
-
+        .then(html => content.innerHTML = html)
         .catch(err => console.error(err));
-
     }
-
-    /* ================= CLOSE SIDEBAR ================= */
 
     function closeCarDetails() {
-
-        const drawer =
-            document.getElementById('car-details-sidebar');
-
-        const overlay =
-            document.getElementById('drawerOverlay');
-
-        drawer.classList.remove('open');
-
-        overlay.classList.remove('show');
-
+        document.getElementById('car-details-sidebar').classList.remove('open');
+        document.getElementById('drawerOverlay').classList.remove('show');
     }
-
-    /* ================= FULLSCREEN ================= */
 
     function toggleMainSidebarSize() {
-
-        const sidebar =
-            document.getElementById('car-details-sidebar');
-
-        const iconContainer =
-            document.getElementById('expand-icon');
-
+        const sidebar = document.getElementById('car-details-sidebar');
+        const iconContainer = document.getElementById('expand-icon');
         if (sidebar.style.maxWidth === '100%') {
-
             sidebar.style.maxWidth = '520px';
-
-            if (iconContainer) {
-
-                iconContainer.innerHTML =
-                    '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
-
-            }
-
-        }
-
-        else {
-
+            if(iconContainer) iconContainer.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+        } else {
             sidebar.style.maxWidth = '100%';
-
-            if (iconContainer) {
-
-                iconContainer.innerHTML =
-                    '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
-
-            }
-
+            if(iconContainer) iconContainer.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
         }
-
     }
 
-    function changeMainImg(src) {
-
-        document.getElementById('main-gallery-img').src = src;
-
-    }
-
-    /* ================= INITIAL LOAD ================= */
-
+    /* ================= INIT ================= */
     document.addEventListener('DOMContentLoaded', function() {
-
         fetchFilteredCars();
-
     });
-
 </script>
 
 <?php include 'Includes/footer.php'; ?>
