@@ -1,436 +1,555 @@
 <?php
 session_start();
 include '../Config/database.php';
+$month = isset($_GET['month']) ? $_GET['month'] : date('m');
+$year = isset($_GET['year']) ? (int) $_GET['year'] : date('Y');
+$month_condition = ($month === 'all') ? "" : "AND MONTH(b.created_at) = '" . (int) $month . "'";
+$kpi_query = mysqli_query($conn, "
+SELECT
+    COUNT(DISTINCT b.booking_id) as total_bookings,
+    COALESCE(SUM(dp.dp_amount),0) as total_downpayments,
+    COALESCE(SUM(mi.monthly_amount),0) as total_installments,
+    (
+        COALESCE(SUM(dp.dp_amount),0)
+        +
+        COALESCE(SUM(mi.monthly_amount),0)
+    ) as total_revenue
+FROM bookings b
+LEFT JOIN down_payments dp ON b.booking_id = dp.booking_id
+LEFT JOIN monthly_installments mi ON b.booking_id = mi.booking_id
+WHERE YEAR(b.created_at) = '$year'
+$month_condition
+");
+$kpi = mysqli_fetch_assoc($kpi_query);
+if ($month === 'all') {
+    $trend_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    $trend_values = array_fill(0, 12, 0); 
+    $trend_query = mysqli_query($conn, "
+        SELECT MONTH(created_at) as label_num, COALESCE(SUM(booking_fee),0) as revenue
+        FROM bookings
+        WHERE YEAR(created_at) = '$year'
+        GROUP BY MONTH(created_at)
+    ");
+    while ($r = mysqli_fetch_assoc($trend_query)) {
+        $month_index = $r['label_num'] - 1; 
+        $trend_values[$month_index] = $r['revenue'];
+    }
 
-$month = isset($_GET['month']) ? (int) $_GET['month'] : (int) date('m');
-$year = isset($_GET['year']) ? (int) $_GET['year'] : (int) date('Y');
+} else {
+    $days_in_month = cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year);
+    $trend_labels = [];
+    $trend_values = array_fill(0, $days_in_month, 0); 
+    for ($i = 1; $i <= $days_in_month; $i++) {
+        $trend_labels[] = 'Day ' . $i;
+    }
 
-$prev_month = $month == 1 ? 12 : $month - 1;
-$prev_year = $month == 1 ? $year - 1 : $year;
-
-// Current month stats
-$cur = mysqli_fetch_assoc(mysqli_query(
-    $conn,
-    "SELECT COUNT(*) as total_sold,
-            COALESCE(SUM(cs.car_status_price), 0) as total_revenue,
-            COALESCE(AVG(cs.car_status_price), 0) as avg_price
-     FROM reservations r
-     LEFT JOIN cars c ON r.car_id = c.car_id
-     LEFT JOIN car_status cs ON c.car_id = cs.car_id
-     WHERE r.reservation_status = 'Sold'
-     AND MONTH(r.reservation_sold_at) = $month
-     AND YEAR(r.reservation_sold_at) = $year"
-));
-
-// Previous month stats
-$prev = mysqli_fetch_assoc(mysqli_query(
-    $conn,
-    "SELECT COUNT(*) as total_sold,
-            COALESCE(SUM(cs.car_status_price), 0) as total_revenue
-     FROM reservations r
-     LEFT JOIN cars c ON r.car_id = c.car_id
-     LEFT JOIN car_status cs ON c.car_id = cs.car_id
-     WHERE r.reservation_status = 'Sold'
-     AND MONTH(r.reservation_sold_at) = $prev_month
-     AND YEAR(r.reservation_sold_at) = $prev_year"
-));
-
-// Status distribution
-$status_q = mysqli_query(
-    $conn,
-    "SELECT reservation_status, COUNT(*) as cnt
-     FROM reservations
-     WHERE MONTH(reservation_created_at) = $month
-     AND YEAR(reservation_created_at) = $year
-     GROUP BY reservation_status"
-);
-$status_data = [];
-while ($row = mysqli_fetch_assoc($status_q)) {
-    $status_data[$row['reservation_status']] = $row['cnt'];
+    $trend_query = mysqli_query($conn, "
+        SELECT DAY(created_at) as label_num, COALESCE(SUM(booking_fee),0) as revenue
+        FROM bookings
+        WHERE YEAR(created_at) = '$year' AND MONTH(created_at) = '$month'
+        GROUP BY DAY(created_at)
+    ");
+    while ($r = mysqli_fetch_assoc($trend_query)) {
+        $day_index = $r['label_num'] - 1; 
+        $trend_values[$day_index] = $r['revenue'];
+    }
 }
 
-// Top 5 car models
-$top_q = mysqli_query(
-    $conn,
-    "SELECT c.car_brand, c.car_model, COUNT(*) as sold_count,
-            COALESCE(SUM(cs.car_status_price), 0) as total_value
-     FROM reservations r
-     LEFT JOIN cars c ON r.car_id = c.car_id
-     LEFT JOIN car_status cs ON c.car_id = cs.car_id
-     WHERE r.reservation_status = 'Sold'
-     AND MONTH(r.reservation_sold_at) = $month
-     AND YEAR(r.reservation_sold_at) = $year
-     GROUP BY r.car_id
-     ORDER BY sold_count DESC
-     LIMIT 5"
-);
-$top_cars = [];
-while ($row = mysqli_fetch_assoc($top_q)) {
-    $top_cars[] = $row;
+$installment_query = mysqli_query($conn, "
+SELECT 
+    mi.payment_status, 
+    COUNT(*) as total
+FROM monthly_installments mi
+JOIN bookings b ON mi.booking_id = b.booking_id
+WHERE YEAR(b.created_at) = '$year'
+$month_condition
+GROUP BY mi.payment_status
+");
+
+$paid = 0;
+$pending = 0;
+$overdue = 0;
+while ($row = mysqli_fetch_assoc($installment_query)) {
+    if ($row['payment_status'] == 'Paid')
+        $paid = $row['total'];
+    if ($row['payment_status'] == 'Pending')
+        $pending = $row['total'];
+    if ($row['payment_status'] == 'Overdue')
+        $overdue = $row['total'];
 }
 
-// Revenue change
-$revenue_change = 0;
-if ($prev['total_revenue'] > 0) {
-    $revenue_change = (($cur['total_revenue'] - $prev['total_revenue']) / $prev['total_revenue']) * 100;
-}
-$sold_change = 0;
-if ($prev['total_sold'] > 0) {
-    $sold_change = (($cur['total_sold'] - $prev['total_sold']) / $prev['total_sold']) * 100;
-}
-
-function fmt($n)
-{
-    return number_format($n, 2);
-}
-
-function change_badge($val)
-{
-    $icon = $val >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
-    $color = $val >= 0 ? '#10b981' : '#ef4444';
-    $bg = $val >= 0 ? '#d1fae5' : '#fee2e2';
-    return "<span style='background:{$bg};color:{$color};font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;'>
-                <i class='fas {$icon}'></i> " . abs(round($val, 1)) . "%
-            </span>";
-}
-
-$month_name = date('F', mktime(0, 0, 0, $month, 1, $year));
+$top_models_query = mysqli_query($conn, "
+SELECT 
+    c.car_brand, 
+    c.car_model, 
+    COUNT(*) as total_sales
+FROM bookings b
+JOIN cars c ON b.car_id = c.car_id
+WHERE LOWER(TRIM(c.car_origin)) = 'new car'
+AND YEAR(b.created_at) = '$year'
+$month_condition
+GROUP BY b.car_id
+ORDER BY total_sales DESC
+LIMIT 5
+");
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Sales Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Analytics</title>
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .report-filter {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
+        body {
+            background: #f5f7fb;
         }
 
-        .report-filter select {
-            padding: 9px 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
+        .main-content {
+            padding: 24px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e9eef5;
+        }
+
+        .page-title h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .page-title p {
             font-size: 13px;
-            color: #374151;
+            color: #64748b;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-group select {
+            height: 42px;
+            min-width: 120px;
+            padding: 0 14px;
+            border: 1px solid #dbe4ee;
+            border-radius: 12px;
             background: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .filter-group button {
+            height: 42px;
+            padding: 0 18px;
+            border: none;
+            border-radius: 12px;
+            background: #6366f1;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
             cursor: pointer;
         }
 
-        .report-filter select:focus {
-            outline: none;
-            border-color: #1e3a8a;
+        .stat-card,
+        .chart-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 22px;
+            border: 1px solid #edf2f7;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 6px 20px rgba(15, 23, 42, 0.04);
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 135px;
+            transition: 0.2s ease;
+            box-sizing: border-box;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 28px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 20px;
         }
 
-        .stat-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 22px 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        .stat-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
         }
 
-        .stat-card .stat-label {
-            font-size: 12px;
+        .stat-label {
+            font-size: 11px;
             font-weight: 700;
-            color: #6b7280;
-            text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            text-transform: uppercase;
+            color: #64748b;
+            line-height: 1.4;
         }
 
-        .stat-card .stat-value {
-            font-size: 28px;
-            font-weight: 800;
-            color: #111827;
-            margin-bottom: 8px;
-        }
-
-        .stat-card .stat-sub {
-            font-size: 12px;
-            color: #9ca3af;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .section-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            margin-bottom: 24px;
-        }
-
-        .section-card h3 {
-            font-size: 15px;
-            font-weight: 700;
-            color: #111827;
-            margin: 0 0 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
-
-        .status-row:last-child {
-            border-bottom: none;
-        }
-
-        .status-label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #374151;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .status-bar-wrap {
-            flex: 1;
-            margin: 0 16px;
-            background: #f3f4f6;
-            border-radius: 4px;
-            height: 8px;
-            overflow: hidden;
-        }
-
-        .status-bar {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.6s ease;
-        }
-
-        .status-count {
-            font-size: 14px;
-            font-weight: 700;
-            color: #111827;
-            min-width: 30px;
-            text-align: right;
-        }
-
-        .top-car-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 13px 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
-
-        .top-car-row:last-child {
-            border-bottom: none;
-        }
-
-        .top-car-rank {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: #eff6ff;
-            color: #1e3a8a;
-            font-size: 12px;
-            font-weight: 800;
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: #eef2ff;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            color: #4f46e5;
+            font-size: 18px;
         }
 
-        .top-car-name {
-            flex: 1;
-            margin: 0 14px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #111827;
-        }
-
-        .top-car-sold {
-            font-size: 13px;
-            font-weight: 700;
-            color: #6b7280;
-            min-width: 60px;
-            text-align: right;
-        }
-
-        .top-car-value {
-            font-size: 13px;
-            font-weight: 700;
-            color: #111827;
-            min-width: 110px;
-            text-align: right;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #9ca3af;
-        }
-
-        .empty-state i {
-            font-size: 32px;
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
             margin-bottom: 12px;
-            display: block;
         }
 
-        .two-col {
+        .stat-sub {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #ecfdf5;
+            color: #10b981;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .chart-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            grid-template-columns: 2fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px;
         }
 
-        @media (max-width: 900px) {
+        .chart-header {
+            margin-bottom: 18px;
+        }
+
+        .chart-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: #eef2ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4f46e5;
+            font-size: 15px;
+        }
+
+        .chart-title h2 {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .chart-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            height: 260px;
+        }
+
+        .top-models-card {
+            margin-top: 18px;
+        }
+
+        .model-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .model-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+        .model-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .model-rank {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #6366f1;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .model-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .model-sales {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        @media(max-width:1200px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media(max-width:768px) {
             .stats-grid {
                 grid-template-columns: 1fr;
             }
 
-            .two-col {
-                grid-template-columns: 1fr;
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 14px;
+            }
+
+            .filter-group {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .filter-group select,
+            .filter-group button {
+                width: 100%;
             }
         }
     </style>
 </head>
-
 <body>
+
     <?php include 'sidebar.php'; ?>
 
     <main class="main-content">
-        <header class="topbar" style="margin-bottom: 24px;">
-            <h1 style="font-size: 24px; font-weight: 800; color: #111827;">Sales Report</h1>
-        </header>
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Sales Report</h1>
+            </div>
+            <form method="GET" class="filter-group">
+                <select name="month" class="form-control">
+                    <option value="all" <?= ($month === 'all') ? 'selected' : '' ?>>All Months</option>
+                    <?php for ($m = 1; $m <= 12; $m++): ?>
+                        <option value="<?= $m ?>" <?= ($month !== 'all' && (int) $month == $m) ? 'selected' : '' ?>>
+                            <?= date('F', mktime(0, 0, 0, $m, 1)) ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
 
-        <!-- Filter -->
-        <form method="GET" class="report-filter">
-            <select name="month" onchange="this.form.submit()">
-                <?php for ($m = 1; $m <= 12; $m++): ?>
-                    <option value="<?= $m ?>" <?= $m == $month ? 'selected' : '' ?>>
-                        <?= date('F', mktime(0, 0, 0, $m, 1)) ?>
-                    </option>
-                <?php endfor; ?>
-            </select>
-            <select name="year" onchange="this.form.submit()">
-                <?php for ($y = date('Y'); $y >= date('Y') - 4; $y--): ?>
-                    <option value="<?= $y ?>" <?= $y == $year ? 'selected' : '' ?>><?= $y ?></option>
-                <?php endfor; ?>
-            </select>
-            <span style="font-size:13px; color:#6b7280;">Showing:
-                <strong><?= $month_name . ' ' . $year ?></strong></span>
-        </form>
+                <select name="year">
+                    <?php for ($y = date('Y'); $y >= 2023; $y--): ?>
+                        <option value="<?= $y ?>" <?= ($year == $y) ? 'selected' : '' ?>>
+                            <?= $y ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
 
-        <!-- Stats -->
+                <button type="submit">Filter</button>
+            </form>
+        </div>
+
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label"><i class="fas fa-dollar-sign" style="color:#10b981;"></i> Total Revenue</div>
-                <div class="stat-value">RM <?= fmt($cur['total_revenue']) ?></div>
-                <div class="stat-sub">
-                    vs last month <?= change_badge($revenue_change) ?>
+                <div class="stat-top">
+                    <div class="stat-label">TOTAL REVENUE</div>
+                    <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
                 </div>
+                <div class="stat-value">RM <?= number_format($kpi['total_revenue'], 2) ?></div>
+                <div class="stat-sub"><i class="fas fa-arrow-trend-up"></i> Revenue Overview</div>
             </div>
+
             <div class="stat-card">
-                <div class="stat-label"><i class="fas fa-check-double" style="color:#6366f1;"></i> Cars Sold</div>
-                <div class="stat-value"><?= $cur['total_sold'] ?> <span
-                        style="font-size:16px;color:#6b7280;">Units</span></div>
-                <div class="stat-sub">
-                    vs last month <?= change_badge($sold_change) ?>
+                <div class="stat-top">
+                    <div class="stat-label">TOTAL BOOKINGS</div>
+                    <div class="stat-icon"><i class="fas fa-file-signature"></i></div>
                 </div>
+                <div class="stat-value"><?= $kpi['total_bookings'] ?></div>
+                <div class="stat-sub"><i class="fas fa-users"></i> Booking Conversion</div>
             </div>
+
             <div class="stat-card">
-                <div class="stat-label"><i class="fas fa-calculator" style="color:#f59e0b;"></i> Average Price</div>
-                <div class="stat-value">RM <?= fmt($cur['avg_price']) ?></div>
-                <div class="stat-sub" style="color:#9ca3af;">Per unit sold this month</div>
+                <div class="stat-top">
+                    <div class="stat-label">DOWN PAYMENTS</div>
+                    <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                </div>
+                <div class="stat-value">RM <?= number_format($kpi['total_downpayments'], 2) ?></div>
+                <div class="stat-sub"><i class="fas fa-wallet"></i> Initial Payments</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-top">
+                    <div class="stat-label">INSTALLMENTS</div>
+                    <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                </div>
+                <div class="stat-value">RM <?= number_format($kpi['total_installments'], 2) ?></div>
+                <div class="stat-sub"><i class="fas fa-clock"></i> Monthly Collections</div>
             </div>
         </div>
 
-        <div class="two-col">
-            <!-- Status Distribution -->
-            <div class="section-card">
-                <h3><i class="fas fa-chart-pie" style="color:#1e3a8a;"></i> Order Status This Month</h3>
+        <div class="chart-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <div class="chart-icon"><i class="fas fa-chart-line"></i></div>
+                        <div>
+                            <h2>Revenue Trend</h2>
+                            <div class="chart-sub">Monthly booking revenue analytics</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="revenueTrend"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <div class="chart-icon"><i class="fas fa-chart-pie"></i></div>
+                        <div>
+                            <h2>Installment Status</h2>
+                            <div class="chart-sub">Paid vs Pending vs Overdue</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="installmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card top-models-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <div class="chart-icon"><i class="fas fa-car-side"></i></div>
+                    <div>
+                        <h2>Top Selling Models</h2>
+                        <div class="chart-sub">Best performing vehicles</div>
+                    </div>
+                </div>
+            </div>
+            <div class="model-list">
                 <?php
-                $statuses = [
-                    'Pending Viewing' => ['#f59e0b', '#fef3c7'],
-                    'Loan Processing' => ['#3b82f6', '#dbeafe'],
-                    'Sold' => ['#10b981', '#d1fae5'],
-                    'Cancelled' => ['#ef4444', '#fee2e2'],
-                ];
-                $total_orders = array_sum($status_data);
-                if ($total_orders > 0):
-                    foreach ($statuses as $label => [$color, $bg]):
-                        $cnt = $status_data[$label] ?? 0;
-                        $pct = $total_orders > 0 ? round(($cnt / $total_orders) * 100) : 0;
-                        ?>
-                        <div class="status-row">
-                            <div class="status-label">
-                                <span class="status-dot" style="background:<?= $color ?>;"></span>
-                                <?= $label ?>
+                $rank = 1;
+                while ($model = mysqli_fetch_assoc($top_models_query)):
+                    ?>
+                    <div class="model-item">
+                        <div class="model-left">
+                            <div class="model-rank">#<?= $rank ?></div>
+                            <div class="model-name">
+                                <?= $model['car_brand'] ?>     <?= $model['car_model'] ?>
                             </div>
-                            <div class="status-bar-wrap">
-                                <div class="status-bar" style="width:<?= $pct ?>%; background:<?= $color ?>;"></div>
-                            </div>
-                            <span class="status-count"><?= $cnt ?></span>
                         </div>
-                    <?php endforeach;
-                else: ?>
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        No orders this month.
+                        <div class="model-sales"><?= $model['total_sales'] ?> Sales</div>
                     </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Top Cars -->
-            <div class="section-card">
-                <h3><i class="fas fa-trophy" style="color:#f59e0b;"></i> Top 5 Models Sold</h3>
-                <?php if (!empty($top_cars)): ?>
-                    <?php foreach ($top_cars as $i => $car): ?>
-                        <div class="top-car-row">
-                            <div class="top-car-rank"><?= $i + 1 ?></div>
-                            <div class="top-car-name">
-                                <?= htmlspecialchars($car['car_brand'] . ' ' . $car['car_model']) ?>
-                            </div>
-                            <div class="top-car-sold"><?= $car['sold_count'] ?> unit<?= $car['sold_count'] > 1 ? 's' : '' ?>
-                            </div>
-                            <div class="top-car-value">RM <?= fmt($car['total_value']) ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="empty-state">
-                        <i class="fas fa-car"></i>
-                        No sales recorded this month.
-                    </div>
-                <?php endif; ?>
+                    <?php
+                    $rank++;
+                endwhile;
+                ?>
             </div>
         </div>
-
     </main>
+
+    <script>
+        new Chart(document.getElementById('revenueTrend'), {
+            type: 'line',
+            data: {
+                labels: <?= json_encode($trend_labels) ?>,
+                datasets: [{
+                    label: 'Revenue',
+                    data: <?= json_encode($trend_values) ?>,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99,102,241,0.12)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#6366f1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        new Chart(document.getElementById('installmentChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Paid', 'Pending', 'Overdue'],
+                datasets: [{
+                    data: [<?= $paid ?>, <?= $pending ?>, <?= $overdue ?>],
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    </script>
 </body>
 
 </html>

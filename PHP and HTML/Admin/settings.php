@@ -76,12 +76,13 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                 }
                 exit;
             }
+
             if ($action === 'upload_logo') {
                 if (!isset($_FILES['logo_file']) || $_FILES['logo_file']['error'] !== UPLOAD_ERR_OK) {
                     echo json_encode(['success' => false, 'message' => 'Upload failed.']);
                     exit;
                 }
-                $ext = strtolower(pathinfo($_FILES['logo_filae']['name'], PATHINFO_EXTENSION));
+                $ext = strtolower(pathinfo($_FILES['logo_file']['name'], PATHINFO_EXTENSION));
                 if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
                     echo json_encode(['success' => false, 'message' => 'Only JPG, PNG, WEBP allowed.']);
                     exit;
@@ -99,12 +100,79 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                 echo json_encode(['success' => true, 'path' => $web_path]);
                 exit;
             }
+
+            if ($action === 'upload_banner') {
+                $display_order = intval($_POST['display_order']);
+                $is_active = mysqli_real_escape_string($conn, $_POST['is_active']);
+
+                $check_order = mysqli_query($conn, "SELECT Banner_ID FROM homepage_banners WHERE Display_Order = $display_order");
+                if (mysqli_num_rows($check_order) > 0) {
+                    echo json_encode(['success' => false, 'message' => "Display Order '$display_order' is already in use."]);
+                    exit;
+                }
+
+                if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] === UPLOAD_ERR_OK) {
+                    $file_name = time() . '_' . basename($_FILES['banner_image']['name']);
+                    $uploadDir = 'uploads/banners/';
+
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0777, true);
+                    }
+
+                    $target_file = $uploadDir . $file_name;
+                    $ext = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+                    $allowed_extensions = ['jpg', 'jpeg', 'png', 'webp'];
+
+                    if (in_array($ext, $allowed_extensions)) {
+                        if (move_uploaded_file($_FILES['banner_image']['tmp_name'], $target_file)) {
+                            $sql = "INSERT INTO homepage_banners (Image_Path, Display_Order, Is_Active) VALUES ('$file_name', '$display_order', '$is_active')";
+                            mysqli_query($conn, $sql);
+                            echo json_encode(['success' => true, 'message' => 'Banner uploaded successfully!']);
+                            exit;
+                        }
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Invalid file type! Only JPG, PNG, and WEBP are allowed.']);
+                        exit;
+                    }
+                }
+                echo json_encode(['success' => false, 'message' => 'Please select a valid image file.']);
+                exit;
+            }
+            if ($action === 'delete_banner') {
+                $id = intval($_POST['banner_id']);
+                $img_sql = mysqli_query($conn, "SELECT Image_Path FROM homepage_banners WHERE Banner_ID = $id");
+
+                if ($row = mysqli_fetch_assoc($img_sql)) {
+                    $file_path = "../../Images/Uploads/Banners/" . $row['Image_Path'];
+                    if (file_exists($file_path)) {
+                        unlink($file_path);
+                    }
+                }
+
+                mysqli_query($conn, "DELETE FROM homepage_banners WHERE Banner_ID = $id");
+                echo json_encode(['success' => true, 'message' => 'Banner deleted successfully.']);
+                exit;
+            }
+            if ($action === 'toggle_banner_status') {
+                $id = intval($_POST['banner_id']);
+                $current_status = mysqli_real_escape_string($conn, $_POST['current_status']);
+                $new_status = ($current_status === 'Yes') ? 'No' : 'Yes';
+
+                $update_sql = "UPDATE homepage_banners SET Is_Active = '$new_status' WHERE Banner_ID = $id";
+                if (mysqli_query($conn, $update_sql)) {
+                    echo json_encode(['success' => true, 'message' => 'Status updated!']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Failed to update status.']);
+                }
+                exit;
+            }
         }
     } catch (Exception $e) {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         exit;
     }
 }
+$sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Display_Order ASC, Created_At DESC");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -114,295 +182,487 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
     <title>System Settings</title>
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style>
+</head>
+<style>
+    .settings-layout {
+        display: flex;
+        gap: 24px;
+        margin-top: 24px;
+        align-items: flex-start;
+    }
+
+    .settings-sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 16px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.04);
+        border: 1px solid #f1f5f9;
+    }
+
+    .settings-tab {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: #4b5563;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 4px;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+    }
+
+    .settings-tab:hover {
+        background: #f8fafc;
+        color: #2563eb;
+        transform: translateX(4px);
+    }
+
+    .settings-tab.active {
+        background: #eff6ff;
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .settings-tab.active i {
+        color: #2563eb;
+    }
+
+    .settings-content {
+        flex: 1;
+        max-width: 900px;
+    }
+
+    .settings-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.04);
+        border: 1px solid #f1f5f9;
+        display: none;
+    }
+
+    .settings-card.active {
+        display: block;
+        animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .section-header {
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #111827;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+    }
+
+    .setting-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 6px;
+    }
+
+    .setting-group {
+        margin-bottom: 20px;
+    }
+
+    .setting-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+
+    .setting-group input[type="text"],
+    .setting-group input[type="email"],
+    .setting-group input[type="number"],
+    .setting-group input[type="password"],
+    .setting-group select {
+        width: 100%;
+        height: 46px;
+        padding: 0 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        font-size: 14px;
+        background: #ffffff;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+        color: #111827;
+    }
+
+    .setting-group input:focus,
+    .setting-group select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+        outline: none;
+    }
+
+    .helper-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-save {
+        height: 44px;
+        padding: 0 24px;
+        border-radius: 10px;
+        background: #2563eb;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+        background: #1d4ed8;
+    }
+
+    .profile-header-layout {
+        display: flex;
+        gap: 32px;
+        align-items: center;
+        margin-bottom: 32px;
+    }
+
+    .profile-avatar-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        width: 120px;
+        flex-shrink: 0;
+    }
+
+    .avatar-circle {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: #eff6ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        color: #2563eb;
+        border: 3px solid #bfdbfe;
+        overflow: hidden;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .avatar-circle:hover {
+        transform: scale(1.05);
+        border-color: #2563eb;
+    }
+
+    .role-badge {
+        background: #2563eb;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .profile-info-section {
+        flex: 1;
+    }
+
+    .security-section {
+        background: #fffaf0;
+        border: 1px solid #ffedd5;
+        padding: 24px;
+        border-radius: 16px;
+        margin-top: 24px;
+        border-left: 4px solid #f97316;
+    }
+
+    .security-section .sub-heading {
+        color: #9a3412;
+        margin: 0 0 16px;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .toggle-switch {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .toggle-switch:hover {
+        border-color: #cbd5e1;
+        background: #f1f5f9;
+    }
+
+    .toggle-switch-text strong {
+        display: block;
+        font-size: 14px;
+        color: #111827;
+        margin-bottom: 4px;
+    }
+
+    .toggle-switch-text span {
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 26px;
+        flex-shrink: 0;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: .3s;
+        border-radius: 24px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    input:checked+.slider {
+        background-color: #2563eb;
+    }
+
+    input:checked+.slider:before {
+        transform: translateX(22px);
+    }
+
+    .upload-section {
+        margin-bottom: 32px;
+    }
+
+    .upload-drop-zone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 16px;
+        padding: 40px 20px;
+        text-align: center;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 24px;
+    }
+
+    .upload-drop-zone:hover,
+    .upload-drop-zone.dragover {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+
+    .upload-icon {
+        font-size: 42px;
+        color: #94a3b8;
+        margin-bottom: 12px;
+        display: block;
+        transition: 0.3s;
+    }
+
+    .upload-drop-zone:hover .upload-icon {
+        color: #2563eb;
+        transform: translateY(-5px);
+    }
+
+    .upload-text {
+        font-size: 15px;
+        color: #334155;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+
+    .upload-subtext {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .upload-controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 20px;
+        align-items: end;
+    }
+
+    @media (max-width: 900px) {
         .settings-layout {
-            display: flex;
-            gap: 30px;
-            margin-top: 20px;
+            flex-direction: column;
         }
 
         .settings-sidebar {
-            width: 230px;
-            flex-shrink: 0;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
             padding: 12px;
-            height: fit-content;
         }
 
         .settings-tab {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 11px 14px;
-            color: #4b5563;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-            margin-bottom: 2px;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-        }
-
-        .settings-tab:hover {
-            background: #f3f4f6;
-        }
-
-        .settings-tab.active {
-            background: #eff6ff;
-            color: #1e3a8a;
-            border-left: 3px solid #1e3a8a;
-        }
-
-        .settings-content {
+            width: auto;
             flex: 1;
-            max-width: 860px;
-        }
-
-        .settings-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 28px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            display: none;
-        }
-
-        .settings-card.active {
-            display: block;
-            animation: fadeIn 0.25s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(4px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .section-header {
-            border-bottom: 1px solid #f3f4f6;
-            margin-bottom: 24px;
-            padding-bottom: 12px;
-        }
-
-        .section-header h3 {
-            margin: 0;
-            font-size: 17px;
-            color: #111827;
-            font-weight: 700;
-        }
-
-        .setting-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            min-width: 150px;
+            justify-content: center;
             margin-bottom: 0;
         }
 
-        .setting-group {
-            margin-bottom: 18px;
+        .setting-row,
+        .upload-controls-grid {
+            grid-template-columns: 1fr;
         }
+    }
 
-        .setting-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 700;
-            color: #374151;
-            margin-bottom: 7px;
-        }
+    .upload-drop-zone input[type="file"],
+    #file-input {
+        display: none !important;
+    }
 
-        .setting-group input[type="text"],
-        .setting-group input[type="email"],
-        .setting-group input[type="number"],
-        .setting-group input[type="password"] {
-            width: 100%;
-            padding: 11px 13px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 14px;
-            background: #f9fafb;
-            transition: 0.2s;
-            box-sizing: border-box;
-        }
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: #ffffff;
+    }
 
-        .setting-group input:focus {
-            border-color: #1e3a8a;
-            background: #fff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
-        }
+    .admin-table th,
+    .admin-table td {
+        padding: 16px;
+        text-align: left;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
 
-        .helper-text {
-            font-size: 11px;
-            color: #9ca3af;
-            margin-top: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+    .banner-preview {
+        max-width: 120px;
+        max-height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
 
-        .btn-save {
-            background: #1e3a8a;
-            color: white;
-            border: none;
-            padding: 11px 22px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+    .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
 
-        .btn-save:hover {
-            background: #1e40af;
-        }
+    .badge:hover {
+        transform: scale(1.05);
+    }
 
-        .profile-header-layout {
-            display: flex;
-            gap: 28px;
-            align-items: center;
-            margin-bottom: 28px;
-        }
+    .badge-active {
+        background: #dcfce7;
+        color: #166534;
+    }
 
-        .profile-avatar-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            width: 110px;
-            flex-shrink: 0;
-        }
+    .badge-hidden {
+        background: #f1f5f9;
+        color: #475569;
+    }
 
-        .avatar-circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #eff6ff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            color: #1e3a8a;
-            border: 2px solid #bfdbfe;
-            overflow: hidden;
-            position: relative;
-        }
+    .btn-action {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        background: #ffffff;
+    }
 
-        .role-badge {
-            background: #1e3a8a;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
+    .btn-delete {
+        color: #ef4444;
+        border: 1px solid #fca5a5;
+        background: #fef2f2;
+    }
 
-        .profile-info-section {
-            flex: 1;
-        }
-
-        .security-section {
-            background: #fffcf5;
-            border: 1px solid #ffedd5;
-            padding: 18px 20px;
-            border-radius: 8px;
-            margin-top: 18px;
-            border-left: 4px solid #f97316;
-        }
-
-        .security-section .sub-heading {
-            color: #9a3412;
-            margin: 0 0 14px;
-            font-size: 13px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toggle-switch {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 16px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-
-        .toggle-switch-text strong {
-            display: block;
-            font-size: 14px;
-            color: #111827;
-            margin-bottom: 3px;
-        }
-
-        .toggle-switch-text span {
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-            flex-shrink: 0;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #cbd5e1;
-            transition: .3s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-        }
-
-        input:checked+.slider {
-            background-color: #1e3a8a;
-        }
-
-        input:checked+.slider:before {
-            transform: translateX(20px);
-        }
-    </style>
-</head>
+    .btn-delete:hover {
+        background: #ef4444;
+        color: #ffffff;
+        border-color: #ef4444;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+    }
+</style>
 
 <body>
     <?php include 'sidebar.php'; ?>
@@ -420,6 +680,9 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                 </div>
                 <div class="settings-tab" data-target="tab-business">
                     <i class="fas fa-building" style="width:16px;"></i> Business Profile
+                </div>
+                <div class="settings-tab" data-target="tab-banners">
+                    <i class="fas fa-images" style="width:16px;"></i> Manage Banners
                 </div>
                 <div class="settings-tab" data-target="tab-system">
                     <i class="fas fa-calculator" style="width:16px;"></i> System Variables
@@ -497,9 +760,8 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                                 <input type="file" id="company_logo_file" accept="image/*" style="display:none;"
                                     onchange="previewLogo(event)">
                                 <div onclick="document.getElementById('company_logo_file').click();"
-                                    style="width:120px; height:90px; border-radius:12px; border:2px dashed #d1d5db; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; transition:0.2s; flex-shrink:0;"
-                                    onmouseover="this.style.borderColor='#1e3a8a'"
-                                    onmouseout="this.style.borderColor='#d1d5db'">
+                                    class="upload-logo-zone"
+                                    style="width:120px; height:90px; border-radius:12px; border:2px dashed #d1d5db; background:#f9fafb; display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; transition:0.2s; flex-shrink:0;">
                                     <img id="logoPreview" src=""
                                         style="width:100%; height:100%; object-fit:contain; display:none; border-radius:10px;">
                                     <div id="logoPlaceholder" style="text-align:center; color:#9ca3af;">
@@ -570,6 +832,86 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                     </form>
                 </div>
 
+                <div class="settings-card" id="tab-banners">
+                    <div class="section-header">
+                        <h3><i class="fas fa-images" style="color:#1e3a8a;margin-right:8px;"></i>Manage Homepage Banners
+                        </h3>
+                    </div>
+
+                    <div class="upload-section">
+                        <form id="form-banner" enctype="multipart/form-data">
+                            <div class="upload-drop-zone" id="drop-zone">
+                                <input type="file" name="banner_image" id="file-input" accept=".jpg,.jpeg,.png,.webp"
+                                    required>
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <p class="upload-text" id="file-name-display">Drag and drop the banner image here, or
+                                    click to
+                                    select <span style="color: #1e3a8a; text-decoration: underline;">Browse</span></p>
+                                <p class="upload-subtext">Recommended Format: 16:9 aspect ratio (JPG, PNG, WEBP)</p>
+                            </div>
+
+                            <div class="upload-controls-grid">
+                                <div class="setting-group">
+                                    <label>Display Order (1 is first)</label>
+                                    <input type="number" id="display_order" name="display_order" min="1" max="100"
+                                        required placeholder="Example: 1">
+                                </div>
+                                <div class="setting-group">
+                                    <label>Visibility Status</label>
+                                    <select name="is_active" id="visibility_status"
+                                        style="width: 100%; padding: 11px 13px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f9fafb;">
+                                        <option value="Yes">Active</option>
+                                        <option value="No">Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="setting-group" style="display: flex; align-items: flex-end;">
+                                    <button type="button" class="btn-save" onclick="submitBannerForm()">
+                                        <i class="fas fa-cloud-upload-alt" style="margin-right:6px;"></i> Upload Banner
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Preview Image</th>
+                                    <th>Order</th>
+                                    <th>Status</th>
+                                    <th>Upload Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                if ($sql_banners && mysqli_num_rows($sql_banners) > 0) {
+                                    while ($row = mysqli_fetch_assoc($sql_banners)) {
+                                        echo "<tr>";
+                                        echo "<td><img src='uploads/banners/" . htmlspecialchars($row['Image_Path']) . "' class='banner-preview' alt='Banner'></td>";
+                                        echo "<td><span style='font-weight: 700; color: #1e3a8a;'>" . $row['Display_Order'] . "</span></td>";
+                                        if ($row['Is_Active'] == 'Yes') {
+                                            echo "<td><button type='button' class='badge badge-active' onclick='toggleBannerStatus(" . $row['Banner_ID'] . ", \"Yes\")'><i class='fas fa-eye'></i> Active</button></td>";
+                                        } else {
+                                            echo "<td><button type='button' class='badge badge-hidden' onclick='toggleBannerStatus(" . $row['Banner_ID'] . ", \"No\")'><i class='fas fa-eye-slash'></i> Inactive</button></td>";
+                                        }
+                                        $date = date("M j, Y, g:i a", strtotime($row['Created_At']));
+                                        echo "<td><small class='text-muted'>" . $date . "</small></td>";
+                                        echo "<td><button class='btn-action btn-delete' onclick='deleteBanner(" . $row['Banner_ID'] . ")'><i class='fas fa-trash-alt'></i> Delete</button></td>";
+                                        echo "</tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='5' style='text-align:center; padding:40px; color: #64748b;'>
+                                              <i class='fas fa-images' style='font-size: 2rem; opacity:0.3; display:block; margin-bottom:10px;'></i>
+                                              No banners found. Upload your first banner above.</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="settings-card" id="tab-system">
                     <div class="section-header">
                         <h3><i class="fas fa-calculator" style="color:#1e3a8a;margin-right:8px;"></i>Financial
@@ -630,11 +972,11 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
 
                         <div class="toggle-switch">
                             <div class="toggle-switch-text">
-                                <strong>Document Verification Alert</strong>
-                                <span>Notify admin when a customer uploads required documents.</span>
+                                <strong>New Reservation Alert</strong>
+                                <span>Send notification when a new reservation is received.</span>
                             </div>
                             <label class="switch">
-                                <input type="checkbox" id="alert_doc_verification" name="alert_doc_verification"
+                                <input type="checkbox" id="alert_new_reservation" name="alert_new_reservation"
                                     value="1">
                                 <span class="slider"></span>
                             </label>
@@ -642,11 +984,11 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
 
                         <div class="toggle-switch">
                             <div class="toggle-switch-text">
-                                <strong>System Maintenance Mode</strong>
-                                <span>Temporarily disable the customer-facing frontend.</span>
+                                <strong>New Down Payment Alert</strong>
+                                <span>Send notification when a new down payment is received.</span>
                             </div>
                             <label class="switch">
-                                <input type="checkbox" id="system_maintenance" name="system_maintenance" value="1">
+                                <input type="checkbox" id="alert_new_down_payment" name="alert_new_down_payment" value="1">
                                 <span class="slider"></span>
                             </label>
                         </div>
@@ -662,9 +1004,8 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
             </div>
         </div>
     </main>
-
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="../../JAVA SCRIPT/settings.js"></script>
+    <script src="../../JAVA SCRIPT/settings.js?v=2"></script>
 </body>
 
 </html>

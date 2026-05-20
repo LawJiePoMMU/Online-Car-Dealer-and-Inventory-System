@@ -25,4 +25,25 @@ function broadcast_notification_to_admins($conn, $message) {
         $stmt->close();
     }
 }
+
+function trigger_new_booking_alert($conn, $booking_id, $customer_name) {
+    if (get_system_setting($conn, 'alert_new_booking') === '1') {
+        $msg = "New Booking [booking_id:{$booking_id}]: from " . $customer_name;
+        broadcast_notification_to_admins($conn, $msg);
+    }
+}
+
+function trigger_new_reservation_alert($conn, $reservation_id, $customer_name) {
+    if (get_system_setting($conn, 'alert_new_reservation') === '1') {
+        $msg = "New Reservation [reservation_id:{$reservation_id}]: from " . $customer_name;
+        broadcast_notification_to_admins($conn, $msg);
+    }
+}
+
+function trigger_new_down_payment_alert($conn, $booking_id, $customer_name) {
+    if (get_system_setting($conn, 'alert_new_down_payment') === '1') {
+        $msg = "New Down Payment [dp_booking_id:{$booking_id}]: from " . $customer_name;
+        broadcast_notification_to_admins($conn, $msg);
+    }
+}
 ?>

@@ -386,6 +386,7 @@ function loadMessages(id, type, scrollToBottom = true) {
                     let div = document.createElement('div');
                     div.className = `message-row ${isSent ? 'outgoing' : 'incoming'}`;
                     let contentHTML = m.message ? `<div>${m.message}</div>` : '';
+
                     if (m.file_path) {
                         let rawName = m.file_path.split('/').pop();
                         let fileName = rawName.includes('_') ? rawName.substring(rawName.indexOf('_') + 1) : rawName;
@@ -398,7 +399,8 @@ function loadMessages(id, type, scrollToBottom = true) {
                             contentHTML += `<div style="margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 6px;"><i class="fas fa-file" style="color:#6b7280; margin-right:8px;"></i> <a href="${m.file_path}" target="_blank" style="color: inherit; text-decoration: none; font-weight: bold; font-size: 13px;">${fileName}</a></div>`;
                         }
                     }
-                    div.innerHTML = `<div class="message-bubble">${senderName}${contentHTML}<span class="message-time">${msgTime}</span></div>`;
+                    let readStatus = (isSent && m.is_read == 1) ? `<span style="font-size: 10px; color: #10b981; margin-left: 6px;"><i class="fas fa-check-double"></i> Read</span>` : '';
+                    div.innerHTML = `<div class="message-bubble">${senderName}${contentHTML}<div style="display:flex; justify-content:flex-end; align-items:center; margin-top:4px;"><span class="message-time">${msgTime}</span> ${readStatus}</div></div>`;
                     area.appendChild(div);
                 });
                 if (scrollToBottom || isAtBottom) {
@@ -407,7 +409,6 @@ function loadMessages(id, type, scrollToBottom = true) {
             }
         });
 }
-
 function sendMessage() {
     let id = document.getElementById('currentChatId').value;
     let type = document.getElementById('currentChatType').value;
@@ -446,32 +447,48 @@ function sendMessage() {
 function dismissNotification() {
     let currentId = document.getElementById('currentChatId').value;
     let currentType = document.getElementById('currentChatType').value;
-    let uniqueId = currentType + '_' + currentId; 
+    let uniqueId = currentType + '_' + currentId;
 
     let bellIcon = document.getElementById('notifBellIcon');
     let mutedChats = JSON.parse(localStorage.getItem('mutedChats')) || [];
+    let isMutingNow = false;
 
     if (bellIcon) {
         if (bellIcon.classList.contains('fa-bell-slash')) {
             bellIcon.className = 'fas fa-bell';
             bellIcon.style.color = '#f59e0b';
             mutedChats = mutedChats.filter(id => id !== uniqueId);
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Notifications unmuted', showConfirmButton: false, timer: 2000 });
+            isMutingNow = false;
         } else {
             bellIcon.className = 'fas fa-bell-slash';
             bellIcon.style.color = '#9ca3af';
             if (!mutedChats.includes(uniqueId)) mutedChats.push(uniqueId);
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Notifications muted', showConfirmButton: false, timer: 2000 });
+            isMutingNow = true;
         }
     }
 
-    localStorage.setItem('mutedChats', JSON.stringify(mutedChats)); 
+    localStorage.setItem('mutedChats', JSON.stringify(mutedChats));
 
     let activeItem = Array.from(document.querySelectorAll('#chatList .contact-item')).find(el => el.dataset.id == currentId && el.dataset.type == currentType);
     if (activeItem) {
         let badge = activeItem.querySelector('.unread-badge');
         if (badge) badge.remove();
     }
+
+    let formData = new FormData();
+    formData.append('action', 'toggle_mute');
+    formData.append('other_id', currentId);
+    formData.append('chat_type', currentType);
+    formData.append('is_muted', isMutingNow ? 'true' : 'false');
+
+    fetch(ajaxUrl, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let msg = isMutingNow ? 'Notifications muted' : 'Notifications unmuted';
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: msg, showConfirmButton: false, timer: 2000 });
+            }
+        });
 }
 
 function confirmAction(type) {

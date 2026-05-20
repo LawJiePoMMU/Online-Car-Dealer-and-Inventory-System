@@ -2,6 +2,7 @@
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_user_id = $_SESSION['user_id'] ?? 0;
 $unread_count = 0;
+$chat_unread_count = 0;
 
 if (isset($conn) && $current_user_id > 0) {
     $badge_stmt = $conn->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND notification_status = 'unread'");
@@ -10,6 +11,20 @@ if (isset($conn) && $current_user_id > 0) {
     $badge_stmt->bind_result($unread_count);
     $badge_stmt->fetch();
     $badge_stmt->close();
+    $chat_stmt = $conn->prepare("
+        SELECT COUNT(*) 
+        FROM messages m 
+        WHERE m.receiver_id = ? 
+        AND m.is_read = 0 
+        AND m.sender_id NOT IN (
+            SELECT muted_target_id FROM muted_chats WHERE user_id = ? AND chat_type = 'user'
+        )
+    ");
+    $chat_stmt->bind_param("ii", $current_user_id, $current_user_id);
+    $chat_stmt->execute();
+    $chat_stmt->bind_result($chat_unread_count);
+    $chat_stmt->fetch();
+    $chat_stmt->close();
 }
 
 $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapsed'] === 'true';
@@ -57,16 +72,18 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
         padding: 16px 0;
     }
 
-    .sb-brand-text {
-        color: #ffffff;
-        font-size: 22px;
-        font-weight: 800;
-        margin: 0;
-        white-space: nowrap;
-        letter-spacing: 0.5px;
-        opacity: 1;
-        transition: opacity 0.15s ease, width 0.15s ease;
-    }
+.sb-brand-text {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    transition: opacity 0.15s ease, width 0.15s ease;
+    background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
 
     .sidebar.collapsed .sb-brand-text {
         opacity: 0;
@@ -241,23 +258,15 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
         flex-shrink: 0;
     }
 
-    .sb-badge {
+    .sb-red-dot {
         position: absolute;
-        top: -7px;
-        right: -7px;
-        background: #ef4444;
-        color: white;
-        font-size: 9px;
-        font-weight: 700;
-        min-width: 16px;
-        height: 16px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 3px;
+        top: -2px;
+        right: -2px;
+        width: 10px;
+        height: 10px;
+        background-color: #ef4444;
+        border-radius: 50%;
         border: 2px solid #111827;
-        line-height: 1;
     }
 
     .sidebar-footer {
@@ -316,7 +325,7 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
 <aside class="sidebar <?= $is_collapsed ? 'collapsed' : '' ?>" id="mySidebar">
 
     <div class="sb-brand">
-        <h2 class="sb-brand-text">ADMIN</h2>
+        <h2 class="sb-brand-text">LCWcar</h2>
         <button class="sb-toggle" id="sidebarToggle" title="Toggle Sidebar">
             <i class="fas fa-bars"></i>
         </button>
@@ -331,16 +340,16 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
             </a>
         </li>
         <li>
-            <a href="manage cars.php" class="<?= $current_page == 'manage cars.php' ? 'active' : '' ?>">
-                <i class="fas fa-car"></i>
-                <span>Manage Cars</span>
+            <a href="sales_report.php" class="<?= $current_page == 'sales_report.php' ? 'active' : '' ?>">
+                <i class="fas fa-chart-bar"></i>
+                <span>Sales Report</span>
             </a>
         </li>
 
         <li>
-            <a href="test_drives.php" class="<?= $current_page == 'test_drives.php' ? 'active' : '' ?>">
-                <i class="fas fa-road"></i>
-                <span>Test Drive</span>
+            <a href="Reservations.php" class="<?= $current_page == 'Reservations.php' ? 'active' : '' ?>">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Reservations</span>
             </a>
         </li>
         <li>
@@ -349,7 +358,12 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
                 <span>Orders</span>
             </a>
         </li>
-
+        <li>
+            <a href="manage cars.php" class="<?= $current_page == 'manage cars.php' ? 'active' : '' ?>">
+                <i class="fas fa-car"></i>
+                <span>Manage Cars</span>
+            </a>
+        </li>
         <li>
             <a href="users.php" class="<?= $current_page == 'users.php' ? 'active' : '' ?>">
                 <i class="fas fa-users"></i>
@@ -357,15 +371,14 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
             </a>
         </li>
         <li>
-            <a href="chat.php" class="<?= $current_page == 'chat.php' ? 'active' : '' ?>">
-                <i class="fas fa-comments"></i>
-                <span>Chat</span>
-            </a>
-        </li>
-        <li>
-            <a href="sales_report.php" class="<?= $current_page == 'sales_report.php' ? 'active' : '' ?>">
-                <i class="fas fa-chart-bar"></i>
-                <span>Sales Report</span>
+            <a href="chat.php" class="sb-nav-link <?= $current_page == 'chat.php' ? 'active' : '' ?>">
+                <div class="sb-icon-wrap">
+                    <i class="fas fa-comments"></i>
+                    <?php if ($chat_unread_count > 0): ?>
+                        <span class="sb-red-dot"></span>
+                    <?php endif; ?>
+                </div>
+                <span class="sb-label">Chat</span>
             </a>
         </li>
     </ul>
@@ -383,9 +396,7 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
                 <div class="sb-icon-wrap">
                     <i class="fas fa-bell"></i>
                     <?php if ($unread_count > 0): ?>
-                        <span class="sb-badge" id="sidebar-badge">
-                            <?= $unread_count > 99 ? '99+' : $unread_count ?>
-                        </span>
+                        <span class="sb-red-dot" id="sidebar-badge"></span>
                     <?php endif; ?>
                 </div>
                 <span class="sb-label">Notifications</span>

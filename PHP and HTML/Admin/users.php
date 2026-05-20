@@ -1,22 +1,36 @@
 <?php
 session_start();
 include '../Config/database.php';
-
-$_SESSION['user_id'] = 1;
-$_SESSION['user_role'] = 'Admin';
-
+$isSuperAdmin = ($_SESSION['user_role'] === 'Super Admin');
 if (isset($_GET['ajax']) && isset($_GET['toggle_id']) && isset($_GET['current_status'])) {
-    if ($_SESSION['user_id'] != 1)
+    if (!$isSuperAdmin)
         exit();
     $id = (int) $_GET['toggle_id'];
-    if ($id != 1) {
-        $new_status = ($_GET['current_status'] == 'Active') ? 'Inactive' : 'Active';
-        mysqli_query($conn, "UPDATE users SET user_status = '$new_status' WHERE user_id = $id");
+    $check_user = mysqli_fetch_assoc(
+        mysqli_query($conn, "SELECT user_role FROM users WHERE user_id = $id")
+    );
+
+    if ($check_user['user_role'] !== 'Super Admin') {
+
+        $new_status = ($_GET['current_status'] == 'Active')
+            ? 'Inactive'
+            : 'Active';
+
+        mysqli_query(
+            $conn,
+            "UPDATE users
+         SET user_status = '$new_status'
+         WHERE user_id = $id"
+        );
     }
     exit();
 }
 
 if (isset($_POST['save_user'])) {
+
+    if (!$isSuperAdmin) {
+        exit('Access Denied');
+    }
     $name = mysqli_real_escape_string($conn, $_POST['user_name']);
     $ic = mysqli_real_escape_string($conn, $_POST['user_ic']);
     $email = mysqli_real_escape_string($conn, $_POST['user_email']);
@@ -43,11 +57,11 @@ if (isset($_POST['save_user'])) {
             mkdir($target_dir, 0777, true);
         }
 
-        $target_dir = "../../uploads/avatars/"; 
+        $target_dir = "../../uploads/avatars/";
 
         if (!is_dir($target_dir)) {
             if (!mkdir($target_dir, 0777, true)) {
-                die("Error: Failed to create directory: " . $target_dir); 
+                die("Error: Failed to create directory: " . $target_dir);
             }
         }
 
@@ -92,7 +106,7 @@ if (isset($_POST['save_user'])) {
 }
 
 $count_all = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users"))['c'];
-$count_admin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE user_role = 'Admin'"))['c'];
+$count_admin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE user_role IN ('Admin', 'Super Admin')"))['c'];
 $count_cust = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE user_role = 'Customer'"))['c'];
 
 $where = "WHERE 1=1";
@@ -104,8 +118,9 @@ if (!empty($search)) {
     $where .= " AND (user_name LIKE '%$search%' OR user_email LIKE '%$search%' OR user_ic LIKE '%$search%')";
 }
 if ($role_filter == 'admin') {
-    $where .= " AND user_role = 'Admin'";
-} elseif ($role_filter == 'customer') {
+    $where .= " AND user_role IN ('Admin', 'Super Admin')";
+}
+elseif ($role_filter == 'customer') {
     $where .= " AND user_role = 'Customer'";
 }
 if ($status_filter != 'all') {
@@ -121,7 +136,7 @@ $offset = ($page - 1) * $limit;
 $total_filtered_rows = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as t FROM users $where"))['t'];
 $total_pages = ceil($total_filtered_rows / $limit);
 
-$order_by = "ORDER BY CASE WHEN user_id = 1 THEN 0 ELSE 1 END, user_created_at DESC";
+$order_by = "ORDER BY CASE WHEN user_id = {$_SESSION['user_id']} THEN 0 ELSE 1 END, user_id ASC";
 
 $users_result = mysqli_query($conn, "SELECT * FROM users $where $order_by LIMIT $limit OFFSET $offset");
 
@@ -141,6 +156,347 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
+<style>
+    .table-card {
+        background: #ffffff;
+        border-radius: 18px;
+        overflow: hidden;
+
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.03),
+            0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    .admin-table th {
+        color: #374151;
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
+
+    .admin-table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .admin-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .admin-table td {
+        vertical-align: middle;
+    }
+
+    .sidebar-menu a {
+        gap: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .sidebar-menu a:hover {
+        transform: translateX(2px);
+    }
+
+    .btn-add-blue {
+        border-radius: 12px;
+        padding: 12px 18px;
+
+        font-weight: 600;
+        font-size: 14px;
+
+        transition: all 0.2s ease;
+    }
+
+    .btn-add-blue:hover {
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 10px 20px rgba(37, 99, 235, 0.15);
+    }
+
+    .form-control {
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: #2563eb;
+        box-shadow:
+            0 0 0 4px rgba(37, 99, 235, 0.08);
+    }
+
+    .status-cell {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-active {
+        color: #16a34a;
+    }
+
+    .text-inactive {
+        color: #dc2626;
+    }
+
+    .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .dot-active {
+        background: #10b981;
+    }
+
+    .dot-inactive {
+        background: #ef4444;
+    }
+
+    .online-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #d1fae5;
+        color: #10b981;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .avatar {
+        transition: all 0.2s ease;
+    }
+
+    .avatar:hover {
+        transform: scale(1.05);
+    }
+
+    .action-btn {
+        transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+        transform: scale(1.12);
+    }
+
+    .pagination-container {
+        padding-top: 24px;
+    }
+
+    .page-btn {
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .page-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .modal-content {
+        border-radius: 18px;
+
+        box-shadow:
+            0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .tab-item {
+        transition: all 0.2s ease;
+    }
+
+    .tab-item:hover {
+        color: #2563eb;
+    }
+
+    .page-title h1 {
+        letter-spacing: -0.4px;
+    }
+
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
+
+    .topbar {
+        backdrop-filter: blur(10px);
+    }
+
+    body {
+        background: #f8fafc;
+    }
+
+    .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(6px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.25s ease;
+        z-index: 9999;
+    }
+
+    .modal.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal-content {
+        width: 100%;
+        max-width: 520px;
+        max-height: 88vh;
+        overflow-y: auto;
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 24px 24px 20px;
+        position: relative;
+        box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.18);
+        transform: translateY(20px) scale(0.97);
+        transition: all 0.2s ease;
+    }
+
+    .modal.active .modal-content {
+        transform: translateY(0px) scale(1);
+    }
+
+    .modal-content h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 22px;
+        color: #111827;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        width: 42px;
+        height: 42px;
+        border: none;
+        border-radius: 12px;
+        background: #f3f4f6;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+        background: #e5e7eb;
+        transform: rotate(90deg);
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .form-control {
+        width: 100%;
+        height: 46px;
+        border-radius: 12px;
+        border: 1px solid #d1d5db;
+        padding: 0 14px;
+        font-size: 14px;
+        background: #ffffff;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: #2563eb;
+        box-shadow:
+            0 0 0 3px rgba(37, 99, 235, 0.08);
+        outline: none;
+    }
+
+    #togglePasswordIcon {
+        position: absolute;
+        right: 16px;
+        top: 16px;
+        color: #9ca3af;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    #togglePasswordIcon:hover {
+        color: #2563eb;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 14px;
+        margin-top: 32px;
+    }
+
+    .btn-cancel {
+        height: 44px;
+        padding: 0 18px;
+        border-radius: 10px;
+        background: #f3f4f6;
+        font-size: 14px;
+    }
+
+    .btn-cancel:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-save {
+        height: 44px;
+        padding: 0 22px;
+        border-radius: 10px;
+        background: #2563eb;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-1px);
+        box-shadow:
+            0 10px 20px rgba(37, 99, 235, 0.18);
+    }
+
+    .modal-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .modal-content::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 999px;
+    }
+
+    input[type="file"] {
+        padding: 10px !important;
+        background: #f9fafb;
+        border: 1px dashed #cbd5e1;
+        cursor: pointer;
+    }
+</style>
 
 <body>
     <?php include 'sidebar.php'; ?>
@@ -180,8 +536,12 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                 <?php if (isset($_GET['role']))
                     echo '<input type="hidden" name="role" value="' . $_GET['role'] . '">'; ?>
             </form>
-                <button onclick="openModal()" class="btn-add-blue"><i class="fas fa-user-plus"></i> Add Admin</button>
-            </div>
+            <?php if ($isSuperAdmin): ?>
+                <button onclick="openModal()" class="btn-add-blue">
+                    <i class="fas fa-user-plus"></i> Add Admin
+                </button>
+            <?php endif; ?>
+        </div>
         </div>
 
         <div class="table-card" style="padding: 0; border: none;">
@@ -197,7 +557,9 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                         <th style="text-align: left;">Email</th>
                         <th style="text-align: left;">Date Created</th>
                         <th style="width: 100px; text-align: left;">Status</th>
-                        <th style="width: 90px; text-align: center;" class="print-hide">Action</th>
+                        <?php if ($isSuperAdmin): ?>
+                            <th style="width: 90px; text-align: center;" class="print-hide">Action</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -205,10 +567,6 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                     if ($users_result && $total_filtered_rows > 0) {
                         while ($row = mysqli_fetch_assoc($users_result)) {
                             $role = !empty($row['user_role']) ? $row['user_role'] : 'Customer';
-                            if ($row['user_id'] == 1) {
-                                $role = 'Super Admin';
-                            }
-
                             $status = !empty($row['user_status']) ? $row['user_status'] : 'Active';
                             $dot_class = ($status == 'Active') ? 'dot-active' : 'dot-inactive';
                             $text_class = ($status == 'Active') ? 'text-active' : 'text-inactive';
@@ -247,24 +605,34 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                             echo "<td style='text-align: left;'>" . htmlspecialchars($row['user_email']) . "</td>";
                             echo "<td style='text-align: left;'>" . date('d M Y', strtotime($row['user_created_at'])) . "</td>";
                             echo "<td style='text-align: left;'><div class='status-cell' style='width: 85px;'><span class='dot {$dot_class} print-hide'></span><span class='{$text_class}'>" . ucfirst($status) . "</span></div></td>";
+                            if ($isSuperAdmin) {
 
-                            echo "<td class='print-hide' style='text-align: center;'>";
-                            if ($_SESSION['user_id'] == 1) {
-                                if ($row['user_id'] == 1) {
-                                    echo "<div style='color: #9ca3af;'>-</div>";
+                                echo "<td class='print-hide' style='text-align: center;'>";
+
+                                if ($row['user_id'] == $_SESSION['user_id']) {
+
+                                    echo "<div style='height:20px;'></div>";
+
                                 } else {
+
                                     $toggle_icon = ($status == 'Active') ? 'fa-lock' : 'fa-unlock';
                                     $toggle_color = ($status == 'Active') ? '#ef4444' : '#10b981';
                                     $action_icon = ($role == 'Customer') ? 'fa-eye' : 'fa-pen';
-                                    echo "<div style='display: flex; justify-content: center; gap: 16px;'>
-                                            <a href='javascript:void(0)' onclick='editUser(" . htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') . ")' style='color: #9ca3af;'><i class='fas {$action_icon}'></i></a>
-                                            <a href='javascript:void(0)' onclick='toggleStatus({$row['user_id']}, \"{$status}\", this)' style='color: {$toggle_color};'><i class='fas {$toggle_icon}'></i></a>
-                                          </div>";
+
+                                    echo "
+                                            <div style='display:flex; justify-content:center; gap:16px;'>
+                                            <a href='javascript:void(0)'onclick='editUser(" . htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') . ")'style='color:#9ca3af;'>
+                                                <i class='fas {$action_icon}'></i>
+                                            </a>
+
+                                             <a href='javascript:void(0)'onclick='toggleStatus({$row['user_id']}, \"{$status}\", this)'style='color:{$toggle_color};'>
+                                                <i class='fas {$toggle_icon}'></i>
+                                            </a>
+                                            </div>";
                                 }
-                            } else {
-                                echo "<div style='color: #9ca3af;'>-</div>";
+
+                                echo "</td>";
                             }
-                            echo "</td>";
                             echo "</tr>";
                         }
                     } else {

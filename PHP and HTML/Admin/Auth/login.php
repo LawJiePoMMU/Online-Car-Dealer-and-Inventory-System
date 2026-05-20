@@ -36,21 +36,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                         if (strcasecmp($db_status, "Active") !== 0) {
                             $error = "Your account is inactive.";
-                        }
-                        elseif (strcasecmp($db_role, "Admin") !== 0 && strcasecmp($db_role, "Super Admin") !== 0) {
+                        } elseif (strcasecmp($db_role, "Admin") !== 0 && strcasecmp($db_role, "Super Admin") !== 0) {
                             $error = "Access denied. Only admins can login here.";
-                        }
-                        elseif (password_verify($password, $db_password)) {
+                        } elseif (password_verify($password, $db_password)) {
 
-                            // 登录成功
                             $_SESSION["loggedin"] = true;
-                            $_SESSION["id"] = $db_id;
-                            $_SESSION["email"] = $db_email;
-                            $_SESSION["role"] = $db_role;
-
+                            $_SESSION["user_id"] = $db_id;
+                            $_SESSION["user_email"] = $db_email;
+                            $_SESSION["user_role"] = $db_role;
+                            $_SESSION["user_status"] = $db_status;
+                            $_SESSION["success"] = "Login Successful!";
                             header("location: ../../Admin/dashboard.php");
                             exit;
-
                         } else {
                             $error = "Incorrect password.";
                         }
@@ -71,18 +68,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 include '../../Users/Includes/header.php';
 ?>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <div class="auth-page-override">
     <div class="auth-wrapper">
         <div class="auth-container">
 
             <h1 class="auth-title">Admin Sign In</h1>
+            <?php if (!empty($error)): ?>
+                <script>
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: '<?php echo $error; ?>',
+                        showConfirmButton: false,
+                        timer: 2500,
+                        timerProgressBar: true,
 
-            <?php
-            if (!empty($error)) {
-                echo '<div class="auth-error">' . $error . '</div>';
-            }
-            ?>
+                        didOpen: (toast) => {
+                            toast.addEventListener('mouseenter', Swal.stopTimer);
+                            toast.addEventListener('mouseleave', Swal.resumeTimer);
+                        }
+                    });
+                </script>
+            <?php endif; ?>
 
             <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
 

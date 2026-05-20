@@ -1,7 +1,6 @@
 <?php
 session_start();
 include '../Config/database.php';
-
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../Auth/login.php");
     exit();
@@ -236,31 +235,45 @@ $stmt->close();
 
                         if (strpos($msg, 'New Booking') !== false) {
                             $icon = 'fa-shopping-cart';
-                            $icon_bg = '#eff6ff'; 
-                            $icon_color = '#3b82f6'; 
+                            $icon_bg = '#eff6ff';
+                            $icon_color = '#3b82f6';
                             $module_name = 'Orders Module';
-                            $target_url = 'orders.php?tab=bookings';
+                            $target_url = 'orders.php?tab=booking';
+                            if (preg_match('/\[booking_id:(\d+)\]/', $msg, $m)) {
+                                $target_url = 'orders.php?tab=booking&highlight=' . $m[1];
+                            }
+                        } elseif (strpos($msg, 'New Reservation') !== false) {
+                            $icon = 'fa-calendar-check';
+                            $icon_bg = '#fdf4ff';
+                            $icon_color = '#c026d3';
+                            $module_name = 'Reservations Module';
+                            $target_url = 'reservations.php?tab=reservations';
+                            if (preg_match('/\[reservation_id:(\d+)\]/', $msg, $m)) {
+                                $target_url = 'reservations.php?tab=reservations&highlight=' . $m[1];
+                            }
+                        } elseif (strpos($msg, 'New Down Payment') !== false) {
+                            $icon = 'fa-file-invoice-dollar';
+                            $icon_bg = '#ecfccb';
+                            $icon_color = '#65a30d';
+                            $module_name = 'Payments Module';
+                            $target_url = 'orders.php?tab=down_payment';
+                            if (preg_match('/\[dp_booking_id:(\d+)\]/', $msg, $m)) {
+                                $target_url = 'orders.php?tab=down_payment&highlight=' . $m[1];
+                            }
                         } elseif (strpos($msg, 'Stock Alert') !== false) {
                             $icon = 'fa-car-side';
                             $icon_bg = '#fef2f2';
                             $icon_color = '#ef4444';
                             $module_name = 'Inventory Module';
                             $target_url = 'manage cars.php';
-
                             if (preg_match('/\[car_id:(\d+)\]/', $msg, $matches)) {
-                                $highlight_id = $matches[1];
-                                $target_url = 'manage cars.php?highlight=' . $highlight_id;
+                                $target_url = 'manage cars.php?highlight=' . $matches[1];
                             }
-                        } elseif (strpos($msg, 'Document') !== false) {
-                            $icon = 'fa-file-pdf';
-                            $icon_bg = '#faf5ff';
-                            $icon_color = '#a855f7'; 
-                            $module_name = 'Verification Module';
-                            $target_url = 'orders.php?tab=bookings';
                         }
                         ?>
 
-                        <a href="<?= $target_url ?>" class="notification-card <?= $is_unread ? 'unread' : '' ?>"
+                        <a href="<?= htmlspecialchars($target_url) ?>"
+                            class="notification-card <?= $is_unread ? 'unread' : '' ?>"
                             data-id="<?= $note['notification_id'] ?>">
                             <div class="noti-icon-wrapper"
                                 style="background-color: <?= $icon_bg ?>; color: <?= $icon_color ?>;">
@@ -269,11 +282,11 @@ $stmt->close();
 
                             <div class="noti-content">
                                 <div class="noti-header">
-                                    <span class="noti-module"><?= $module_name ?></span>
+                                    <span class="noti-module"><?= htmlspecialchars($module_name) ?></span>
                                     <span
                                         class="noti-time"><?= date('M j, Y, g:i a', strtotime($note['notification_created_at'])) ?></span>
                                 </div>
-                                <p class="noti-message"><?= htmlspecialchars(preg_replace('/\[car_id:\d+\]/', '', $msg)) ?></p>
+                                <p class="noti-message"><?= htmlspecialchars(preg_replace('/\[(car_id|booking_id|reservation_id|dp_booking_id):\d+\]/', '', $msg)) ?></p>
                             </div>
 
                             <div class="noti-actions">

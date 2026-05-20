@@ -4,158 +4,265 @@ include '../Config/database.php';
 include '../Config/functions.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $admin_id = $_SESSION['user_id'] ?? 1;
-$sys_query = mysqli_query($conn, "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('default_dp_percent', 'default_loan_rate')");
-$sys_settings = [];
-while ($row = mysqli_fetch_assoc($sys_query)) {
-    $sys_settings[$row['setting_key']] = $row['setting_value'];
+$sys_query = mysqli_query($conn, "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('default_dp_percent','default_loan_rate')");
+$sys = [];
+while ($r = mysqli_fetch_assoc($sys_query))
+    $sys[$r['setting_key']] = $r['setting_value'];
+$dp_percent = (float) ($sys['default_dp_percent'] ?? 10);
+$loan_rate = (float) ($sys['default_loan_rate'] ?? 3.00);
+mysqli_query($conn, "
+    UPDATE monthly_installments
+       SET payment_status = 'Overdue',
+           overdue_days   = DATEDIFF(CURDATE(), due_date)
+     WHERE payment_status = 'Pending'
+       AND due_date < CURDATE()
+");
+
+$expired_dp_query = mysqli_query($conn, "SELECT booking_id FROM down_payments WHERE dp_status = 'Pending' AND DATEDIFF(CURDATE(), dp_created_at) >= 7");
+while ($edp = mysqli_fetch_assoc($expired_dp_query)) {
+    $bid = $edp['booking_id'];
+
+    $b_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM bookings WHERE booking_id = $bid"));
+    if ($b_info) {
+        $cid = $b_info['car_id'];
+
+        mysqli_query($conn, "UPDATE down_payments SET dp_status = 'Cancelled', dp_reason = 'System Auto-Cancelled: 7 Days Unpaid' WHERE booking_id = $bid");
+        mysqli_query($conn, "UPDATE bookings SET booking_status = 'Rejected', rejection_reason = 'System Auto-Rejected: DP 7 Days Unpaid', refunded_at = NOW() WHERE booking_id = $bid");
+
+        mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = car_status_stock_quantity + 1 WHERE car_id = $cid");
+        mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $cid AND car_status_stock_quantity > 0");
+    }
 }
-$dp_percent = $sys_settings['default_dp_percent'] ?? 10;
-$dp_rate = $dp_percent / 100;
-$loan_rate = $sys_settings['default_loan_rate'] ?? 3.00;
+
+if (isset($_GET['highlight']) && !isset($_GET['page']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $hl_id = (int) $_GET['highlight'];
+    $tab_param = $_GET['tab'] ?? 'booking';
+    
+    $find_q = null;
+    if ($tab_param === 'booking') {
+        $find_q = mysqli_query($conn, "
+            SELECT b.booking_id FROM bookings b 
+            WHERE b.booking_status='Pending' 
+            ORDER BY b.created_at DESC
+        ");
+    } elseif ($tab_param === 'down_payment') {
+        $find_q = mysqli_query($conn, "
+            SELECT b.booking_id FROM down_payments dp 
+            LEFT JOIN bookings b ON dp.booking_id=b.booking_id 
+            WHERE dp.dp_status='Pending' 
+            ORDER BY dp.dp_created_at ASC
+        ");
+    }
+    
+    if ($find_q) {
+        $pos = 0; $found = 0;
+        while ($r = mysqli_fetch_assoc($find_q)) {
+            $pos++;
+            if ($r['booking_id'] == $hl_id) { $found = $pos; break; }
+        }
+        if ($found > 0) {
+            $target_page = (int) ceil($found / 10);
+            header("Location: orders.php?tab=$tab_param&page=$target_page&highlight=$hl_id");
+            exit();
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     ob_clean();
     header('Content-Type: application/json');
     $action = $_POST['action'];
-    $res_id = intval($_POST['reservation_id'] ?? 0);
+    $booking_id = intval($_POST['booking_id'] ?? 0);
 
     try {
         switch ($action) {
-
-            case 'process_to_loan':
-                $order_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM reservations WHERE reservation_id = $res_id"));
-                $car_id = $order_info['car_id'];
-                $check_car = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_status_status FROM car_status WHERE car_id = $car_id"));
-                if ($check_car['car_status_status'] === 'Inactive') {
-                    echo json_encode(['success' => false, 'message' => 'Cannot process. This car model is currently Inactive.']);
+            case 'approve_booking':
+                if (!$booking_id) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid booking.']);
                     break;
                 }
-                mysqli_query($conn, "UPDATE reservations SET reservation_status='Loan Processing' WHERE reservation_id=$res_id");
-                $res = mysqli_fetch_assoc(mysqli_query(
-                    $conn,
-                    "SELECT cs.car_status_price FROM reservations r
-                     JOIN cars c ON r.car_id = c.car_id
-                     JOIN car_status cs ON c.car_id = cs.car_id
-                     WHERE r.reservation_id = $res_id"
-                ));
-                $dp = round($res['car_status_price'] * $dp_rate, 2);
-                $exists = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id FROM down_payments WHERE reservation_id=$res_id"));
-                if (!$exists) {
-                    mysqli_query($conn, "INSERT INTO down_payments (reservation_id, dp_amount, dp_status, dp_created_at) VALUES ($res_id, $dp, 'Pending', NOW())");
+                $b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM bookings WHERE booking_id=$booking_id"));
+                if (!$b || $b['booking_status'] !== 'Pending') {
+                    echo json_encode(['success' => false, 'message' => 'Booking is not pending verification.']);
+                    break;
                 }
-                echo json_encode(['success' => true, 'message' => 'Moved to Loan Processing. Down payment record created.']);
+
+                $snap = json_decode($b['snapshot_data'] ?: '{}', true);
+                if (empty($snap['user_address'])) {
+                    echo json_encode(['success' => false, 'message' => 'Customer billing address is missing. Address verification is mandatory.']);
+                    break;
+                }
+
+                $docs = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM loan_installment_documents WHERE booking_id=$booking_id"));
+                if (!$docs || empty($docs['ic_url']) || empty($docs['driving_license_url']) || empty($docs['payslip_url']) || empty($docs['bank_statement_url'])) {
+                    echo json_encode(['success' => false, 'message' => 'Customer has not uploaded all 4 mandatory documents (IC, Licence, Payslip, Bank Statement).']);
+                    break;
+                }
+
+                $price = (float) ($snap['car_price'] ?? 0);
+                $dp_amt = round($price * ($dp_percent / 100), 2);
+
+                mysqli_begin_transaction($conn);
+                mysqli_query($conn, "UPDATE bookings SET booking_status='Approved' WHERE booking_id=$booking_id");
+                $exists = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id FROM down_payments WHERE booking_id=$booking_id"));
+                if (!$exists) {
+                    mysqli_query($conn, "INSERT INTO down_payments (booking_id, dp_amount, dp_status, dp_created_at) VALUES ($booking_id, $dp_amt, 'Pending', NOW())");
+                }
+                mysqli_commit($conn);
+                echo json_encode(['success' => true, 'message' => 'Booking approved. Advanced to Down Payment stage.']);
                 break;
 
-            case 'approve_dp':
-                mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW() WHERE reservation_id=$res_id");
-                echo json_encode(['success' => true, 'message' => 'Down payment approved.']);
+            case 'reject_booking':
+                $reason = mysqli_real_escape_string($conn, trim($_POST['reason'] ?? ''));
+                if (!$booking_id || $reason === '') {
+                    echo json_encode(['success' => false, 'message' => 'Valid booking ID and reason required.']);
+                    break;
+                }
+
+                $res_query = mysqli_query($conn, "SELECT user_id, car_id, booking_fee, booking_status FROM bookings WHERE booking_id=$booking_id");
+                $b = mysqli_fetch_assoc($res_query);
+                if (!$b || $b['booking_status'] !== 'Pending') {
+                    echo json_encode(['success' => false, 'message' => 'Booking is not pending.']);
+                    break;
+                }
+
+                $d_query = mysqli_query($conn, "SELECT * FROM loan_installment_documents WHERE booking_id = $booking_id");
+                $docs = mysqli_fetch_assoc($d_query);
+                $car_id = $b['car_id'];
+                $fee = (float) $b['booking_fee'];
+                if ($docs) {
+                    $files_to_delete = [$docs['ic_url'], $docs['driving_license_url'], $docs['payslip_url'], $docs['bank_statement_url']];
+                    foreach ($files_to_delete as $file) {
+                        if (!empty($file) && file_exists($file))
+                            unlink($file);
+                    }
+                    mysqli_query($conn, "DELETE FROM loan_installment_documents WHERE booking_id = $booking_id");
+                }
+
+                mysqli_begin_transaction($conn);
+                mysqli_query($conn, "UPDATE bookings SET booking_status='Rejected', rejection_reason='$reason', refunded_at=NOW() WHERE booking_id=$booking_id");
+                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, remarks, payment_date) VALUES ('Booking Fee', $booking_id, $fee, 'Refunded', '$reason', NOW())");
+                mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = car_status_stock_quantity + 1 WHERE car_id = $car_id");
+                mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id AND car_status_stock_quantity > 0");
+                mysqli_commit($conn);
+                echo json_encode(['success' => true, 'message' => 'Refund processed and stock restored. User data kept intact for history.']);
                 break;
 
             case 'reject_dp':
-                $reason = mysqli_real_escape_string($conn, $_POST['reason'] ?? 'Rejected by admin');
-                mysqli_query($conn, "UPDATE down_payments SET dp_status='Cancelled', dp_reason='$reason' WHERE reservation_id=$res_id");
-                echo json_encode(['success' => true, 'message' => 'Down payment rejected.']);
-                break;
-
-            case 'mark_sold':
-                $dp_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT dp_status FROM down_payments WHERE reservation_id=$res_id"));
-                if (!$dp_row || $dp_row['dp_status'] !== 'Approved') {
-                    echo json_encode(['success' => false, 'message' => 'Down payment must be Approved before marking as Sold.']);
+                $reason = mysqli_real_escape_string($conn, trim($_POST['reason'] ?? ''));
+                if (!$booking_id || $reason === '') {
+                    echo json_encode(['success' => false, 'message' => 'Valid booking ID and reason required.']);
                     break;
                 }
-                $order_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM reservations WHERE reservation_id = $res_id"));
-                $car_id = $order_info['car_id'];
-                $check_car = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_status_status FROM car_status WHERE car_id = $car_id"));
-                if ($check_car['car_status_status'] !== 'Active') {
-                    echo json_encode(['success' => false, 'message' => 'Cannot sell. This car model has been marked as Inactive.']);
+
+                $dp = mysqli_fetch_assoc(mysqli_query($conn, "SELECT dp_status FROM down_payments WHERE booking_id=$booking_id"));
+                if (!$dp || $dp['dp_status'] !== 'Pending') {
+                    echo json_encode(['success' => false, 'message' => 'DP is not pending verification.']);
                     break;
                 }
-                mysqli_query($conn, "UPDATE car_status cs JOIN reservations r ON r.car_id = cs.car_id SET cs.car_status_stock_quantity = cs.car_status_stock_quantity - 1 WHERE r.reservation_id = $res_id");
-                mysqli_query($conn, "UPDATE reservations SET reservation_status='Sold', reservation_sold_at=NOW() WHERE reservation_id=$res_id");
-                $stock_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT c.car_brand, c.car_model, cs.car_status_stock_quantity FROM car_status cs JOIN cars c ON cs.car_id = c.car_id WHERE cs.car_id = $car_id"));
-                $current_stock = (int) $stock_info['car_status_stock_quantity'];
-                $threshold = (int) get_system_setting($conn, 'low_stock_threshold');
 
-                if ($current_stock <= $threshold) {
-                    $car_name = $stock_info['car_brand'] . ' ' . $stock_info['car_model'];
-                    $msg = "Stock Alert: {$car_name} is running low. Only {$current_stock} unit(s) left!";
-                    broadcast_notification_to_admins($conn, $msg);
+                $b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id, booking_fee FROM bookings WHERE booking_id=$booking_id"));
+                $car_id = $b['car_id'];
+                $fee = (float) $b['booking_fee'];
+
+                // 移除保險文件
+                $dp_data = mysqli_fetch_assoc(mysqli_query($conn, "SELECT insurance_pdf_url FROM down_payments WHERE booking_id=$booking_id"));
+                if ($dp_data && !empty($dp_data['insurance_pdf_url']) && file_exists($dp_data['insurance_pdf_url'])) {
+                    unlink($dp_data['insurance_pdf_url']);
                 }
 
-                echo json_encode(['success' => true, 'message' => 'Marked as Sold. Stock deducted.']);
-                break;
-
-            case 'cancel_reservation':
-                $reason = mysqli_real_escape_string($conn, $_POST['reason'] ?? '');
-                mysqli_query($conn, "UPDATE reservations SET reservation_status='Cancelled', reservation_cancel_reason='$reason' WHERE reservation_id=$res_id");
-                echo json_encode(['success' => true, 'message' => 'Reservation cancelled.']);
-                break;
-
-            case 'update_plate':
-                $plate = mysqli_real_escape_string($conn, $_POST['plate'] ?? '');
-                mysqli_query($conn, "UPDATE reservations SET assigned_plate='$plate' WHERE reservation_id=$res_id");
-                echo json_encode(['success' => true, 'message' => 'Number plate assigned to this order.']);
-                break;
-
-            case 'update_address':
-                $addr = mysqli_real_escape_string($conn, $_POST['address'] ?? '');
-                $city = mysqli_real_escape_string($conn, $_POST['city'] ?? '');
-                $state = mysqli_real_escape_string($conn, $_POST['state'] ?? '');
-                $post = mysqli_real_escape_string($conn, $_POST['postcode'] ?? '');
-                $uid = mysqli_fetch_assoc(mysqli_query($conn, "SELECT user_id FROM reservations WHERE reservation_id=$res_id"))['user_id'];
-                mysqli_query($conn, "UPDATE users SET user_address='$addr', user_city='$city', user_state='$state', user_postcode='$post' WHERE user_id=$uid");
-                echo json_encode(['success' => true, 'message' => 'Address updated.']);
-                break;
-
-            case 'upload_document':
-                $doc_type = mysqli_real_escape_string($conn, $_POST['doc_type']);
-                $allowed = ['driving_licence', 'bank_statement', 'salary_slip', 'ic_pdf'];
-                if (!in_array($doc_type, $allowed)) {
-                    echo json_encode(['success' => false, 'message' => 'Invalid document type.']);
-                    break;
-                }
-                if (!isset($_FILES['doc_file']) || $_FILES['doc_file']['error'] !== UPLOAD_ERR_OK) {
-                    echo json_encode(['success' => false, 'message' => 'Upload failed.']);
-                    break;
-                }
-                $ext = strtolower(pathinfo($_FILES['doc_file']['name'], PATHINFO_EXTENSION));
-                if ($ext !== 'pdf') {
-                    echo json_encode(['success' => false, 'message' => 'Only PDF files are allowed.']);
-                    break;
-                }
-                $target_dir = "../../uploads/documents/";
-                if (!is_dir($target_dir))
-                    mkdir($target_dir, 0777, true);
-                $filename = $doc_type . '_res' . $res_id . '_' . time() . '.pdf';
-                $filepath = $target_dir . $filename;
-                $web_url = '../../uploads/documents/' . $filename;
-                move_uploaded_file($_FILES['doc_file']['tmp_name'], $filepath);
-                mysqli_query($conn, "UPDATE reservations SET {$doc_type}_url='$web_url' WHERE reservation_id=$res_id");
-                if (get_system_setting($conn, 'alert_doc_verification') === '1') {
-                    $formatted_doc_type = ucwords(str_replace('_', ' ', $doc_type));
-                    $msg = "Document Uploaded: A customer uploaded {$formatted_doc_type} for Order #ORD" . str_pad($res_id, 3, '0', STR_PAD_LEFT) . ".";
-                    broadcast_notification_to_admins($conn, $msg);
-                }
-
-                echo json_encode(['success' => true, 'message' => 'Document uploaded.', 'file_url' => $web_url]);
-                break;
-
-            case 'add_reservation':
-                $user_id = intval($_POST['user_id']);
-                $car_id = intval($_POST['car_id']);
-                $amount = floatval($_POST['payment_amount']);
-                $method = mysqli_real_escape_string($conn, $_POST['payment_method']);
                 mysqli_begin_transaction($conn);
-                mysqli_query($conn, "INSERT INTO reservations (user_id, car_id, reservation_status, reservation_created_at) VALUES ($user_id, $car_id, 'Pending Viewing', NOW())");
-                $new_res_id = mysqli_insert_id($conn);
-                mysqli_query($conn, "INSERT INTO payments (reservation_id, payment_amount, payment_status, payment_method, payment_date) VALUES ($new_res_id, $amount, 'Paid', '$method', NOW())");
+                mysqli_query($conn, "UPDATE down_payments SET dp_status='Cancelled', dp_reason='$reason', insurance_pdf_url=NULL WHERE booking_id=$booking_id");
+                mysqli_query($conn, "UPDATE bookings SET booking_status='Refunded', rejection_reason='[DP Rejected] $reason', refunded_at=NOW() WHERE booking_id=$booking_id");
+                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, remarks, payment_date) VALUES ('Booking Fee Refund', $booking_id, $fee, 'Refunded', '$reason', NOW())");
+                mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = car_status_stock_quantity + 1 WHERE car_id = $car_id");
+                mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id AND car_status_stock_quantity > 0");
                 mysqli_commit($conn);
-                if (get_system_setting($conn, 'alert_new_booking') === '1') {
-                    $msg = "New Booking Alert! Order ID: #ORD" . str_pad($new_res_id, 3, '0', STR_PAD_LEFT);
-                    broadcast_notification_to_admins($conn, $msg);
+                echo json_encode(['success' => true, 'message' => 'Down Payment rejected, booking refunded, and stock restored.']);
+                break;
+
+            case 'save_dp_details':
+                $number = mysqli_real_escape_string($conn, trim($_POST['plate_number'] ?? ''));
+                mysqli_query($conn, "UPDATE down_payments SET plate_number='$number' WHERE booking_id=$booking_id");
+                echo json_encode(['success' => true, 'message' => 'Plate details saved successfully.']);
+                break;
+
+            case 'approve_dp':
+                if (!$booking_id) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid booking.']);
+                    break;
+                }
+                $dp = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM down_payments WHERE booking_id=$booking_id"));
+                if (!$dp || $dp['dp_status'] !== 'Pending') {
+                    echo json_encode(['success' => false, 'message' => 'DP is not pending verification.']);
+                    break;
+                }
+                if (empty($dp['insurance_pdf_url'])) {
+                    echo json_encode(['success' => false, 'message' => 'Cannot approve. Customer has not uploaded the Insurance Cover Note yet.']);
+                    break;
                 }
 
-                echo json_encode(['success' => true, 'message' => 'ORD' . str_pad($new_res_id, 3, '0', STR_PAD_LEFT) . ' created successfully.']);
+                $b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM bookings WHERE booking_id=$booking_id"));
+                $snap = json_decode($b['snapshot_data'] ?: '{}', true);
+                $price = (float) ($snap['car_price'] ?? 0);
+                $years = (int) ($b['installment_years'] ?? 9);
+                if (!in_array($years, [5, 7, 9]))
+                    $years = 9;
+
+                $bk_fee = (float) $b['booking_fee'];
+                $dp_amt = (float) $dp['dp_amount'];
+                $loan_amount = max(0, $price - $bk_fee - $dp_amt);
+                $rate = (float) ($b['interest_rate'] ?: $loan_rate);
+                $months = $years * 12;
+                $total_with_int = $loan_amount * (1 + ($rate / 100) * $years);
+                $monthly = $months > 0 ? round($total_with_int / $months, 2) : 0;
+                $rcpt = 'DP-' . date('Ymd') . '-' . str_pad($booking_id, 4, '0', STR_PAD_LEFT);
+
+                mysqli_begin_transaction($conn);
+                mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW(), paid_at=NOW(), dp_receipt_number='$rcpt' WHERE booking_id=$booking_id");
+                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, receipt_number, payment_date) VALUES ('Down Payment', $booking_id, $dp_amt, 'Paid', '$rcpt', NOW())");
+
+                mysqli_query($conn, "DELETE FROM monthly_installments WHERE booking_id=$booking_id");
+                for ($i = 1; $i <= $months; $i++) {
+                    $due = date('Y-m-d', strtotime("+$i month"));
+                    mysqli_query($conn, "INSERT INTO monthly_installments (booking_id, installment_number, monthly_amount, due_date, interest_rate, installment_status, payment_status, created_at) VALUES ($booking_id, $i, $monthly, '$due', $rate, 'Active', 'Pending', NOW())");
+                }
+                mysqli_commit($conn);
+                echo json_encode(['success' => true, 'message' => "DP approved. $months installment(s) generated."]);
+                break;
+
+            case 'mark_installment_paid':
+                $inst_id = intval($_POST['installment_id'] ?? 0);
+                if (!$inst_id) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid installment.']);
+                    break;
+                }
+                $inst = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM monthly_installments WHERE installment_id=$inst_id"));
+                if (!$inst || $inst['payment_status'] === 'Paid') {
+                    echo json_encode(['success' => false, 'message' => 'Not found or already paid.']);
+                    break;
+                }
+
+                $amt = (float) $inst['monthly_amount'];
+                $bk = (int) $inst['booking_id'];
+                $rcpt = 'INS-' . date('Ymd') . '-' . str_pad($inst_id, 6, '0', STR_PAD_LEFT);
+                mysqli_begin_transaction($conn);
+                mysqli_query($conn, "UPDATE monthly_installments SET payment_status='Paid', paid_at=NOW(), overdue_days=0 WHERE installment_id=$inst_id");
+                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, receipt_number, payment_date) VALUES ('Monthly Installment', $bk, $amt, 'Paid', '$rcpt', NOW())");
+                mysqli_commit($conn);
+                echo json_encode(['success' => true, 'message' => 'Installment marked paid.']);
+                break;
+
+            case 'get_schedule':
+                if (!$booking_id) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid booking.']);
+                    break;
+                }
+                $rows = [];
+                $q = mysqli_query($conn, "SELECT * FROM monthly_installments WHERE booking_id=$booking_id ORDER BY installment_number ASC");
+                while ($r = mysqli_fetch_assoc($q))
+                    $rows[] = $r;
+                echo json_encode(['success' => true, 'rows' => $rows]);
                 break;
 
             default:
@@ -168,71 +275,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     exit;
 }
 
-$active_tab = $_GET['tab'] ?? 'bookings';
+$tab = $_GET['tab'] ?? 'booking';
+if (!in_array($tab, ['booking', 'down_payment', 'monthly_installment', 'history']))
+    $tab = 'booking';
+$sub_tab = $_GET['sub_tab'] ?? 'booking';
+if ($tab === 'history' && !in_array($sub_tab, ['booking', 'down_payment', 'monthly_installment', 'blacklist'])) {
+    $sub_tab = 'booking';
+}
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
-$status_filter = $_GET['status'] ?? 'all';
+$filter = isset($_GET['filter']) ? mysqli_real_escape_string($conn, $_GET['filter']) : '';
+$count_booking = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings WHERE booking_status='Pending'"))['c'];
+$count_dp = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM down_payments WHERE dp_status='Pending'"))['c'];
+$count_inst = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT booking_id) AS c FROM monthly_installments WHERE payment_status IN ('Pending','Overdue') AND booking_id NOT IN (SELECT DISTINCT booking_id FROM monthly_installments WHERE overdue_days >= 21)"))['c'];
 
-$search_condition = "";
-if (!empty($search)) {
-    $search_condition .= " AND (u.user_name LIKE '%$search%' OR c.car_plate LIKE '%$search%' OR c.car_model LIKE '%$search%') ";
-}
-if ($status_filter !== 'all') {
-    $esc = mysqli_real_escape_string($conn, $status_filter);
-    $search_condition .= " AND r.reservation_status = '$esc' ";
-}
-
-if ($active_tab === 'transactions') {
-    $tab_condition = " AND r.reservation_status = 'Loan Processing' ";
-} elseif ($active_tab === 'history') {
-    $tab_condition = " AND r.reservation_status IN ('Sold', 'Cancelled', 'Refunded') ";
-} else {
-    $tab_condition = " AND r.reservation_status = 'Pending Viewing' ";
-}
+$count_hist_bk = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings WHERE booking_status IN ('Approved','Rejected','Refunded')"))['c'];
+$count_hist_dp = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM down_payments WHERE dp_status IN ('Approved','Cancelled','Rejected')"))['c'];
+$count_hist_inst = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT booking_id) AS c FROM monthly_installments WHERE booking_id NOT IN (SELECT booking_id FROM monthly_installments WHERE payment_status IN ('Pending','Overdue'))"))['c'];
+$count_blacklist = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT booking_id) AS c FROM monthly_installments WHERE overdue_days >= 21"))['c'];
+$count_history = $count_hist_bk + $count_hist_dp + $count_hist_inst + $count_blacklist;
 
 $limit = 10;
-$page = max(1, intval($_GET['page'] ?? 1));
+$page = max(1, (int) ($_GET['page'] ?? 1));
 $offset = ($page - 1) * $limit;
 
-$count_sql = "SELECT COUNT(DISTINCT r.reservation_id) as t FROM reservations r LEFT JOIN users u ON r.user_id=u.user_id LEFT JOIN cars c ON r.car_id=c.car_id WHERE 1=1 $search_condition $tab_condition";
-$total_rows = mysqli_fetch_assoc(mysqli_query($conn, $count_sql))['t'];
-$total_pages = max(1, ceil($total_rows / $limit));
+$search_cond_user = "";
+if (!empty($search)) {
+    $search_cond_user = " AND (u.user_name LIKE '%$search%' OR c.car_brand LIKE '%$search%' OR c.car_model LIKE '%$search%') ";
+}
 
-$query = "
-    SELECT r.*,
-           u.user_name, u.user_ic, u.user_phone, u.user_email, u.user_avatar,
-           COALESCE(u.user_address, '') as user_address,
-           COALESCE(u.user_city,    '') as user_city,
-           COALESCE(u.user_state,   '') as user_state,
-           COALESCE(u.user_postcode,'') as user_postcode,
-           c.car_brand, c.car_model, c.car_year, c.car_origin,
-           c.variant as car_variant,
-           COALESCE(r.assigned_plate, c.car_plate) as car_plate, 
-           COALESCE(r.assigned_color, 'Pending Selection') as car_color,
-           p.payment_amount, p.payment_status, p.payment_method, p.payment_date,
-           cs.car_status_stock_quantity as stock,
-           cs.car_status_price as price,
-           dp.dp_amount, dp.dp_status, dp.dp_approved_at, dp.dp_reason,
-           (SELECT COUNT(*) FROM reservations r2 WHERE r2.user_id=u.user_id AND r2.reservation_status='Sold') as total_sold,
-           (SELECT car_image_url FROM car_image WHERE car_id=c.car_id LIMIT 1) as car_image
-    FROM reservations r
-    LEFT JOIN users u          ON r.user_id        = u.user_id
-    LEFT JOIN cars c           ON r.car_id         = c.car_id
-    LEFT JOIN payments p       ON r.reservation_id = p.reservation_id
-    LEFT JOIN car_status cs    ON c.car_id         = cs.car_id
-    LEFT JOIN down_payments dp ON r.reservation_id = dp.reservation_id
-    WHERE 1=1 $search_condition $tab_condition
-    GROUP BY r.reservation_id
-    ORDER BY r.reservation_created_at DESC
-    LIMIT $limit OFFSET $offset
+$result = null;
+$total_rows = 0;
+
+$baseSelect = "
+    b.*,
+    u.user_name, u.user_email, u.user_ic, u.user_phone, COALESCE(u.user_address,'') AS user_address, COALESCE(u.user_city,'') AS user_city, COALESCE(u.user_state,'') AS user_state, COALESCE(u.user_postcode,'') AS user_postcode,
+    c.car_brand, c.car_model, c.car_year, c.car_origin,
+    (SELECT variant FROM car_inventory WHERE car_id=c.car_id ORDER BY inventory_id ASC LIMIT 1) AS car_variant,
+    cs.car_status_price AS car_price,
+    (SELECT car_image_url FROM car_image WHERE car_id=c.car_id LIMIT 1) AS car_image,
+    (SELECT color_name FROM car_inventory WHERE car_id=c.car_id ORDER BY inventory_id ASC LIMIT 1) AS car_color,
+    dp.id AS dp_id, dp.dp_amount, dp.dp_status, dp.dp_approved_at, dp.dp_created_at, dp.dp_reason, dp.insurance_pdf_url, dp.plate_number, dp.plate_option
 ";
-$result = mysqli_query($conn, $query);
 
-$count_bookings = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT reservation_id) as c FROM reservations WHERE reservation_status='Pending Viewing'"))['c'];
-$count_transactions = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT reservation_id) as c FROM reservations WHERE reservation_status='Loan Processing'"))['c'];
-$count_history = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT reservation_id) as c FROM reservations WHERE reservation_status IN ('Sold','Cancelled','Refunded')"))['c'];
+if ($tab === 'booking') {
+    $where = "WHERE b.booking_status='Pending' $search_cond_user";
+    $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings b LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+    $result = mysqli_query($conn, "SELECT $baseSelect, doc.ic_url, doc.driving_license_url, doc.payslip_url, doc.bank_statement_url FROM bookings b LEFT JOIN down_payments dp ON b.booking_id=dp.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id LEFT JOIN loan_installment_documents doc ON b.booking_id=doc.booking_id $where ORDER BY b.created_at DESC LIMIT $limit OFFSET $offset");
+} elseif ($tab === 'down_payment') {
+    $where = "WHERE dp.dp_status='Pending' $search_cond_user";
+    $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM down_payments dp LEFT JOIN bookings b ON dp.booking_id=b.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+    $result = mysqli_query($conn, "SELECT $baseSelect, doc.ic_url, doc.driving_license_url, doc.payslip_url, doc.bank_statement_url FROM down_payments dp LEFT JOIN bookings b ON dp.booking_id=b.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id LEFT JOIN loan_installment_documents doc ON b.booking_id=doc.booking_id $where ORDER BY dp.dp_created_at ASC LIMIT $limit OFFSET $offset");
+} elseif ($tab === 'monthly_installment') {
+    $where = "WHERE EXISTS(SELECT 1 FROM monthly_installments mi WHERE mi.booking_id=b.booking_id AND mi.payment_status IN ('Pending','Overdue')) AND NOT EXISTS(SELECT 1 FROM monthly_installments mi2 WHERE mi2.booking_id=b.booking_id AND mi2.overdue_days >= 21) $search_cond_user";
+    $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings b LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+    $result = mysqli_query($conn, "SELECT $baseSelect, (SELECT COUNT(*) FROM monthly_installments WHERE booking_id=b.booking_id) AS total_months, (SELECT COUNT(*) FROM monthly_installments WHERE booking_id=b.booking_id AND payment_status='Paid') AS paid_months, (SELECT COUNT(*) FROM monthly_installments WHERE booking_id=b.booking_id AND payment_status='Overdue') AS overdue_months, (SELECT MIN(due_date) FROM monthly_installments WHERE booking_id=b.booking_id AND payment_status IN ('Pending','Overdue')) AS next_due, (SELECT monthly_amount FROM monthly_installments WHERE booking_id=b.booking_id LIMIT 1) AS monthly_amount FROM bookings b LEFT JOIN down_payments dp ON b.booking_id=dp.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id $where ORDER BY next_due ASC LIMIT $limit OFFSET $offset");
+} else {
+    if ($sub_tab === 'booking') {
+        $status_cond = "b.booking_status IN ('Approved','Rejected','Refunded')";
+        if ($filter === 'Approved')
+            $status_cond = "b.booking_status = 'Approved'";
+        if ($filter === 'Rejected')
+            $status_cond = "b.booking_status = 'Rejected'";
+        if ($filter === 'Refunded')
+            $status_cond = "b.booking_status = 'Refunded'";
 
-$users_query = mysqli_query($conn, "SELECT user_id, user_name, user_ic FROM users WHERE user_role='Customer' ORDER BY user_name");
-$cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs.car_status_price FROM cars c JOIN car_status cs ON c.car_id=cs.car_id WHERE cs.car_status_stock_quantity>0 AND cs.car_status_status='Active' ORDER BY c.car_brand");
+        $where = "WHERE $status_cond $search_cond_user";
+        $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings b LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+        $result = mysqli_query($conn, "SELECT $baseSelect, doc.ic_url, doc.driving_license_url, doc.payslip_url, doc.bank_statement_url FROM bookings b LEFT JOIN down_payments dp ON b.booking_id=dp.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id LEFT JOIN loan_installment_documents doc ON b.booking_id=doc.booking_id $where ORDER BY COALESCE(b.refunded_at, b.created_at) DESC LIMIT $limit OFFSET $offset");
+
+    } elseif ($sub_tab === 'down_payment') {
+        $status_cond = "dp.dp_status IN ('Approved','Cancelled','Rejected')";
+        if ($filter === 'Approved')
+            $status_cond = "dp.dp_status = 'Approved'";
+        if ($filter === 'Cancelled')
+            $status_cond = "dp.dp_status = 'Cancelled'";
+        if ($filter === 'Rejected')
+            $status_cond = "dp.dp_status = 'Rejected'";
+
+        $where = "WHERE $status_cond $search_cond_user";
+        $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM down_payments dp LEFT JOIN bookings b ON dp.booking_id=b.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+        $result = mysqli_query($conn, "SELECT $baseSelect FROM down_payments dp LEFT JOIN bookings b ON dp.booking_id=b.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id $where ORDER BY COALESCE(dp.dp_approved_at, dp.dp_created_at) DESC LIMIT $limit OFFSET $offset");
+    } elseif ($sub_tab === 'monthly_installment') {
+        $where = "WHERE NOT EXISTS(SELECT 1 FROM monthly_installments mi WHERE mi.booking_id=b.booking_id AND mi.payment_status IN ('Pending','Overdue')) AND EXISTS(SELECT 1 FROM monthly_installments mi2 WHERE mi2.booking_id=b.booking_id) $search_cond_user";
+        $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings b LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+        $result = mysqli_query($conn, "SELECT $baseSelect, (SELECT COUNT(*) FROM monthly_installments WHERE booking_id=b.booking_id) AS total_months, (SELECT COUNT(*) FROM monthly_installments WHERE booking_id=b.booking_id AND payment_status='Paid') AS paid_months, (SELECT monthly_amount FROM monthly_installments WHERE booking_id=b.booking_id LIMIT 1) AS monthly_amount FROM bookings b LEFT JOIN down_payments dp ON b.booking_id=dp.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id $where ORDER BY b.created_at DESC LIMIT $limit OFFSET $offset");
+    } else {
+        $where = "WHERE EXISTS(SELECT 1 FROM monthly_installments mi WHERE mi.booking_id=b.booking_id AND mi.overdue_days >= 21) $search_cond_user";
+        $total_rows = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM bookings b LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id $where"))['c'];
+        $result = mysqli_query($conn, "SELECT $baseSelect, (SELECT MAX(overdue_days) FROM monthly_installments WHERE booking_id=b.booking_id) AS max_overdue FROM bookings b LEFT JOIN down_payments dp ON b.booking_id=dp.booking_id LEFT JOIN users u ON b.user_id=u.user_id LEFT JOIN cars c ON b.car_id=c.car_id LEFT JOIN car_status cs ON c.car_id=cs.car_id $where ORDER BY max_overdue DESC LIMIT $limit OFFSET $offset");
+    }
+}
+$total_pages = max(1, (int) ceil($total_rows / $limit));
+
+function apply_snapshot($row)
+{
+    if (!empty($row['snapshot_data'])) {
+        $snap = json_decode($row['snapshot_data'], true);
+        if (is_array($snap)) {
+            foreach ($snap as $k => $v)
+                $row[$k] = $v;
+        }
+    }
+    return $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -240,427 +385,15 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Orders</title>
+    <title>Orders</title>
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
+    <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/orders.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style>
-        @media print {
-
-            body * {
-                visibility: hidden;
-            }
-
-            #splitModal,
-            #splitModal * {
-                visibility: visible;
-            }
-
-            #splitModal {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                background: white;
-            }
-
-            .modal-container {
-                width: 100%;
-                box-shadow: none;
-                border: none;
-                max-height: none;
-            }
-
-            .modal-body {
-                padding: 0;
-                overflow: visible;
-            }
-
-            .modal-footer,
-            .close-btn,
-            .edit-inline-btn,
-            .upload-btn-label,
-            #dpActionsWrap {
-                display: none !important;
-            }
-
-            .layout-grid {
-                flex-direction: column;
-                gap: 20px;
-            }
-
-            .info-card {
-                border: 1px solid #000;
-                box-shadow: none;
-                break-inside: avoid;
-            }
-
-            .bottom-card,
-            .dp-panel {
-                border: 1px solid #000;
-                box-shadow: none;
-            }
-        }
-
-        .dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-            flex-shrink: 0;
-        }
-
-        .status-cell {
-            display: flex;
-            align-items: center;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(17, 24, 39, .72);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-overlay.hidden {
-            display: none;
-        }
-
-        .modal-container {
-            background: #fff;
-            width: 1140px;
-            max-height: 92vh;
-            border-radius: 14px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, .22);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .modal-container-sm {
-            width: 580px;
-        }
-
-        .modal-header {
-            padding: 18px 26px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f8fafc;
-            border-radius: 14px 14px 0 0;
-        }
-
-        .modal-header h2 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-            color: #9ca3af;
-            transition: color .15s;
-        }
-
-        .close-btn:hover {
-            color: #111827;
-        }
-
-        .modal-body {
-            padding: 24px;
-            overflow-y: auto;
-            background: #f3f4f6;
-            flex: 1;
-        }
-
-        .modal-footer {
-            padding: 14px 24px;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            background: #fff;
-            border-radius: 0 0 14px 14px;
-        }
-
-        .layout-grid {
-            display: flex;
-            gap: 18px;
-        }
-
-        .info-card {
-            flex: 1;
-            background: #fff;
-            border-radius: 10px;
-            padding: 22px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
-            border-top: 4px solid;
-        }
-
-        .user-card {
-            border-top-color: #3b82f6;
-        }
-
-        .car-card {
-            border-top-color: #10b981;
-        }
-
-        .section-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding-bottom: 10px;
-        }
-
-        .user-card .section-title {
-            color: #1e3a8a;
-            border-bottom: 2px solid #eff6ff;
-        }
-
-        .car-card .section-title {
-            color: #064e3b;
-            border-bottom: 2px solid #ecfdf5;
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-
-        .grid-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 14px;
-        }
-
-        .detail-item label {
-            display: block;
-            font-size: 10px;
-            font-weight: 700;
-            color: #9ca3af;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            letter-spacing: .6px;
-        }
-
-        .detail-item p {
-            font-size: 14px;
-            color: #111827;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .doc-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 4px 0;
-            font-size: 13px;
-        }
-
-        .doc-link:hover {
-            color: #1d4ed8;
-        }
-
-        .finance-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 16px;
-            margin-top: 18px;
-        }
-
-        .finance-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .finance-row.total {
-            border-top: 2px dashed #cbd5e1;
-            padding-top: 12px;
-            margin-top: 12px;
-            margin-bottom: 0;
-        }
-
-        .bottom-card {
-            background: #fff;
-            border-radius: 10px;
-            padding: 18px 22px;
-            margin-top: 18px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
-            border-left: 4px solid #f59e0b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .dp-panel {
-            background: #fff;
-            border-radius: 10px;
-            padding: 20px 22px;
-            margin-top: 18px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
-            border-left: 4px solid #6366f1;
-        }
-
-        .dp-panel h3 {
-            margin: 0 0 14px;
-            font-size: 14px;
-            font-weight: 700;
-            color: #4338ca;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .dp-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 14px;
-        }
-
-        .plate-tag {
-            background: #111827;
-            color: #fff;
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-weight: 700;
-        }
-
-        .btn-modal {
-            padding: 9px 18px;
-            border-radius: 7px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            font-size: 13px;
-            transition: opacity .2s;
-        }
-
-        .btn-modal:hover {
-            opacity: .85;
-        }
-
-        .btn-modal-cancel {
-            background: #fff;
-            color: #374151;
-            border: 1px solid #d1d5db;
-        }
-
-        .btn-modal-process {
-            background: #10b981;
-            color: #fff;
-        }
-
-        .btn-modal-approve {
-            background: #3b82f6;
-            color: #fff;
-        }
-
-        .btn-modal-reject {
-            background: #ef4444;
-            color: #fff;
-        }
-
-        .btn-modal-sold {
-            background: #7c3aed;
-            color: #fff;
-        }
-
-        .btn-modal-danger {
-            background: #ef4444;
-            color: #fff;
-        }
-
-        .btn-modal-sm {
-            padding: 5px 12px;
-            font-size: 12px;
-        }
-
-        .form-group {
-            margin-bottom: 14px;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 6px;
-            font-size: 13px;
-            color: #374151;
-        }
-
-        .form-group select,
-        .form-group input {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 7px;
-            font-size: 13px;
-            box-sizing: border-box;
-        }
-
-        #rejectReasonWrap {
-            margin-top: 12px;
-            display: none;
-        }
-
-        #rejectReasonWrap textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 13px;
-            height: 70px;
-            resize: vertical;
-            box-sizing: border-box;
-        }
-
-        .data-row {
-            cursor: pointer;
-            transition: background .12s;
-        }
-
-        .data-row:hover {
-            background: #f9fafb;
-        }
-
-        .edit-inline-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #3b82f6;
-            font-size: 12px;
-            margin-left: 6px;
-            padding: 0;
-        }
-    </style>
 </head>
 
 <body>
     <?php include 'sidebar.php'; ?>
-
     <main class="main-content">
-
         <header class="topbar" style="margin-bottom:24px;">
             <div class="page-title">
                 <h1 style="font-size:24px; font-weight:700; color:#111827;">Orders</h1>
@@ -668,394 +401,374 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
         </header>
 
         <div class="page-tabs">
-            <a href="orders.php?tab=bookings"
-                class="tab-item <?= $active_tab === 'bookings' ? 'active' : '' ?>">Bookings (<?= $count_bookings ?>)</a>
-            <a href="orders.php?tab=transactions"
-                class="tab-item <?= $active_tab === 'transactions' ? 'active' : '' ?>">Transactions
-                (<?= $count_transactions ?>)</a>
-            <a href="orders.php?tab=history" class="tab-item <?= $active_tab === 'history' ? 'active' : '' ?>">History
+            <a href="?tab=booking" class="tab-item <?= $tab === 'booking' ? 'active' : '' ?>">Booking
+                (<?= $count_booking ?>)</a>
+            <a href="?tab=down_payment" class="tab-item <?= $tab === 'down_payment' ? 'active' : '' ?>">Down Payment
+                (<?= $count_dp ?>)</a>
+            <a href="?tab=monthly_installment"
+                class="tab-item <?= $tab === 'monthly_installment' ? 'active' : '' ?>">Monthly Installment
+                (<?= $count_inst ?>)</a>
+            <a href="?tab=history" class="tab-item <?= $tab === 'history' ? 'active' : '' ?>">History
                 (<?= $count_history ?>)</a>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <form method="GET" style="display:flex; gap:16px;">
-                <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab) ?>">
+        <?php if ($tab === 'history'): ?>
+            <div class="sub-tabs">
+                <a href="?tab=history&sub_tab=booking" class="sub-tab <?= $sub_tab === 'booking' ? 'active' : '' ?>"><i
+                        class="fas fa-receipt"></i> Booking (<?= $count_hist_bk ?>)</a>
+                <a href="?tab=history&sub_tab=down_payment"
+                    class="sub-tab <?= $sub_tab === 'down_payment' ? 'active' : '' ?>"><i
+                        class="fas fa-hand-holding-usd"></i> Down Payment (<?= $count_hist_dp ?>)</a>
+                <a href="?tab=history&sub_tab=monthly_installment"
+                    class="sub-tab <?= $sub_tab === 'monthly_installment' ? 'active' : '' ?>"><i
+                        class="fas fa-folder-open"></i> Completed Loans (<?= $count_hist_inst ?>)</a>
+                <a href="?tab=history&sub_tab=blacklist" class="sub-tab <?= $sub_tab === 'blacklist' ? 'active' : '' ?>"
+                    style="<?= $count_blacklist > 0 ? 'background:#fee2e2;color:#991b1b;border-color:#fecaca;' : '' ?>"><i
+                        class="fas fa-user-slash"></i> Blacklist (<?= $count_blacklist ?>)</a>
+            </div>
+        <?php endif; ?>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <form method="GET" style="display:flex;gap:16px;">
+                <input type="hidden" name="tab" value="<?= htmlspecialchars($tab) ?>">
+
                 <div style="position:relative;">
                     <i class="fas fa-search"
-                        style="position:absolute; left:14px; top:11px; color:#9ca3af; font-size:14px;"></i>
-                    <input type="text" name="search" class="form-control" placeholder="Search name, plate, model…"
-                        style="padding-left:38px; width:280px; font-size:13px;"
-                        value="<?= htmlspecialchars($search) ?>">
+                        style="position:absolute;left:14px;top:11px;color:#9ca3af;font-size:14px;"></i>
+                    <input type="text" name="search" class="form-control" placeholder="Search customer or car..."
+                        style="padding-left:38px;width:280px;font-size:13px;" value="<?= htmlspecialchars($search) ?>">
                 </div>
-                <?php if ($active_tab === 'history'): ?>
-                    <select name="status" class="form-control" style="width:150px; font-size:13px;"
-                        onchange="this.form.submit()">
-                        <option value="all">All Status</option>
-                        <option value="Sold" <?= $status_filter === 'Sold' ? 'selected' : '' ?>>Sold</option>
-                        <option value="Cancelled" <?= $status_filter === 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                    </select>
-                <?php endif; ?>
-            </form>
-            <div>
-                <button onclick="openAddModal()" class="btn-add-blue"><i class="fas fa-plus"></i> Add
-                    Reservation</button>
-            </div>
-        </div>
+                <?php if ($tab === 'history'): ?>
+                    <input type="hidden" name="sub_tab" value="<?= htmlspecialchars($sub_tab) ?>">
+                    <?php if ($sub_tab === 'booking' || $sub_tab === 'down_payment'): ?>
+                        <select name="filter" class="form-control" onchange="this.form.submit()"
+                            style="padding-left:12px; width:200px; font-size:13px;">
 
-        <div class="table-card" style="padding:0; border:none;">
-            <table class="admin-table" id="ordersTable">
-                <thead>
-                    <tr>
-                        <th style="text-align:left; width:12%;">Order ID</th>
-                        <th style="text-align:left; width:8%;">Avatar</th>
-                        <th style="text-align:left; width:20%;">Customer</th>
-                        <th style="text-align:left; width:20%;">Car Model</th>
-                        <th style="text-align:left; width:12%;">Booking Fee</th>
-                        <?php if (in_array($active_tab, ['transactions', 'history'])): ?>
-                            <th style="text-align:left; width:13%;">Down Payment</th>
-                        <?php endif; ?>
-                        <th style="text-align:left; width:13%;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($result && mysqli_num_rows($result) > 0): ?>
-                        <?php while ($row = mysqli_fetch_assoc($result)): ?>
-                            <?php
-                            $st = $row['reservation_status'];
-                            $dot_color = match ($st) {
-                                'Loan Processing' => '#3b82f6',
-                                'Sold' => '#10b981',
-                                'Cancelled' => '#ef4444',
-                                'Refunded' => '#8b5cf6',
-                                default => '#f59e0b'
-                            };
-                            $name_parts = explode(' ', trim($row['user_name'] ?? ''));
-                            $initials = '';
-                            foreach ($name_parts as $part) {
-                                if (!empty($part))
-                                    $initials .= strtoupper(mb_substr($part, 0, 1, 'UTF-8'));
-                            }
-                            $initials = mb_substr($initials, 0, 3, 'UTF-8');
-                            $avatar_content = !empty($row['user_avatar'])
-                                ? "<img src='" . htmlspecialchars($row['user_avatar']) . "' style='width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;'>"
-                                : $initials;
+                            <option value="All" <?= ($filter === 'All' || empty($filter)) ? 'selected' : '' ?>>All Status</option>
+
+                            <?php if ($sub_tab === 'booking'): ?>
+                                <option value="Approved" <?= $filter === 'Approved' ? 'selected' : '' ?>>Approved</option>
+                                <option value="Rejected" <?= $filter === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
+                                <option value="Refunded" <?= $filter === 'Refunded' ? 'selected' : '' ?>>Refunded</option>
+
+                            <?php elseif ($sub_tab === 'down_payment'): ?>
+                                <option value="Approved" <?= $filter === 'Approved' ? 'selected' : '' ?>>Approved</option>
+                                <option value="Cancelled" <?= $filter === 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                                <option value="Rejected" <?= $filter === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
+                            <?php endif; ?>
+
+                        </select>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+            </form>
+        </div>
+        <?php if ($tab === 'monthly_installment' || ($tab === 'history' && $sub_tab === 'monthly_installment')): ?>
+            <div class="table-card" style="padding:0;border:none;">
+                <?php if ($result && mysqli_num_rows($result) > 0): ?>
+                    <div class="folder-grid">
+                        <?php while ($row = mysqli_fetch_assoc($result)):
+                            $row = apply_snapshot($row);
+                            $total = (int) $row['total_months'];
+                            $paid = (int) $row['paid_months'];
+                            $overdue = (int) ($row['overdue_months'] ?? 0);
+                            $pct = $total > 0 ? round($paid / $total * 100) : 0;
+                            $next = !empty($row['next_due']) ? date('d M Y', strtotime($row['next_due'])) : '-';
                             $row_json = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                            $is_completed = ($tab === 'history');
                             ?>
-                            <tr class="data-row" onclick='openModal(<?= $row_json ?>)'>
-                                <td style="text-align: left; color: #6b7280;">
-                                    ORD<?= str_pad($row['reservation_id'], 3, '0', STR_PAD_LEFT) ?>
-                                </td>
-                                <td style="text-align:left;">
-                                    <div
-                                        style="width:42px;height:42px;font-size:14px;font-weight:700;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;background-color:#e0e7ff;color:#6366f1;margin:0 auto;">
-                                        <?= $avatar_content ?>
-                                    </div>
-                                </td>
-                                <td style="text-align:left;">
-                                    <div style="font-weight:500; color:#111827; font-size:14px;">
-                                        <?= htmlspecialchars($row['user_name']) ?>
-                                    </div>
-                                    <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($row['user_phone']) ?>
-                                    </div>
-                                </td>
-                                <td style="text-align:left;">
-                                    <div style="font-weight:500; color:#111827; font-size:14px;">
-                                        <?= htmlspecialchars($row['car_brand'] . ' ' . $row['car_model']) ?>
-                                    </div>
-                                    <div style="font-size:12px; color:#6b7280;">
-                                        <?= htmlspecialchars($row['car_plate'] ?: 'No Plate') ?>
-                                    </div>
-                                </td>
-                                <td style="text-align:left; font-weight:500; color:#111827; font-size:14px;">
-                                    RM <?= number_format($row['payment_amount'], 2) ?>
-                                </td>
-                                <?php if (in_array($active_tab, ['transactions', 'history'])): ?>
-                                    <td style="text-align:left;">
-                                        <?php
-                                        $ds = $row['dp_status'] ?? 'Pending';
-                                        $dp_dot = match ($ds) { 'Approved' => '#10b981', 'Cancelled' => '#ef4444', default => '#f59e0b'};
-                                        ?>
-                                        <div class="status-cell">
-                                            <span class="dot print-hide" style="background:<?= $dp_dot ?>;"></span>
-                                            <span
-                                                style="color:<?= $dp_dot ?>; font-weight:600; font-size:13px;"><?= htmlspecialchars($ds) ?></span>
+                            <div class="folder-card" onclick='openScheduleModal(<?= $row_json ?>)'
+                                style="<?= $is_completed ? 'border-left:4px solid #10b981;' : '' ?>">
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                                    <div>
+                                        <div
+                                            style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">
+                                            BK<?= str_pad($row['booking_id'], 4, '0', STR_PAD_LEFT) ?></div>
+                                        <div style="font-size:15px;font-weight:700;color:#111827;margin-top:2px;">
+                                            <?= htmlspecialchars($row['user_name']) ?>
                                         </div>
-                                        <div style="font-size:11px; color:#6b7280; margin-top:2px; padding-left:14px;">RM
-                                            <?= number_format($row['dp_amount'] ?? 0, 2) ?>
+                                        <div style="font-size:13px;color:#6b7280;">
+                                            <?= htmlspecialchars($row['car_brand'] . ' ' . $row['car_model']) ?>
+                                        </div>
+                                    </div>
+                                    <?php if ($is_completed): ?>
+                                        <i class="fas fa-check-circle" style="color:#10b981;font-size:28px;"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-folder-open"
+                                            style="color:<?= $overdue > 0 ? '#f97316' : '#3b82f6' ?>;font-size:28px;"></i>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($is_completed): ?>
+                                    <div style="font-size:12px;color:#16a34a;font-weight:700;">All <?= $total ?> payments completed
+                                    </div>
+                                <?php else: ?>
+                                    <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;">
+                                        <span><?= $paid ?>/<?= $total ?> paid</span><span><strong
+                                                style="color:#111827;"><?= $pct ?>%</strong></span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill <?= $overdue > 0 ? 'overdue' : '' ?>" style="width:<?= $pct ?>%;">
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px;">
+                                        <span style="color:#6b7280;">Next due:</span><span
+                                            style="color:<?= $overdue > 0 ? '#dc2626' : '#111827' ?>;font-weight:600;"><?= $next ?></span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endwhile; ?>
+                    </div>
+                <?php else: ?>
+                    <div style="text-align:center;padding:60px 0;color:#6b7280;font-size:14px;">No records found.</div>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="table-card" style="padding:0;border:none;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;padding-left:24px;">Order ID</th>
+                            <th style="text-align:left;">Customer</th>
+                            <th style="text-align:left;">Car</th>
+                            <?php if ($tab === 'booking'): ?>
+                                <th style="text-align:left;">Booking Fee</th>
+                                <th style="text-align:left;">Docs</th>
+                            <?php elseif ($tab === 'down_payment' || ($tab === 'history' && $sub_tab === 'down_payment')): ?>
+                                <th style="text-align:left;">DP Amount</th>
+                                <th style="text-align:left;">Plate</th>
+                            <?php elseif ($tab === 'history' && $sub_tab === 'blacklist'): ?>
+                                <th style="text-align:left;">Overdue</th>
+                            <?php endif; ?>
+                            <th style="text-align:left;">Date</th>
+                            <th style="text-align:left;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($result && mysqli_num_rows($result) > 0):
+                            while ($row = mysqli_fetch_assoc($result)):
+                                $row = apply_snapshot($row);
+                                if ($tab === 'booking' || ($tab === 'history' && $sub_tab === 'booking'))
+                                    $status_label = $row['booking_status'];
+                                elseif ($tab === 'down_payment' || ($tab === 'history' && $sub_tab === 'down_payment'))
+                                    $status_label = $row['dp_status'];
+                                else
+                                    $status_label = 'Blacklisted';
+
+                                $status_slug = strtolower(str_replace(' ', '-', $status_label));
+                                if ($status_slug === 'blacklisted')
+                                    $status_slug = 'rejected';
+
+                                $doc_count = 0;
+                                foreach (['ic_url', 'driving_license_url', 'payslip_url', 'bank_statement_url'] as $col) {
+                                    if (!empty($row[$col] ?? null))
+                                        $doc_count++;
+                                }
+
+                                if ($tab === 'history' && $sub_tab === 'booking')
+                                    $date_disp = date('d M Y, g:ia', strtotime($row['refunded_at'] ?: $row['created_at']));
+                                elseif ($tab === 'down_payment' || ($tab === 'history' && $sub_tab === 'down_payment'))
+                                    $date_disp = !empty($row['dp_approved_at']) ? date('d M Y, g:ia', strtotime($row['dp_approved_at'])) : date('d M Y, g:ia', strtotime($row['dp_created_at'] ?? ''));
+                                else
+                                    $date_disp = date('d M Y, g:ia', strtotime($row['created_at'] ?? ''));
+
+                                $row_json = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                                ?>
+                                <tr class="data-row" onclick='openModal(<?= $row_json ?>, "<?= $tab ?>", "<?= $sub_tab ?>")'>
+                                    <td style="text-align:left;padding-left:24px;color:#6b7280;font-weight:500;">
+                                        BK<?= str_pad($row['booking_id'], 4, '0', STR_PAD_LEFT) ?></td>
+                                    <td>
+                                        <div style="font-weight:500;color:#111827;font-size:14px;">
+                                            <?= htmlspecialchars($row['user_name']) ?>
+                                        </div>
+                                        <div style="font-size:12px;color:#6b7280;"><?= htmlspecialchars($row['user_phone']) ?></div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:500;color:#111827;font-size:14px;">
+                                            <?= htmlspecialchars($row['car_brand'] . ' ' . $row['car_model']) ?>
+                                        </div>
+                                        <div style="font-size:12px;color:#6b7280;">
+                                            <?= htmlspecialchars(($row['car_year'] ?? '') . ' | ' . ($row['car_origin'] ?? '')) ?>
                                         </div>
                                     </td>
-                                <?php endif; ?>
-                                <td style="text-align:left;">
-                                    <div class="status-cell" style="width:150px;">
-                                        <span class="dot print-hide" style="background:<?= $dot_color ?>;"></span>
-                                        <span
-                                            style="color:<?= $dot_color ?>; font-weight:600; font-size:13px;"><?= $st ?></span>
-                                    </div>
-                                </td>
+                                    <?php if ($tab === 'booking'): ?>
+                                        <td style="font-weight:600;color:#111827;">RM <?= number_format($row['booking_fee'], 2) ?></td>
+                                        <td><span
+                                                class="badge-pill <?= $doc_count === 4 ? 'badge-paid' : 'badge-pending' ?>"><?= $doc_count ?>/4
+                                                <?= $doc_count === 4 ? 'Complete' : 'Incomplete' ?></span></td>
+                                    <?php elseif ($tab === 'down_payment' || ($tab === 'history' && $sub_tab === 'down_payment')): ?>
+                                        <td style="font-weight:600;color:#111827;">RM <?= number_format($row['dp_amount'] ?? 0, 2) ?>
+                                        </td>
+                                        <td><?= !empty($row['plate_number']) ? "<span style='background:#111827;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:11px;'>" . htmlspecialchars($row['plate_number']) . "</span>" : '<span style="color:#9ca3af;">-</span>' ?>
+                                        </td>
+                                    <?php elseif ($tab === 'history' && $sub_tab === 'blacklist'): ?>
+                                        <td><span class="badge-pill badge-overdue"><?= (int) $row['max_overdue'] ?> days</span></td>
+                                    <?php endif; ?>
+                                    <td style="color:#4b5563;font-weight:500;"><?= $date_disp ?></td>
+                                    <td>
+                                        <div class="status-cell"><span class="dot dot-<?= $status_slug ?>"></span><span
+                                                class="text-<?= $status_slug ?>"><?= htmlspecialchars($status_label) ?></span></div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; else: ?>
+                            <tr>
+                                <td colspan="8" style="text-align:center;padding:48px 0;color:#6b7280;font-size:14px;">No
+                                    records found.</td>
                             </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="<?= $active_tab === 'transactions' ? 8 : 7 ?>"
-                                style="text-align:center; padding:48px 0; color:#6b7280; font-size:14px;">No records found.
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
 
-            <div class="pagination-container"
-                style="padding:20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e5e7eb;">
-                <div class="page-info" style="color:#6b7280; font-size:13px;">Showing Page <?= $page ?> of
-                    <?= $total_pages ?>
+                <div class="pagination-container"
+                    style="padding:20px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5e7eb;">
+                    <div style="color:#6b7280;font-size:13px;">Showing Page <?= $page ?> of <?= $total_pages ?></div>
+                    <?php if ($total_pages > 1):
+                        $base_q = "?tab=" . urlencode($tab) . ($tab === 'history' ? "&sub_tab=" . urlencode($sub_tab) : '') . "&search=" . urlencode($search); ?>
+                        <div style="display:flex;gap:8px;">
+                            <a href="<?= $base_q ?>&page=<?= max(1, $page - 1) ?>" class="page-btn"><i
+                                    class="fas fa-angle-left"></i> Prev</a>
+                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                <a href="<?= $base_q ?>&page=<?= $i ?>"
+                                    class="page-btn <?= $page == $i ? 'active' : '' ?>"><?= $i ?></a>
+                            <?php endfor; ?>
+                            <a href="<?= $base_q ?>&page=<?= min($total_pages, $page + 1) ?>" class="page-btn">Next <i
+                                    class="fas fa-angle-right"></i></a>
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <?php if ($total_pages > 1):
-                    $base = "?tab=" . urlencode($active_tab) . "&search=" . urlencode($search) . "&status=" . urlencode($status_filter);
-                    ?>
-                    <div class="page-controls" style="display:flex; gap:8px;">
-                        <a href="orders.php<?= $base ?>&page=<?= max(1, $page - 1) ?>" class="page-btn"
-                            style="text-decoration:none;"><i class="fas fa-angle-left"></i> Prev</a>
-                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                            <a href="orders.php<?= $base ?>&page=<?= $i ?>" class="page-btn <?= $page == $i ? 'active' : '' ?>"
-                                style="text-decoration:none;"><?= $i ?></a>
-                        <?php endfor; ?>
-                        <a href="orders.php<?= $base ?>&page=<?= min($total_pages, $page + 1) ?>" class="page-btn"
-                            style="text-decoration:none;">Next <i class="fas fa-angle-right"></i></a>
-                    </div>
-                <?php endif; ?>
             </div>
-        </div>
+        <?php endif; ?>
     </main>
 
-    <div id="splitModal" class="modal-overlay hidden">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2><i class="fas fa-file-invoice" style="color:#6366f1; margin-right:8px;"></i>Reservation Dossier</h2>
-                <button onclick="closeModal()" class="close-btn"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="layout-grid">
+    <div id="splitModal" class="modal">
+        <div class="modal-content">
+            <h2 style="font-size:20px;margin-bottom:24px;color:#111827;">
+                <i class="fas fa-file-invoice" style="margin-right:8px;color:#3b82f6;"></i>
+                <span id="modalTitleText">Order Details</span>
+            </h2>
 
-                    <div class="info-card user-card">
-                        <div class="section-title"><i class="fas fa-user-circle"></i> User Information</div>
+            <div class="modal-layout">
+
+                <div class="modal-column">
+                    <div class="info-card">
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-user-circle"></i>
+                            Customer Details</h3>
                         <div class="grid-2">
                             <div class="detail-item"><label>Name</label>
                                 <p id="detName">-</p>
                             </div>
-                            <div class="detail-item"><label>Gmail</label>
-                                <p id="detEmail" style="word-break:break-all;">-</p>
-                            </div>
-                            <div class="detail-item"><label>IC Number</label>
-                                <p id="detIC">-</p>
-                            </div>
-                            <div class="detail-item"><label>Contact</label>
+                            <div class="detail-item"><label>Phone</label>
                                 <p id="detContact">-</p>
                             </div>
+                            <div class="detail-item"><label>Email</label>
+                                <p id="detEmail" style="word-break:break-all;">-</p>
+                            </div>
+                            <div class="detail-item"><label>IC</label>
+                                <p id="detIC">-</p>
+                            </div>
                         </div>
-
-                        <hr style="border:0; border-top:1px dashed #e5e7eb; margin:16px 0;">
-                        <div id="pdfSectionWrap" style="display:none;">
-                            <div class="detail-item">
-                                <label>Documents (PDF)</label>
-
-                                <div
-                                    style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f3f4f6;">
-                                    <span style="font-weight:600; font-size:13px; color:#374151;"><i
-                                            class="fas fa-id-card" style="color:#3b82f6; margin-right:6px;"></i>IC
-                                        Document</span>
-                                    <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" id="btnView_ic_pdf" onclick="togglePdf('frameIcPdf')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
-                                                class="fas fa-eye"></i> View</button>
-                                        <label class="upload-btn-label"
-                                            style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <span id="lblUpload_ic_pdf"><i class="fas fa-upload"></i> Upload</span>
-                                            <input type="file" accept=".pdf" style="display:none;"
-                                                onchange="uploadDoc(this,'ic_pdf')">
-                                        </label>
-                                    </div>
-                                </div>
-                                <iframe id="frameIcPdf" src=""
-                                    style="width:100%; height:400px; display:none; border:1px solid #d1d5db; border-radius:6px; margin-top:8px;"></iframe>
-
-                                <div
-                                    style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f3f4f6;">
-                                    <span style="font-weight:600; font-size:13px; color:#374151;"><i
-                                            class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>Driving
-                                        Licence</span>
-                                    <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" id="btnView_driving_licence"
-                                            onclick="togglePdf('frameDrivingLicence')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
-                                                class="fas fa-eye"></i> View</button>
-                                        <label class="upload-btn-label"
-                                            style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <span id="lblUpload_driving_licence"><i class="fas fa-upload"></i>
-                                                Upload</span>
-                                            <input type="file" accept=".pdf" style="display:none;"
-                                                onchange="uploadDoc(this,'driving_licence')">
-                                        </label>
-                                    </div>
-                                </div>
-                                <iframe id="frameDrivingLicence" src=""
-                                    style="width:100%; height:400px; display:none; border:1px solid #d1d5db; border-radius:6px; margin-top:8px;"></iframe>
-
-                                <div
-                                    style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f3f4f6;">
-                                    <span style="font-weight:600; font-size:13px; color:#374151;"><i
-                                            class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>Bank
-                                        Statement</span>
-                                    <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" id="btnView_bank_statement"
-                                            onclick="togglePdf('frameBankStatement')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
-                                                class="fas fa-eye"></i> View</button>
-                                        <label class="upload-btn-label"
-                                            style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <span id="lblUpload_bank_statement"><i class="fas fa-upload"></i>
-                                                Upload</span>
-                                            <input type="file" accept=".pdf" style="display:none;"
-                                                onchange="uploadDoc(this,'bank_statement')">
-                                        </label>
-                                    </div>
-                                </div>
-                                <iframe id="frameBankStatement" src=""
-                                    style="width:100%; height:400px; display:none; border:1px solid #d1d5db; border-radius:6px; margin-top:8px;"></iframe>
-
-                                <div
-                                    style="display:flex; align-items:center; justify-content:space-between; padding:6px 0;">
-                                    <span style="font-weight:600; font-size:13px; color:#374151;"><i
-                                            class="fas fa-file-pdf" style="color:#ef4444; margin-right:6px;"></i>3 Month
-                                        Salary</span>
-                                    <div style="display:flex; gap:14px; align-items:center;">
-                                        <button type="button" id="btnView_salary_slip"
-                                            onclick="togglePdf('frameSalarySlip')"
-                                            style="background:none; border:none; color:#4b5563; font-size:12px; font-weight:600; cursor:pointer; display:none;"><i
-                                                class="fas fa-eye"></i> View</button>
-                                        <label class="upload-btn-label"
-                                            style="cursor:pointer; color:#3b82f6; font-size:12px; font-weight:600; margin:0;">
-                                            <span id="lblUpload_salary_slip"><i class="fas fa-upload"></i> Upload</span>
-                                            <input type="file" accept=".pdf" style="display:none;"
-                                                onchange="uploadDoc(this,'salary_slip')">
-                                        </label>
-                                    </div>
-                                </div>
-                                <iframe id="frameSalarySlip" src=""
-                                    style="width:100%; height:400px; display:none; border:1px solid #d1d5db; border-radius:6px; margin-top:8px;"></iframe>
-                            </div>
-                            <hr style="border:0; border-top:1px dashed #e5e7eb; margin:16px 0;">
-                        </div>
-
-                        <div class="detail-item">
-                            <label>
-                                Billing Address
-                                <button id="editAddressBtn" class="edit-inline-btn" onclick="toggleEditAddress(true)"><i
-                                        class="fas fa-pen"></i></button>
-                            </label>
-
-                            <div id="addressViewMode">
-                                <p id="detAddress" style="font-weight:normal; margin-bottom:10px;">-</p>
-                                <div class="grid-3">
-                                    <div><label style="font-size:9px;">City</label>
-                                        <p id="detCity" style="font-size:13px;">-</p>
-                                    </div>
-                                    <div><label style="font-size:9px;">State</label>
-                                        <p id="detState" style="font-size:13px;">-</p>
-                                    </div>
-                                    <div><label style="font-size:9px;">Postcode</label>
-                                        <p id="detPostcode" style="font-size:13px;">-</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="addressEditMode"
-                                style="display:none; margin-top:8px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px;">
-
-                                <input type="text" id="inlineAddr" class="form-control"
-                                    style="margin-bottom:8px; width:100%; box-sizing:border-box;" placeholder="Address">
-
-                                <div style="position:relative; width:100%; height:36px; margin-bottom:8px;">
-                                    <select id="inlineState" class="form-control"
-                                        onmousedown="this.size=4; this.style.position='absolute'; this.style.zIndex='9999';"
-                                        onchange="this.size=1; this.style.position='static'; inlinePopulateCities(); this.blur();"
-                                        onblur="this.size=1; this.style.position='static';"
-                                        style="width:100%; box-sizing:border-box; top:0; left:0;">
-                                        <option value="">Select State</option>
-                                    </select>
-                                </div>
-
-                                <div style="position:relative; width:100%; height:36px; margin-bottom:8px;">
-                                    <select id="inlineCity" class="form-control"
-                                        onmousedown="this.size=4; this.style.position='absolute'; this.style.zIndex='9999';"
-                                        onchange="this.size=1; this.style.position='static'; this.blur();"
-                                        onblur="this.size=1; this.style.position='static';"
-                                        style="width:100%; box-sizing:border-box; top:0; left:0;">
-                                        <option value="">Select City</option>
-                                    </select>
-                                </div>
-
-                                <input type="text" id="inlinePost" class="form-control"
-                                    style="margin-bottom:8px; width:100%; box-sizing:border-box;"
-                                    placeholder="Postcode">
-
-                                <div style="display:flex; gap:8px; margin-top:4px;">
-                                    <button class="btn-modal btn-modal-approve" onclick="saveInlineAddress()"
-                                        style="flex:1;">Save</button>
-                                    <button class="btn-modal btn-modal-cancel" onclick="toggleEditAddress(false)"
-                                        style="flex:1;">Cancel</button>
-                                </div>
-                            </div>
+                        <div class="detail-item" style="margin-top:15px;"><label>Address</label>
+                            <p id="detAddress" style="font-weight:normal;">-</p>
+                            <p style="font-size:11px;color:#9ca3af;margin-top:4px;"><span id="detCityState">-</span>
+                                <span id="detPostcode">-</span>
+                            </p>
                         </div>
                     </div>
 
-                    <div class="info-card car-card">
-                        <div class="section-title"><i class="fas fa-car"></i> Car Information</div>
-                        <div style="display:flex; gap:14px;">
-                            <img id="detCarImage" src="" alt="Car"
-                                style="width:120px;height:88px;object-fit:cover;border-radius:8px;background:#e2e8f0;border:1px solid #e5e7eb;flex-shrink:0;">
-                            <div class="grid-2" style="flex:1;">
-                                <div class="detail-item"><label>Brand</label>
-                                    <p id="detCarBrand">-</p>
+                    <div id="docsWrap" class="info-card" style="display:none;">
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-file-pdf"></i>
+                            Verification Documents</h3>
+                        <div style="display:flex;flex-direction:column;gap:8px;">
+                            <?php
+                            $doc_rows = [
+                                ['ic_url', 'IC Document', 'fa-id-card', '#3b82f6'],
+                                ['driving_license_url', 'Driving Licence', 'fa-id-badge', '#ef4444'],
+                                ['payslip_url', '3 Months Payslip', 'fa-file-invoice-dollar', '#10b981'],
+                                ['bank_statement_url', 'Bank Statement', 'fa-university', '#f59e0b'],
+                            ];
+                            foreach ($doc_rows as $i => $d):
+                                [$key, $label, $icon, $color] = $d;
+                                ?>
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #f3f4f6;border-radius:8px;background:#f9fafb;">
+                                    <span style="font-weight:600;font-size:13px;color:#374151;">
+                                        <i class="fas <?= $icon ?>"
+                                            style="color:<?= $color ?>;width:20px;text-align:center;margin-right:8px;"></i><?= $label ?>
+                                    </span>
+                                    <div style="display:flex;gap:12px;align-items:center;">
+                                        <span id="statusTxt_<?= $key ?>" style="font-size:12px;font-weight:700;">-</span>
+                                        <button type="button" id="btnView_<?= $key ?>"
+                                            onclick="viewCustomerDoc('<?= $key ?>')" class="btn-export"
+                                            style="padding:4px 10px;font-size:12px;display:none;">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="detail-item"><label>Model</label>
-                                    <p id="detCarModel">-</p>
-                                </div>
-                                <div class="detail-item"><label>Variant/Trim</label>
-                                    <p id="detCarVariant">-</p>
-                                </div>
-                                <div class="detail-item"><label>Colour</label>
-                                    <p id="detCarColor">-</p>
-                                </div>
+                            <?php endforeach; ?>
+                            <iframe id="frameCustomerDoc" src=""
+                                style="width:100%;height:350px;display:none;border:1px solid #d1d5db;border-radius:8px;margin-top:10px;"></iframe>
+                        </div>
+                    </div>
+
+                    <div id="dpPanel" class="info-card" style="display:none; border-left:4px solid #6366f1;">
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#4338ca;"><i class="fas fa-car-side"></i>
+                            Verification & Plate Registration</h3>
+
+                        <div class="detail-item"
+                            style="margin-bottom:20px; border-bottom:1px solid #e5e7eb; padding-bottom:20px;">
+                            <label>Customer Uploaded Insurance</label>
+                            <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
+                                <span id="statusTxt_insurance" style="font-size:12px;font-weight:700;">-</span>
+                                <button type="button" id="btnViewInsurance" onclick="viewCustomerDoc('insurance')"
+                                    class="btn-export" style="padding:4px 10px;font-size:12px;display:none;">
+                                    <i class="fas fa-eye"></i> View Document
+                                </button>
                             </div>
                         </div>
 
-                        <div class="grid-2" style="margin-top:14px;">
-                            <div class="detail-item"><label>Condition / Origin</label>
+                        <div class="detail-item" style="margin-bottom:15px;">
+                            <label>Customer Selected Plate Option</label>
+                            <p id="detPlateOption"
+                                style="font-weight:700;color:#111827;background:#f3f4f6;padding:10px;border-radius:6px; margin-top:6px;">
+                                -</p>
+                        </div>
+
+                        <div>
+                            <label
+                                style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;display:block;margin-bottom:6px;">Register
+                                Final Car Plate</label>
+                            <input type="text" id="plateNumberInput" class="form-control" placeholder="e.g. ABC 1234">
+                            <button class="btn-export" id="btnSaveDPDetails"
+                                style="margin-top:12px;background:#fff;border-color:#3b82f6;color:#3b82f6;width:100%;"
+                                onclick="saveDPDetails()">
+                                <i class="fas fa-save"></i> Save Plate Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-column">
+                    <div class="info-card">
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-car"></i> Vehicle
+                            & Finance</h3>
+                        <div style="display:flex;gap:15px;margin-bottom:20px;">
+                            <img id="detCarImage" src="" alt="Car"
+                                style="width:120px;height:85px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;">
+                            <div style="flex:1;">
+                                <p id="detCarBrand"
+                                    style="font-weight:800;color:#111827;font-size:16px;margin:0 0 4px 0;">-</p>
+                                <p id="detCarModel" style="color:#6b7280;font-size:13px;margin:0;">-</p>
+                            </div>
+                        </div>
+                        <div class="grid-2"
+                            style="margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #f3f4f6;">
+                            <div class="detail-item"><label>Variant</label>
+                                <p id="detCarVariant">-</p>
+                            </div>
+                            <div class="detail-item"><label>Colour</label>
+                                <p id="detCarColor">-</p>
+                            </div>
+                            <div class="detail-item"><label>Origin</label>
                                 <p id="detCarOrigin">-</p>
-                            </div>
-
-                            <div class="detail-item">
-                                <label>
-                                    Number Plate
-                                    <button id="editPlateBtn" class="edit-inline-btn" onclick="toggleEditPlate(true)"><i
-                                            class="fas fa-pen"></i></button>
-                                </label>
-                                <div id="plateViewMode">
-                                    <p><span id="detCarPlate" class="plate-tag">-</span></p>
-                                </div>
-                                <div id="plateEditMode"
-                                    style="display:none; margin-top:6px; gap:6px; align-items:center;">
-                                    <input type="text" id="inlinePlate" class="form-control" style="width:120px;"
-                                        placeholder="Plate No.">
-                                    <button class="btn-modal btn-modal-approve btn-modal-sm"
-                                        onclick="saveInlinePlate()"><i class="fas fa-check"></i></button>
-                                    <button class="btn-modal btn-modal-cancel btn-modal-sm"
-                                        onclick="toggleEditPlate(false)"><i class="fas fa-times"></i></button>
-                                </div>
-                            </div>
-
-                            <div class="detail-item"><label>Quantity</label>
-                                <p id="detCarStock">-</p>
                             </div>
                             <div class="detail-item"><label>Year</label>
                                 <p id="detCarYear">-</p>
@@ -1064,174 +777,109 @@ $cars_query = mysqli_query($conn, "SELECT c.car_id, c.car_brand, c.car_model, cs
 
                         <div class="finance-box">
                             <div class="finance-row">
-                                <span style="font-size:13px;font-weight:600;color:#6b7280;">Price</span>
-                                <span id="detPrice" style="font-size:16px;font-weight:700;color:#111827;">RM 0.00</span>
+                                <span style="color:#6b7280;font-weight:600;">Car Price </span>
+                                <span id="detPrice" style="font-weight:700;color:#111827;font-size:15px;">RM 0.00</span>
                             </div>
                             <div class="finance-row">
-                                <span style="font-size:13px;font-weight:600;color:#6b7280;">Down Payment
-                                    (<?= $sys_settings['default_dp_percent'] ?? 10 ?>%)</span>
-                                <span id="detDP" style="font-size:14px;font-weight:600;color:#dc2626;">- RM 0.00</span>
-                            </div>
-                            <div class="finance-row">
-                                <span style="font-size:13px;font-weight:600;color:#6b7280;">Booking Fee Paid</span>
-                                <span id="detBookingFee" style="font-size:14px;font-weight:600;color:#10b981;">RM
+                                <span style="color:#6b7280;font-weight:600;">Booking Fee <span
+                                        class="paid-badge">PAID</span></span>
+                                <span id="detBookingFee" style="font-weight:600;color:#10b981;font-size:14px;">- RM
                                     0.00</span>
                             </div>
-                            <div class="finance-row total">
+                            <div class="finance-row" id="rowDP" style="display:none;">
+                                <span style="color:#6b7280;font-weight:600;">Down Payment <span
+                                        class="paid-badge">PAID</span></span>
+                                <span id="detDP" style="font-weight:600;color:#10b981;font-size:14px;">- RM 0.00</span>
+                            </div>
+                            <div class="finance-row total" id="rowBalance">
+                                <span id="lblBalanceText"
+                                    style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance (尾款)</span>
+                                <span id="detBalance" style="font-size:18px;font-weight:800;color:#ef4444;">RM
+                                    0.00</span>
+                            </div>
+                            <div class="finance-row total" id="rowMonthly" style="display:none;">
                                 <div>
-                                    <span style="display:block;font-size:14px;font-weight:700;color:#2563eb;">Est.
-                                        Monthly Installment</span>
-                                    <span style="font-size:11px;color:#9ca3af;">
-                                        Loan
-                                        <select id="loanYears" onchange="recalcMonthly()"
-                                            style="border:1px solid #d1d5db;border-radius:4px;font-size:11px;padding:1px 4px;">
-                                            <option value="5">5 Yrs</option>
-                                            <option value="7">7 Yrs</option>
-                                            <option value="9" selected>9 Yrs</option>
-                                        </select>
-                                        @ <?= $loan_rate ?>% P.A.
-                                    </span>
+                                    <span style="display:block;font-size:13px;font-weight:700;color:#2563eb;">Monthly
+                                        Installment</span>
+                                    <span style="font-size:11px;color:#9ca3af;"><span id="detYears">9</span> Yrs @
+                                        <?= $loan_rate ?>% P.A.</span>
                                 </div>
-                                <span id="detMonthly" style="font-size:20px;font-weight:800;color:#2563eb;">RM 0.00 /
-                                    mo</span>
+                                <span id="detMonthly" style="font-size:22px;font-weight:800;color:#2563eb;">RM
+                                    0.00</span>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="dpPanel" class="dp-panel" style="display:none;">
-                    <h3><i class="fas fa-hand-holding-usd"></i> Down Payment Approval</h3>
-                    <div class="grid-2">
-                        <div class="detail-item"><label>DP Amount</label>
-                            <p id="detDPAmount">-</p>
-                        </div>
-                        <div class="detail-item"><label>DP Status</label>
-                            <p id="detDPStatus">-</p>
-                        </div>
-                        <div class="detail-item"><label>Approved At</label>
-                            <p id="detDPApproved">-</p>
-                        </div>
-                        <div class="detail-item"><label>Reject Reason</label>
-                            <p id="detDPReason" style="color:#dc2626;">-</p>
+                    <div class="info-card">
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-info-circle"></i>
+                            Order Status</h3>
+                        <div class="grid-2">
+                            <div class="detail-item"><label>Order ID</label>
+                                <p id="detResID" style="color:#d97706;font-family:monospace;font-weight:800;">-</p>
+                            </div>
+                            <div class="detail-item"><label>Status</label>
+                                <p id="detStatus" style="color:#3b82f6;">-</p>
+                            </div>
+                            <div class="detail-item"><label>Loan Term</label>
+                                <p id="detLoanTerm">-</p>
+                            </div>
+                            <div class="detail-item"><label>Created At</label>
+                                <p id="detCreatedAt" style="font-size:12px;">-</p>
+                            </div>
                         </div>
                     </div>
-                    <div id="dpActionsWrap" class="dp-actions">
-                        <button class="btn-modal btn-modal-approve" onclick="approveDP()"><i
-                                class="fas fa-check-circle"></i> Approve DP</button>
-                        <button class="btn-modal btn-modal-reject" onclick="toggleRejectReason()"><i
-                                class="fas fa-times-circle"></i> Reject DP</button>
-                    </div>
-                    <div id="rejectReasonWrap">
-                        <textarea id="rejectReasonText" placeholder="Enter reason for rejection…"></textarea>
-                        <button class="btn-modal btn-modal-danger btn-modal-sm" style="margin-top:6px;"
-                            onclick="rejectDP()">Confirm Reject</button>
+
+                    <div id="reasonWrap" class="info-card" style="display:none;border-left:4px solid #ef4444;">
+                        <div class="detail-item"><label id="reasonLabel">Cancellation Reason</label>
+                            <p id="detReason" style="color:#dc2626;margin-top:6px;">-</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bottom-card">
-                    <div>
-                        <label
-                            style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;display:block;">Order
-                            ID</label>
-                        <div id="detResID" style="font-family:monospace;font-size:20px;font-weight:800;color:#d97706;">
-                            ORD000</div>
-                    </div>
-                    <div>
-                        <label
-                            style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;display:block;">Status</label>
-                        <div id="detStatus" style="font-size:15px;font-weight:700;color:#111827;">-</div>
-                    </div>
-                    <div>
-                        <label
-                            style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;display:block;">Payment
-                            Method</label>
-                        <div id="detPayMethod" style="font-size:15px;font-weight:600;color:#111827;">-</div>
-                    </div>
-                    <div>
-                        <label
-                            style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;display:block;">Reserved
-                            On</label>
-                        <div id="detCreatedAt" style="font-size:14px;font-weight:600;color:#374151;">-</div>
-                    </div>
-                </div>
             </div>
 
-            <div class="modal-footer">
-                <button onclick="closeModal()" class="btn-modal btn-modal-cancel">Close</button>
-
-                <button id="btnPrintDossier" class="btn-modal" onclick="window.print()"
-                    style="display:none; background:#f3f4f6; color:#374151; border:1px solid #d1d5db;">
-                    <i class="fas fa-print"></i> Print Dossier
-                </button>
-
-                <button id="btnProcessLoan" class="btn-modal btn-modal-process" onclick="processToLoan()"
-                    style="display:none;"><i class="fas fa-arrow-right"></i> Process to Loan</button>
-                <button id="btnMarkSold" class="btn-modal btn-modal-sold" onclick="markSold()" style="display:none;"><i
-                        class="fas fa-check-double"></i> Mark as Sold &amp; Deduct Stock</button>
-                <button id="btnCancelRes" class="btn-modal btn-modal-danger" onclick="cancelReservation()"
-                    style="display:none;"><i class="fas fa-ban"></i> Cancel Reservation</button>
+            <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:20px;border-top:1px solid #d1d5db;">
+                <button type="button" class="btn-export" onclick="closeModal()">Close</button>
+                <button type="button" id="btnRejectBooking" class="btn-export" onclick="rejectBooking()"
+                    style="color:#ef4444;border-color:#ef4444;display:none;">Reject & Cancel</button>
+                <button type="button" id="btnApproveBooking" class="btn-add-blue" onclick="approveBooking()"
+                    style="display:none;border:none;background:#10b981;color:#fff;">Verify & Approve Booking</button>
+                <button type="button" id="btnRejectDP" class="btn-export" onclick="rejectDP()"
+                    style="color:#ef4444;border-color:#ef4444;display:none;">Reject DP</button>
+                <button type="button" id="btnApproveDP" class="btn-add-blue" onclick="approveDP()"
+                    style="display:none;border:none;background:#10b981;color:#fff;">Verify & Generate Loan</button>
             </div>
         </div>
     </div>
 
-    <div id="addModal" class="modal-overlay hidden">
-        <div class="modal-container modal-container-sm">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus-circle" style="color:#3b82f6;margin-right:8px;"></i>Create New Reservation
-                </h2>
-                <button onclick="closeAddModal()" class="close-btn"><i class="fas fa-times"></i></button>
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content" style="max-width:800px;">
+            <h2 style="font-size:20px;margin-bottom:20px;"><i class="fas fa-folder-open"
+                    style="color:#3b82f6;margin-right:8px;"></i><span id="schedTitle">Amortization Schedule</span></h2>
+            <div id="schedSummary" style="display:flex;gap:12px;margin-bottom:16px;"></div>
+            <div style="max-height:500px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">#</th>
+                            <th>Due Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Paid At</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedBody"></tbody>
+                </table>
             </div>
-            <form id="addReservationForm">
-                <div class="modal-body" style="background:#fff;">
-                    <div class="form-group">
-                        <label>Select Customer</label>
-                        <select name="user_id" required>
-                            <option value="">-- Choose Customer --</option>
-                            <?php while ($u = mysqli_fetch_assoc($users_query)): ?>
-                                <option value="<?= $u['user_id'] ?>">
-                                    <?= htmlspecialchars($u['user_name'] . ' (' . $u['user_ic'] . ')') ?>
-                                </option>
-                            <?php endwhile; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Select Car</label>
-                        <select name="car_id" required>
-                            <option value="">-- Choose Car --</option>
-                            <?php while ($c = mysqli_fetch_assoc($cars_query)): ?>
-                                <option value="<?= $c['car_id'] ?>">
-                                    <?= htmlspecialchars($c['car_brand'] . ' ' . $c['car_model'] . ' — RM ' . number_format($c['car_status_price'], 2)) ?>
-                                </option>
-                            <?php endwhile; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Booking Fee Amount (RM)</label>
-                        <input type="number" step="0.01" min="0" name="payment_amount" placeholder="e.g. 500.00"
-                            required>
-                    </div>
-                    <div class="form-group">
-                        <label>Payment Method</label>
-                        <select name="payment_method" required>
-                            <option value="Online Transfer">Online Transfer</option>
-                            <option value="Credit Card">Credit Card</option>
-                            <option value="Cash">Cash</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" onclick="closeAddModal()" class="btn-modal btn-modal-cancel">Cancel</button>
-                    <button type="submit" class="btn-add-blue" style="border:none;"><i class="fas fa-save"></i> Save
-                        Reservation</button>
-                </div>
-            </form>
+            <div style="display:flex;justify-content:flex-end;margin-top:20px;"><button onclick="closeScheduleModal()"
+                    class="btn-export">Close</button></div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        window.GLOBAL_DP_RATE = <?= isset($dp_rate) ? $dp_rate : 0.10 ?>;
-        window.GLOBAL_LOAN_RATE = <?= isset($loan_rate) ? $loan_rate : 3.00 ?>;
+        window.GLOBAL_LOAN_RATE = <?= $loan_rate ?>;
     </script>
     <script src="../../JAVA SCRIPT/orders.js?v=<?= time() ?>"></script>
 </body>

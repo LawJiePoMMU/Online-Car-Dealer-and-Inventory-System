@@ -178,7 +178,11 @@ function openModal() {
         });
         document.getElementById('form_user_status').style.pointerEvents = 'auto';
         document.getElementById('form_user_status').style.backgroundColor = '#ffffff';
-        document.querySelector('button[name="save_user"]').style.display = 'block';
+        let saveBtn = document.querySelector('button[name="save_user"]');
+
+        if (saveBtn) {
+            saveBtn.style.display = 'block';
+        }
     }
 }
 
@@ -249,8 +253,6 @@ function closeModal() {
 }
 
 function toggleStatus(id, currentStatus, element) {
-    if (id == 4) return; 
-
     let newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     let row = element.closest('tr');
     fetch('users.php?ajax=1&toggle_id=' + id + '&current_status=' + currentStatus)
@@ -261,7 +263,7 @@ function toggleStatus(id, currentStatus, element) {
                 (urlParamsStatus === 'Inactive' && newStatus === 'Active')) {
                 row.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
                 row.style.opacity = '0';
-                row.style.transform = 'scale(0.95)'; 
+                row.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     row.remove();
                     if (document.querySelectorAll('tbody .data-row').length === 0) {
@@ -280,13 +282,13 @@ function toggleStatus(id, currentStatus, element) {
                     statusText.className = 'text-active';
                     dot.className = 'dot dot-active print-hide';
                     icon.className = 'fas fa-lock';
-                    element.style.color = '#ef4444'; 
+                    element.style.color = '#ef4444';
                 } else {
                     statusText.textContent = 'Inactive';
                     statusText.className = 'text-inactive';
                     dot.className = 'dot dot-inactive print-hide';
                     icon.className = 'fas fa-unlock';
-                    element.style.color = '#10b981'; 
+                    element.style.color = '#10b981';
                 }
             }
         })

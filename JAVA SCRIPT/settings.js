@@ -7,13 +7,29 @@ function setupTabs() {
     const tabs = document.querySelectorAll('.settings-tab');
     const cards = document.querySelectorAll('.settings-card');
 
+    const savedTab = localStorage.getItem('activeSettingsTab') || 'tab-profile';
+
+    tabs.forEach(t => t.classList.remove('active'));
+    cards.forEach(c => c.classList.remove('active'));
+
+    const activeTabBtn = document.querySelector(`.settings-tab[data-target="${savedTab}"]`);
+    const activeCard = document.getElementById(savedTab);
+
+    if (activeTabBtn && activeCard) {
+        activeTabBtn.classList.add('active');
+        activeCard.classList.add('active');
+    }
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             cards.forEach(c => c.classList.remove('active'));
+
             tab.classList.add('active');
             const targetId = tab.getAttribute('data-target');
             document.getElementById(targetId).classList.add('active');
+
+            localStorage.setItem('activeSettingsTab', targetId);
         });
     });
 }
@@ -141,4 +157,185 @@ function previewLogo(event) {
             }
         })
         .catch(e => console.error(e));
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileNameDisplay = document.getElementById('file-name-display');
+
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                fileNameDisplay.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981; margin-right:5px;"></i> Selected: <strong style="color: #111827;">${this.files[0].name}</strong>`;
+                dropZone.style.borderColor = '#10b981';
+                dropZone.style.background = '#f0fdf4';
+            } else {
+                fileNameDisplay.innerHTML = `Drag and drop the banner image here, or click to select <span style="color: #1e3a8a; text-decoration: underline;">Browse</span>`;
+                dropZone.style.borderColor = '#cbd5e1';
+                dropZone.style.background = '#f8fafc';
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#2563eb';
+            dropZone.style.background = '#eff6ff';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#cbd5e1';
+            dropZone.style.background = '#f8fafc';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                fileNameDisplay.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981; margin-right:5px;"></i> Selected: <strong style="color: #111827;">${e.dataTransfer.files[0].name}</strong>`;
+                dropZone.style.borderColor = '#10b981';
+                dropZone.style.background = '#f0fdf4';
+            }
+        });
+    }
+});
+
+function submitBannerForm() {
+    try {
+        if (typeof Swal === 'undefined') {
+            alert("SweetAlert2 library failed to load.");
+            return;
+        }
+
+        const fileInput = document.getElementById('file-input');
+        const orderEl = document.getElementById('display_order');
+        const formElement = document.getElementById('form-banner');
+
+        if (!fileInput || !orderEl || !formElement) {
+            alert("Missing required HTML elements.");
+            return;
+        }
+
+        const orderInput = orderEl.value;
+
+        if (!fileInput.files || !fileInput.files.length) {
+            Swal.fire('Warning', 'Please select a banner image first.', 'warning');
+            return;
+        }
+        if (!orderInput) {
+            Swal.fire('Warning', 'Please set a display order.', 'warning');
+            return;
+        }
+
+        const formData = new FormData(formElement);
+        formData.append('action', 'upload_banner');
+
+        Swal.fire({
+            title: 'Uploading...',
+            text: 'Please wait while the banner is being saved.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        localStorage.setItem('activeSettingsTab', 'tab-banners');
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('Failed', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('Backend Error', error.message, 'error');
+            });
+
+    } catch (jsError) {
+        alert("Execution Error: " + jsError.message);
+    }
+}
+
+function deleteBanner(bannerId) {
+    Swal.fire({
+        title: 'Delete this banner?',
+        text: "This action cannot be undone!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('action', 'delete_banner');
+            formData.append('banner_id', bannerId);
+
+            fetch('', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({ icon: 'success', title: 'Deleted!', text: data.message, timer: 1500, showConfirmButton: false })
+                            .then(() => {
+                                localStorage.setItem('activeSettingsTab', 'tab-banners');
+                                location.reload();
+                            });
+                    } else {
+                        Swal.fire('Failed', data.message, 'error');
+                    }
+                });
+        }
+    });
+}
+
+function toggleBannerStatus(bannerId, currentStatus) {
+    const formData = new FormData();
+    formData.append('action', 'toggle_banner_status');
+    formData.append('banner_id', bannerId);
+    formData.append('current_status', currentStatus);
+
+    fetch('', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Status Updated',
+                    showConfirmButton: false,
+                    timer: 1000
+                }).then(() => {
+                    localStorage.setItem('activeSettingsTab', 'tab-banners');
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error', 'Failed to change status', 'error');
+        });
 }
