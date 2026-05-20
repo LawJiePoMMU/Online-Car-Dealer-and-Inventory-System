@@ -2,223 +2,798 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-include 'Includes/header.php'; 
+include 'Includes/header.php';
 ?>
 
 <style>
+
+/* ==================== SIDEBAR ==================== */
+
 .side-drawer {
     position: fixed;
     top: 0;
-    right: -100%; /* 默认藏在屏幕右边外面 */
+    right: -100%;
     width: 100%;
-    max-width: 500px; /* 侧边栏宽度 */
+    max-width: 520px;
     height: 100vh;
-    background: #fff;
-    box-shadow: -5px 0 25px rgba(0,0,0,0.15);
-    transition: right 0.4s cubic-bezier(0.82, 0.085, 0.395, 0.895);
+    background: #ffffff;
+    box-shadow: -10px 0 40px rgba(15, 23, 42, 0.12);
+    transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 9999;
-    overflow-y: auto;
+    overflow: visible;
+    border-left: 1px solid #e2e8f0;
 }
+
 .side-drawer.open {
-    right: 0; /* 滑入屏幕 */
+    right: 0;
 }
-.drawer-content { padding: 25px; position: relative; }
-.close-drawer-btn {
-    position: absolute; top: 15px; left: 15px;
-    background: rgba(255,255,255,0.9); border: none;
-    border-radius: 50%; width: 35px; height: 35px;
-    font-size: 18px; font-weight: bold; cursor: pointer; z-index: 10;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+/* ==================== CONTENT ==================== */
+
+.drawer-content {
+    padding: 28px;
+    position: relative;
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: linear-gradient(to bottom, #ffffff, #f8fafc);
 }
-.close-drawer-btn:hover { background: #f1f5f9; }
-.gallery-main img { width: 100%; height: 280px; object-fit: cover; border-radius: 10px; }
-.gallery-thumbs { display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding-bottom: 5px; }
-.gallery-thumbs img { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: 0.2s;}
-.gallery-thumbs img:hover { border-color: #0f172a; }
-.car-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; margin-top: 15px;}
-.grid-item span { color: #64748b; display: inline-block; width: 80px; }
-.grid-item strong { color: #0f172a; font-weight: 600; }
-.seller-card { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 20px; border-radius: 10px; margin-top: 15px; border: 1px solid #e2e8f0;}
-.seller-buttons button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;}
-.btn-whatsapp { background: #25D366; color: white; border: none; }
-.btn-whatsapp:hover { background: #20bd5a; }
-.btn-call { background: white; color: #0f172a; border: 1px solid #0f172a; }
-.btn-call:hover { background: #f1f5f9; }
+
+/* ==================== OVERLAY ==================== */
+
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(5px);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.3s ease;
+}
+
+.drawer-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ==================== TOGGLE BTN ==================== */
+
+.toggle-drawer-edge-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10005;
+}
+
+.toggle-drawer-edge-btn:hover {
+    transform: scale(1.08);
+    color: #0f172a;
+    background: #f8fafc;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+/* ==================== GALLERY ==================== */
+
+.gallery-main img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 24px;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+}
+
+.gallery-main {
+    margin-top: 50px !important;
+}
+
+.gallery-thumbs {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.gallery-thumbs img {
+    width: 85px;
+    height: 65px;
+    object-fit: cover;
+    border-radius: 14px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: 0.25s ease;
+}
+
+.gallery-thumbs img:hover {
+    border-color: #0f172a;
+    transform: translateY(-2px);
+}
+
+/* ==================== HEADINGS ==================== */
+
+h2 {
+    font-size: 32px !important;
+    font-weight: 900 !important;
+    line-height: 1.1;
+    color: #0f172a !important;
+}
+
+h3 {
+    color: #0f172a !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    margin-bottom: 18px !important;
+}
+
+/* ==================== GRID ==================== */
+
+.car-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.grid-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    transition: 0.25s ease;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+}
+
+.grid-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+}
+
+.grid-item span {
+    color: #64748b;
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.grid-item strong {
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* ==================== SECTION SPACING ==================== */
+
+hr {
+    border: 0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin: 30px 0 !important;
+}
+
+/* ==================== BUTTONS ==================== */
+
+button {
+    transition: 0.25s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+}
+
+/* ==================== SCROLLBAR ==================== */
+
+.drawer-content::-webkit-scrollbar {
+    width: 7px;
+}
+
+.drawer-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 20px;
+}
+
+/* ================= MODEL TABS (更新优化版) ================= */
+
+.category-tabs {
+    display: flex;
+    flex-wrap: wrap; 
+    gap: 8px;       
+    margin-top: 15px;
+    margin-bottom: 25px;
+    align-items: center;
+}
+
+.category-tab {
+    padding: 8px 18px;
+    background-color: transparent; /* 去掉默认多余底色 */
+    border: 1px solid transparent;   /* 去掉默认的框框 */
+    border-radius: 8px; 
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b; /* 未选中时使用温和的灰蓝色 */
+    cursor: pointer;
+    transition: all 0.25s ease;
+    user-select: none;
+}
+
+.category-tab:hover {
+    background-color: #f1f5f9; /* 悬停时淡淡的灰色反馈 */
+    color: #0f172a;
+    transform: translateY(-2px); 
+}
+
+.category-tab.active {
+    background-color: #0f172a; 
+    color: #ffffff;
+    border-color: #0f172a;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); 
+}
+
+/* ================= SIDEBAR BODY TYPE FILTER (更新优化版) ================= */
+
+.checkbox-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 5px;
+    background-color: #ffffff; /* 干净纯白底 */
+    border: 1px solid #cbd5e1; /* 柔和的边框线 */
+    border-radius: 30px; 
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    user-select: none;
+    text-align: center;
+}
+
+/* 完美排版平衡：让第一个 "All" 按钮横跨两个格子 */
+.checkbox-item:first-child {
+    grid-column: span 2;
+}
+
+.checkbox-item input[type="radio"] {
+    display: none;
+}
+
+.checkbox-item:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateY(-2px);
+}
+
+.checkbox-item:has(input[type="radio"]:checked) {
+    background-color: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.checkbox-item input[type="radio"]:checked + span {
+    color: white;
+}
+
+/* ==================== FULLSCREEN MODE ==================== */
+
+#car-details-sidebar[style*="max-width: 100%"] {
+    max-width: 100% !important;
+}
+
+#car-details-sidebar[style*="max-width: 100%"] .drawer-content {
+    max-width: 1600px;
+    margin: auto;
+}
+
+#car-details-sidebar[style*="max-width: 100%"] .car-details-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* ==================== MOBILE ==================== */
+
+@media (max-width: 768px) {
+
+    .side-drawer {
+        max-width: 100%;
+    }
+
+    .car-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    h2 {
+        font-size: 26px !important;
+    }
+
+}
+
 </style>
 
 <div class="inventory-page">
+
     <div class="inventory-wrapper">
-        
+
         <aside class="inventory-sidebar">
+
             <div class="filter-group">
                 <div class="sidebar-title">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-                    FILTER
+                    🚗 PROTON FILTER
                 </div>
             </div>
 
             <div class="filter-group">
-                <div class="sidebar-title">🏢 BRAND</div>
-                <ul class="checkbox-list" id="brand-list">
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="AllBrands" checked> All Brands</label>
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="Proton"> Proton</label>
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="Perodua"> Perodua</label>
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="Toyota"> Toyota</label>
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="Honda"> Honda</label>
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="Mazda"> Mazda</label>
-                    <label class="checkbox-item"><input type="radio" name="brandFilter" value="Nissan"> Nissan</label>
-                </ul>
+
+                <div class="sidebar-title">
+                    BODY TYPE
+                </div>
+
+                <div class="checkbox-list">
+
+                    <label class="checkbox-item">
+                        <input type="radio" name="bodyTypeFilter" value="All" checked>
+                        <span>All</span>
+                    </label>
+
+                    <label class="checkbox-item">
+                        <input type="radio" name="bodyTypeFilter" value="Sedan">
+                        <span>Sedan</span>
+                    </label>
+
+                    <label class="checkbox-item">
+                        <input type="radio" name="bodyTypeFilter" value="SUV">
+                        <span>SUV</span>
+                    </label>
+
+                    <label class="checkbox-item">
+                        <input type="radio" name="bodyTypeFilter" value="Hatchback">
+                        <span>Hatchback</span>
+                    </label>
+
+                    <label class="checkbox-item">
+                        <input type="radio" name="bodyTypeFilter" value="EV">
+                        <span>EV</span>
+                    </label>
+
+                </div>
+
             </div>
-            
-            <button onclick="resetFilters()" style="width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 20px;">RESET FILTER</button>
+
+            <button onclick="resetFilters()" style="width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 25px;">
+                RESET FILTER
+            </button>
+
         </aside>
 
         <main class="inventory-main">
+
             <div class="top-action-bar">
+
                 <div class="search-sort-row">
+
                     <div class="search-bar">
-                        <input type="text" id="searchInput" placeholder="Search brand, model or keyword...">
-                        <button onclick="fetchFilteredCars()">Search</button>
+
+                        <input type="text" id="searchInput" placeholder="Search Proton model...">
+
+                        <button onclick="fetchFilteredCars()">
+                            Search
+                        </button>
+
                     </div>
+
                     <div class="sort-dropdown">
+
                         <span>Sort by:</span>
-                        <select>
-                            <option>Latest</option>
-                            <option>Price: Low to High</option>
-                            <option>Price: High to Low</option>
+
+                        <select id="sortSelect" onchange="fetchFilteredCars()">
+
+                            <option value="Latest">
+                                Latest
+                            </option>
+
+                            <option value="Price: Low to High">
+                                Price: Low to High
+                            </option>
+
+                            <option value="Price: High to Low">
+                                Price: High to Low
+                            </option>
+
                         </select>
+
                     </div>
+
                 </div>
 
-                <div class="category-tabs" id="category-tabs">
-                    <div class="category-tab active" data-filter="All">ALL</div>
-                    <div class="category-tab" data-filter="Standard">STANDARD</div>
-                    <div class="category-tab" data-filter="SUV">SUV</div>
-                    <div class="category-tab" data-filter="MPV">MPV</div>
-                    <div class="category-tab" data-filter="Hatchback">HATCHBACK</div>
+                <div class="category-tabs" id="model-tabs">
+
+                    <div class="category-tab active" data-filter="AllModels">
+                        ALL
+                    </div>
+
+                    <div class="category-tab" data-filter="Saga">
+                        SAGA
+                    </div>
+
+                    <div class="category-tab" data-filter="Persona">
+                        PERSONA
+                    </div>
+
+                    <div class="category-tab" data-filter="Iriz">
+                        IRIZ
+                    </div>
+
+                    <div class="category-tab" data-filter="S70">
+                        S70
+                    </div>
+
+                    <div class="category-tab" data-filter="X50">
+                        X50
+                    </div>
+
+                    <div class="category-tab" data-filter="X70">
+                        X70
+                    </div>
+
+                    <div class="category-tab" data-filter="X90">
+                        X90
+                    </div>
+
+                    <div class="category-tab" data-filter="e.MAS 7">
+                        e.MAS 7
+                    </div>
+
                 </div>
+
             </div>
 
             <div class="inventory-grid" id="cars-container">
-                <div style="text-align:center; color:#64748b; width: 100%; padding: 50px;">Loading vehicles...</div>
-            </div> 
+
+                <div style="text-align:center; color:#64748b; width: 100%; padding: 50px;">
+                    Loading vehicles...
+                </div>
+
+            </div>
 
         </main>
-    </div> 
+
+    </div>
+
 </div>
 
+<div id="drawerOverlay" class="drawer-overlay" onclick="closeCarDetails()"></div>
+
 <div id="car-details-sidebar" class="side-drawer">
-    <div class="drawer-content" id="drawer-content">
-        </div>
+
+    <button class="toggle-drawer-edge-btn" onclick="toggleMainSidebarSize()" title="Toggle Fullscreen">
+
+        <svg id="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+        </svg>
+
+    </button>
+
+    <div class="drawer-content" id="drawer-content"></div>
+
 </div>
 
 <script>
-    let currentCategory = 'All';
+
+    let currentModel = 'AllModels';
 
     function fetchFilteredCars() {
-        const container = document.getElementById('cars-container');
-        container.innerHTML = '<div style="text-align:center; color:#64748b; padding: 50px;">Loading...</div>';
 
-        let selectedBrand = document.querySelector('input[name="brandFilter"]:checked').value;
-        let searchQuery = document.getElementById('searchInput').value;
+        const container = document.getElementById('cars-container');
+
+        container.innerHTML = `
+            <div style="text-align:center; color:#64748b; padding: 50px; width: 100%;">
+                Loading...
+            </div>
+        `;
+
+        let bodyType =
+            document.querySelector('input[name="bodyTypeFilter"]:checked').value;
+
+        let searchQuery =
+            document.getElementById('searchInput').value;
+
+        let sortValue =
+            document.getElementById('sortSelect').value;
 
         fetch('fetch_cars.php', {
+
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `category=${encodeURIComponent(currentCategory)}&brand=${encodeURIComponent(selectedBrand)}&search=${encodeURIComponent(searchQuery)}`
+
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+
+            body:
+                `model=${encodeURIComponent(currentModel)}
+                &bodyType=${encodeURIComponent(bodyType)}
+                &search=${encodeURIComponent(searchQuery)}
+                &sort=${encodeURIComponent(sortValue)}`
+
         })
+
         .then(response => response.text())
-        .then(html => container.innerHTML = html )
+
+        .then(html => {
+            container.innerHTML = html;
+        })
+
         .catch(error => console.error('Error:', error));
+
     }
 
-    const categoryTabs = document.querySelectorAll('.category-tab');
-    categoryTabs.forEach(tab => {
+    /* ================= MODEL TABS ================= */
+
+    const modelTabs =
+        document.querySelectorAll('.category-tab');
+
+    modelTabs.forEach(tab => {
+
         tab.addEventListener('click', function() {
-            categoryTabs.forEach(t => t.classList.remove('active'));
+
+            modelTabs.forEach(t =>
+                t.classList.remove('active')
+            );
+
             this.classList.add('active');
-            currentCategory = this.getAttribute('data-filter');
+
+            currentModel =
+                this.getAttribute('data-filter');
+
             fetchFilteredCars();
+
         });
+
     });
 
-    const brandRadios = document.querySelectorAll('input[name="brandFilter"]');
-    brandRadios.forEach(radio => {
+    /* ================= BODY TYPE FILTER ================= */
+
+    const bodyTypeRadios =
+        document.querySelectorAll('input[name="bodyTypeFilter"]');
+
+    bodyTypeRadios.forEach(radio => {
+
         radio.addEventListener('change', fetchFilteredCars);
+
     });
-    
-    document.getElementById('searchInput').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') fetchFilteredCars();
-    });
+
+    /* ================= SEARCH ================= */
+
+    document.getElementById('searchInput')
+        .addEventListener('keypress', function(e) {
+
+            if (e.key === 'Enter') {
+                fetchFilteredCars();
+            }
+
+        });
+
+    /* ================= RESET ================= */
 
     function resetFilters() {
-        currentCategory = 'All';
-        categoryTabs.forEach(t => t.classList.remove('active'));
-        categoryTabs[0].classList.add('active');
-        
-        document.querySelector('input[name="brandFilter"][value="AllBrands"]').checked = true;
+
+        currentModel = 'AllModels';
+
+        modelTabs.forEach(t =>
+            t.classList.remove('active')
+        );
+
+        modelTabs[0].classList.add('active');
+
+        document.querySelector(
+            'input[name="bodyTypeFilter"][value="All"]'
+        ).checked = true;
+
         document.getElementById('searchInput').value = '';
+
+        document.getElementById('sortSelect').value = 'Latest';
+
         fetchFilteredCars();
+
     }
 
-    // 🔥 真实后台存入功能 + 没登录自动跳转
+    /* ================= WISHLIST ================= */
+
     function addToWishlist(event, btnElement, carId) {
-        event.preventDefault(); 
-        event.stopPropagation(); // 阻止点击爱心时触发卡片的打开侧边栏事件！
-        
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
         fetch('toggle_wishlist.php', {
+
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+
             body: `car_id=${carId}`
+
         })
+
         .then(response => response.json())
+
         .then(data => {
+
             if (data.status === 'added') {
-                btnElement.classList.add('liked'); // 变红心
-            } 
+
+                btnElement.classList.add('liked');
+
+            }
+
             else if (data.status === 'removed') {
-                btnElement.classList.remove('liked'); // 取消红心
-            } 
+
+                btnElement.classList.remove('liked');
+
+            }
+
             else if (data.status === 'not_logged_in') {
+
                 window.location.href = 'Auth/login.php';
+
             }
+
             else if (data.status === 'error') {
-                alert(data.message); 
+
+                alert(data.message);
+
             }
+
         })
+
         .catch(error => console.error('Error:', error));
+
     }
 
-    // 🔥 新增：打开侧边栏
+    /* ================= OPEN SIDEBAR ================= */
+
     function openCarDetails(carId) {
-        const drawer = document.getElementById('car-details-sidebar');
-        const content = document.getElementById('drawer-content');
-        
+
+        const drawer =
+            document.getElementById('car-details-sidebar');
+
+        const content =
+            document.getElementById('drawer-content');
+
+        const overlay =
+            document.getElementById('drawerOverlay');
+
+        const iconContainer =
+            document.getElementById('expand-icon');
+
+        drawer.style.maxWidth = '520px';
+
+        if (iconContainer) {
+
+            iconContainer.innerHTML =
+                '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+
+        }
+
         drawer.classList.add('open');
-        content.innerHTML = '<div style="text-align: center; padding: 100px; color:#64748b;">Loading details... 🚗💨</div>';
+
+        overlay.classList.add('show');
+
+        content.innerHTML = `
+            <div style="text-align: center; padding: 100px; color:#64748b;">
+                Loading details... 🚗💨
+            </div>
+        `;
 
         fetch('fetch_car_details_sidebar.php?id=' + carId)
-            .then(response => response.text())
-            .then(html => {
-                content.innerHTML = html;
-            })
-            .catch(err => console.error(err));
+
+        .then(response => response.text())
+
+        .then(html => {
+
+            content.innerHTML = html;
+
+        })
+
+        .catch(err => console.error(err));
+
     }
 
-    // 🔥 新增：关闭侧边栏
+    /* ================= CLOSE SIDEBAR ================= */
+
     function closeCarDetails() {
-        document.getElementById('car-details-sidebar').classList.remove('open');
+
+        const drawer =
+            document.getElementById('car-details-sidebar');
+
+        const overlay =
+            document.getElementById('drawerOverlay');
+
+        drawer.classList.remove('open');
+
+        overlay.classList.remove('show');
+
     }
 
-    // 🔥 新增：切换相册大图
+    /* ================= FULLSCREEN ================= */
+
+    function toggleMainSidebarSize() {
+
+        const sidebar =
+            document.getElementById('car-details-sidebar');
+
+        const iconContainer =
+            document.getElementById('expand-icon');
+
+        if (sidebar.style.maxWidth === '100%') {
+
+            sidebar.style.maxWidth = '520px';
+
+            if (iconContainer) {
+
+                iconContainer.innerHTML =
+                    '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+
+            }
+
+        }
+
+        else {
+
+            sidebar.style.maxWidth = '100%';
+
+            if (iconContainer) {
+
+                iconContainer.innerHTML =
+                    '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
+
+            }
+
+        }
+
+    }
+
     function changeMainImg(src) {
+
         document.getElementById('main-gallery-img').src = src;
+
     }
 
-    // 网页骨架一加载完，立刻强制去抓取车子！
+    /* ================= INITIAL LOAD ================= */
+
     document.addEventListener('DOMContentLoaded', function() {
+
         fetchFilteredCars();
+
     });
+
 </script>
 
 <?php include 'Includes/footer.php'; ?>
