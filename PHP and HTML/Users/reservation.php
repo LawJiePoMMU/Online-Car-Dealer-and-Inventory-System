@@ -1,119 +1,156 @@
 <?php
 session_start();
-require 'db.php'; // Ensure your PDO connection points to online_car_dealer_and_inventory_db
+require 'db.php'; 
 
-// Redirect if the user is not logged in
+// Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Capture user inputs from the reservation form
-    $user_id      = $_SESSION['user_id'];
-    $car_id       = intval($_POST['car_id'] ?? 0); // Passed via hidden form input
-    
-    $input_date   = $_POST['reserve_date'] ?? ''; // e.g., "2026-05-21"
-    $input_time   = $_POST['reserve_time'] ?? ''; // e.g., "14:30"
-    
-    $user_name    = $_POST['user_name'] ?? '';
-    $user_phone   = $_POST['user_phone'] ?? '';
-    $user_email   = $_POST['user_email'] ?? '';
-    $user_ic      = $_POST['user_ic'] ?? '';
-    
-    // NEW: Capture variant and color choices chosen by the user from your form dropdowns
-    $chosen_variant = $_POST['car_variant'] ?? ''; 
-    $chosen_color   = $_POST['car_color'] ?? ''; 
+$user_id = $_SESSION['user_id'];
 
-    // 2. Fetch comprehensive car specs directly from your friend's relational structure
-    $car_stmt = $pdo->prepare("SELECT * FROM cars WHERE car_id = ?");
-    $car_stmt->execute([$car_id]);
-    $car = $car_stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$car) {
-        die("Error: Selected car does not exist.");
-    }
+// IMPROVEMENT 1: CAPTURE AND VALIDATE GET PARAMETER IMMEDIATELY
+if (!isset($_GET['car_id']) || empty($_GET['car_id'])) {
+    die("System Error: No vehicle was specified for booking.");
+}
+$car_id = intval($_GET['car_id']);
 
-    // EXTRA FETCH A: Pull the license plate if this is a "Used Car"
-    $plate_number = "";
-    if ($car['car_origin'] === 'Used Car') {
-        $plate_stmt = $pdo->prepare("SELECT car_plate FROM used_car_details WHERE car_id = ?");
-        $plate_stmt->execute([$car_id]);
-        $plate_data = $plate_stmt->fetch(PDO::FETCH_ASSOC);
-        $plate_number = $plate_data['car_plate'] ?? "";
-    }
+// IMPROVEMENT 1 (CRITICAL): Query database to confirm the vehicle structurally exists
+$car_check_stmt = $pdo->prepare("
+    SELECT car_brand, car_model, car_origin 
+    FROM cars 
+    WHERE car_id = ?
+");
+$car_check_stmt->execute([$car_id]);
+$car_exists = $car_check_stmt->fetch(PDO::FETCH_ASSOC);
 
-    // EXTRA FETCH B: Pull the official main photo asset link for this vehicle
-    $img_stmt = $pdo->prepare("SELECT car_image_url FROM car_image WHERE car_id = ? LIMIT 1");
-    $img_stmt->execute([$car_id]);
-    $img_data = $img_stmt->fetch(PDO::FETCH_ASSOC);
-    $car_image_url = $img_data['car_image_url'] ?? "";
-
-
-    // 3. Combine the separate Date & Time strings into a clean MySQL DATETIME pattern
-    $preferred_test_drive_at = null;
-    if (!empty($input_date) && !empty($input_time)) {
-        $preferred_test_drive_at = $input_date . ' ' . $input_time . ':00';
-    }
-
-
-    // 4. Construct the required JSON dictionary dynamically populated with database properties
-    $snapshot_array = [
-        "user_name"  => $user_name,
-        "user_phone" => $user_phone,
-        "user_email" => $user_email,
-        "user_ic"    => $user_ic,
-        "car_brand"  => $car['car_brand'],
-        "car_model"  => $car['car_model'],
-        "car_year"   => (string)$car['car_year'],
-        "car_origin" => $car['car_origin'],
-        "car_plate"  => $plate_number,    // Now dynamically retrieved!
-        "car_image"  => $car_image_url,   // Now dynamically retrieved!
-        "car_variant"=> $chosen_variant,  // Captured from active post submit selection!
-        "car_color"  => $chosen_color     // Captured from active post submit selection!
-    ];
-    
-    // Encode array into a valid clean JSON string for the database
-    $snapshot_json = json_encode($snapshot_array, JSON_UNESCAPED_UNICODE);
-if (empty($input_date) || empty($input_time)) {
-    die("Please select reservation date and time.");
+if (!$car_exists) {
+    die("Security Exception: The requested vehicle resource does not exist in our inventory.");
 }
 
-if ($car_id <= 0) {
-    die("Invalid car selected.");
-}
-    try {
-        // 5. Build your insert query using your friend's exact column names
-        $query = "INSERT INTO reservations (
-                    user_id, 
-                    car_id, 
-                    reservation_created_at, 
-                    reservation_status, 
-                    preferred_test_drive_at, 
-                    snapshot_data
-                  ) VALUES (?, ?, NOW(), 'Pending Viewing', ?, ?)";
-                  
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([
-            $user_id,
-            $car_id,
-            $preferred_test_drive_at,
-            $snapshot_json
-        ]);
-        
-        // Grab the auto-increment ID to display as a confirmation reference code
-        $new_reservation_id = $pdo->lastInsertId();
-        $_SESSION['reservation_id'] = $new_reservation_id;
-        
-        // Store reference info in the session to render on a success page
-        $_SESSION['success_message'] = "Reservation successful!";
-        $_SESSION['ref_number'] = 'RSV-' . str_pad($new_reservation_id, 6, '0', STR_PAD_LEFT);
-        
-        header("Location: reservation_success.php");
-        exit();
+// FETCH USER DATA AFTER LOGIN FOR AUTO-FILL
+$user_stmt = $pdo->prepare("
+    SELECT full_name, email, phone 
+    FROM users 
+    WHERE user_id = ?
+");
+$user_stmt->execute([$user_id]);
+$user_data = $user_stmt->fetch(PDO::FETCH_ASSOC);
 
-    } catch (PDOException $e) {
-        die("Database error occurred: " . $e->getMessage());
-    }
-}
+// Fallbacks to avoid PHP undefined index notices if a user profile is missing data
+$fetched_name  = $user_data['full_name'] ?? '';
+$fetched_email = $user_data['email'] ?? '';
+$fetched_phone = $user_data['phone'] ?? '';
+
+// Format a clean display title for the page context
+$car_display_name = htmlspecialchars($car_exists['car_brand'] . ' ' . $car_exists['car_model']);
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Reservation - <?php echo $car_display_name; ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: #f4f7fb; color: #333; padding: 40px 20px; }
+        .form-container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 20px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        .form-header { margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+        .form-header h2 { font-size: 24px; color: #1e293b; font-weight: 700; }
+        .form-header p { font-size: 14px; color: #64748b; margin-top: 5px; }
+        .form-group { margin-bottom: 20px; display: flex; flex-direction: column; }
+        .form-group label { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+        .form-input { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; width: 100%; font-size: 14px; transition: border-color 0.2s; }
+        .form-input:focus { outline: none; border-color: #2563eb; }
+        .btn-submit { background: #2563eb; color: white; border: none; padding: 14px; width: 100%; font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+        .btn-submit:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <div class="form-header">
+        <h2>Secure Vehicle Reservation</h2>
+        <p>Booking Target: <strong><?php echo $car_display_name; ?></strong> (<?php echo htmlspecialchars($car_exists['car_origin']); ?>)</p>
+    </div>
+
+    <form action="process_reservation.php" method="POST">
+        
+        <input type="hidden" name="car_id" value="<?php echo htmlspecialchars($car_id); ?>">
+
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" 
+                   name="user_name" 
+                   class="form-input" 
+                   value="<?php echo htmlspecialchars($fetched_name); ?>" 
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" 
+                   name="user_email" 
+                   class="form-input" 
+                   value="<?php echo htmlspecialchars($fetched_email); ?>" 
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" 
+                   name="user_phone" 
+                   class="form-input" 
+                   value="<?php echo htmlspecialchars($fetched_phone); ?>" 
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label>IC / Passport Number</label>
+            <input type="text" 
+                   name="user_ic" 
+                   class="form-input" 
+                   placeholder="e.g. 021024045321" 
+                   required>
+        </div>
+        
+        <div class="form-group">
+            <label>Preferred Variant</label>
+            <select name="car_variant" class="form-input" required>
+                <option value="">-- Select Variant --</option>
+                <option value="Standard Base">Standard Base</option>
+                <option value="Executive Spec">Executive Spec</option>
+                <option value="Premium Sport RS">Premium Sport RS</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Preferred Exterior Color</label>
+            <select name="car_color" class="form-input" required>
+                <option value="">-- Select Color --</option>
+                <option value="Platinum White Pearl">Platinum White Pearl</option>
+                <option value="Meteoroid Gray Metallic">Meteoroid Gray Metallic</option>
+                <option value="Crystal Black Pearl">Crystal Black Pearl</option>
+                <option value="Ignite Red Metallic">Ignite Red Metallic</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Preferred Viewing Date</label>
+            <input type="date" name="reserve_date" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+            <label>Preferred Viewing Time</label>
+            <input type="time" name="reserve_time" class="form-input" required>
+        </div>
+
+        <button type="submit" class="btn-submit">Confirm & Submit Request</button>
+    </form>
+</div>
+
+</body>
+</html>
