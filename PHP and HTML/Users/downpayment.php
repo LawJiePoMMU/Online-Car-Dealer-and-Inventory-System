@@ -2,606 +2,295 @@
 session_start();
 require 'db.php';
 
+// 1. USER SECURITY: Ensure user is logged in to access data securely
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
+// 2. Extract context target tracking ID passed from view_status.php
+$reservation_id = $_GET['reservation_id'] ?? ($_GET['id'] ?? 0);
 
-$stmt = $pdo->prepare("SELECT * FROM users WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-/* FILE UPLOAD */
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    $upload_dir = "uploads/";
-
-    if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
-    }
-
-    if (isset($_FILES['ic_file']) && $_FILES['ic_file']['error'] === 0) {
-
-        $ic_path = $upload_dir . basename($_FILES['ic_file']['name']);
-
-        move_uploaded_file(
-            $_FILES['ic_file']['tmp_name'],
-            $ic_path
-        );
-    }
-
-    if (isset($_FILES['license_file']) && $_FILES['license_file']['error'] === 0) {
-
-        $license_path = $upload_dir . basename($_FILES['license_file']['name']);
-
-        move_uploaded_file(
-            $_FILES['license_file']['tmp_name'],
-            $license_path
-        );
-    }
-
-    if (isset($_FILES['payslip_file']) && $_FILES['payslip_file']['error'] === 0) {
-
-        $payslip_path = $upload_dir . basename($_FILES['payslip_file']['name']);
-
-        move_uploaded_file(
-            $_FILES['payslip_file']['tmp_name'],
-            $payslip_path
-        );
-    }
-
-    if (isset($_FILES['bank_statement']) && $_FILES['bank_statement']['error'] === 0) {
-
-        $bank_path = $upload_dir . basename($_FILES['bank_statement']['name']);
-
-        move_uploaded_file(
-            $_FILES['bank_statement']['tmp_name'],
-            $bank_path
-        );
-    }
+if (!$reservation_id) {
+    header("Location: view_status.php?error=missing_reference");
+    exit();
 }
 
-/* SELECTED CAR */
-
-$car_id = $_SESSION['selected_car_id'] ?? null;
-
-$car = null;
-$car_image = null;
-
-if ($car_id) {
-
-    $stmt = $pdo->prepare("SELECT * FROM cars WHERE car_id = ?");
-    $stmt->execute([$car_id]);
-
-    $car = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $stmt2 = $pdo->prepare("
-        SELECT car_image_url
-        FROM car_image
-        WHERE car_id = ?
+try {
+    // ENFORCE STATUS CHECK: Only allow 'Approved' status to proceed
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM reservations
+        WHERE reservation_id = ? 
+          AND user_id = ? 
+          AND reservation_status = 'Approved'
         LIMIT 1
     ");
+    $stmt->execute([$reservation_id, $_SESSION['user_id']]);
+    $reservation = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $stmt2->execute([$car_id]);
+    if (!$reservation) {
+        header("Location: view_status.php?error=unauthorized_or_not_approved");
+        exit();
+    }
 
-    $img = $stmt2->fetch(PDO::FETCH_ASSOC);
+    // SAFE EMPTY JSON OBJECT STRING FALLBACK
+    $snapshot = json_decode($reservation['snapshot_data'] ?? '{}', true) ?? [];
 
-    $car_image = $img ? $img['car_image_url'] : null;
+} catch (Exception $e) {
+    die("Database Connection Error: " . $e->getMessage());
+}
+
+// CLEAN STRING TRIM & FALLBACK ASSIGNMENT FOR VEHICLE NAME
+$car_name = trim(($snapshot['car_brand'] ?? '') . ' ' . ($snapshot['car_model'] ?? ''));
+if (empty($car_name)) {
+    $car_name = 'Selected Vehicle';
+}
+
+// Map Dynamic Database Variables into Local Display Strings
+$car_price           = (float)($snapshot['total_price'] ?? 0);
+$plate_number        = $snapshot['car_plate'] ?? 'Pending Registration';
+$loan_duration       = ($snapshot['loan_years'] ?? 0) . ' Years';
+$monthly_installment = (float)($snapshot['monthly_payment'] ?? 0);
+
+// =========================================================================
+// UPDATED FINANCING LOGIC (REMOVED BOOKING DEDUCTION)
+// =========================================================================
+$insurance_fee       = 3000.00; // Flat price for every car
+
+// 10% down payment strictly on the vehicle price
+$base_downpayment    = round($car_price * 0.10, 2);
+
+// Final amount due now: Full 10% Downpayment + Insurance (No deduction)
+$final_amount_due    = $base_downpayment + $insurance_fee;
+// =========================================================================
+
+// SAVE INSURANCE FILE BACKEND LOGIC HANDLER
+$upload_error = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['insurance_file'])) {
+    $file = $_FILES['insurance_file'];
+    
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        
+        // FILE SIZE VALIDATION (MAX 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) { 
+            $upload_error = "File size exceeds the 5MB maximum allowed limit.";
+        } else {
+            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png'];
+            
+            if (in_array($file_ext, $allowed_extensions)) {
+                if (!is_dir('uploads/insurance')) {
+                    mkdir('uploads/insurance', 0755, true);
+                }
+                
+                $new_file_name = 'INS_RES_' . $reservation_id . '_' . time() . '.' . $file_ext;
+                $destination = 'uploads/insurance/' . $new_file_name;
+                
+                if (move_uploaded_file($file['tmp_name'], $destination)) {
+                    
+                    $snapshot['signed_insurance_path'] = $destination;
+                    $updated_json = json_encode($snapshot, JSON_UNESCAPED_SLASHES);
+                    
+                    $update_stmt = $pdo->prepare("
+                        UPDATE reservations 
+                        SET snapshot_data = ?
+                        WHERE reservation_id = ? AND user_id = ?
+                    ");
+                    $update_stmt->execute([$updated_json, $reservation_id, $_SESSION['user_id']]);
+                    
+                    // Establish fallback tracking metrics inside session memory structures
+                    $_SESSION['pay_source']         = 'downpayment';
+                    $_SESSION['pay_car_id']         = $reservation['car_id'];
+                    $_SESSION['pay_amount']         = $final_amount_due;
+                    $_SESSION['pay_label']          = 'Down Payment Checkout - ' . $car_name;
+                    $_SESSION['pay_reservation_id'] = $reservation_id;
+                    
+                    $_SESSION['pay_detail_price']   = 'RM ' . number_format($car_price, 2);
+                    $_SESSION['pay_detail_loan']    = 'RM ' . number_format($car_price - $base_downpayment, 2);
+                    $_SESSION['pay_detail_monthly'] = 'RM ' . number_format($monthly_installment, 2) . ' / month';
+                    $_SESSION['pay_detail_tenure']  = $loan_duration;
+
+                    echo "<form id='gate_redir' method='POST' action='payment.php'>
+                            <input type='hidden' name='source' value='downpayment'>
+                            <input type='hidden' name='reservation_id' value='".htmlspecialchars($reservation_id)."'>
+                            <input type='hidden' name='payment_amount' value='".htmlspecialchars($final_amount_due)."'>
+                            <input type='hidden' name='payment_label' value='Down Payment Checkout - ".htmlspecialchars($car_name)."'>
+                          </form>
+                          <script>document.getElementById('gate_redir').submit();</script>";
+                    exit();
+                } else {
+                    $upload_error = "Server storage system write failure. Please check directory permissions.";
+                }
+            } else {
+                $upload_error = "Invalid file type extension. Only PDF, JPG, and PNG are accepted.";
+            }
+        }
+    } else {
+        $upload_error = "Failed to transmit file data package safely. Please try again.";
+    }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-<title>Down Payment Calculator</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-
-<link rel="stylesheet" href="styles.css"/>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insurance & Down Payment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    *{ margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+    body{ background:#f4f7fb; color:#1e293b; }
+    .navbar{ background:white; padding:18px 50px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 12px rgba(0,0,0,0.05); }
+    .logo{ font-size:26px; font-weight:700; color:#2563eb; }
+    .nav-links{ display:flex; gap:25px; }
+    .nav-links a{ text-decoration:none; color:#334155; font-weight:500; }
+    .hero{ background:linear-gradient(135deg,#2563eb,#1d4ed8); color:white; padding:60px 20px; text-align:center; }
+    .hero h1{ font-size:42px; margin-bottom:12px; }
+    .hero p{ opacity:0.9; }
+    .container{ max-width:1300px; margin:auto; padding:40px 20px; }
+    .portal-grid{ display:grid; grid-template-columns:1fr 1.1fr; gap:30px; }
+    .card{ background:white; border-radius:24px; padding:30px; box-shadow:0 10px 30px rgba(0,0,0,0.06); }
+    .car-image{ width:100%; height:260px; object-fit:cover; border-radius:18px; margin-bottom:20px; }
+    .section-title{ font-size:24px; font-weight:700; margin-bottom:25px; }
+    .car-title{ font-size:30px; font-weight:700; margin-bottom:8px; }
+    .car-price{ font-size:32px; font-weight:700; color:#2563eb; margin-bottom:20px; }
+    .info-row{ display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid #edf2f7; }
+    .info-row:last-child{ border-bottom:none; }
+    .info-label{ color:#64748b; }
+    .info-value{ font-weight:600; }
+    .badge{ display:inline-block; padding:8px 16px; border-radius:50px; font-size:12px; font-weight:700; text-transform:uppercase; }
+    .approved{ background:#dcfce7; color:#166534; }
+    .summary-box{ background:#eff6ff; border-radius:18px; padding:22px; margin-top:25px; }
+    .summary-title{ font-size:20px; font-weight:700; margin-bottom:18px; }
+    .summary-row{ display:flex; justify-content:space-between; padding:10px 0; }
+    .summary-label{ color:#64748b; }
+    .summary-value{ font-weight:600; }
+    .highlight{ color:#2563eb; font-size:24px; font-weight:700; }
+    .doc-box{ background:#f8fafc; border:2px dashed #cbd5e1; border-radius:18px; padding:25px; text-align:center; transition:0.2s; margin-bottom:22px; }
+    .doc-box:hover{ border-color:#2563eb; background:#eff6ff; }
+    .doc-title{ font-size:18px; font-weight:700; margin-bottom:10px; }
+    .doc-text{ font-size:14px; color:#64748b; margin-bottom:18px; line-height:1.6; }
+    .btn{ display:inline-block; padding:14px 24px; border-radius:12px; text-decoration:none; font-weight:600; transition:0.2s; cursor:pointer; }
+    .btn-download{ background:#2563eb; color:white; }
+    .btn-download:hover{ background:#1d4ed8; }
+    .btn-pay{ width:100%; text-align:center; background:#22c55e; color:white; border:none; padding:16px; border-radius:14px; font-size:16px; font-weight:700; cursor:pointer; transition:0.2s; margin-top:25px; }
+    .btn-pay:hover{ background:#16a34a; }
+    .file-input{ margin-top:15px; }
+    .alert-danger { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; text-align: left; }
+    .security-box{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:20px; margin-top:25px; }
+    .security-title{ font-weight:700; margin-bottom:10px; }
+    .security-text{ font-size:14px; color:#64748b; line-height:1.6; }
+    @media(max-width:1000px){ .portal-grid{ grid-template-columns:1fr; } }
+    @media(max-width:768px){ .hero h1{ font-size:32px; } .navbar{ flex-direction:column; gap:15px; } }
+</style>
 </head>
-
 <body>
 
-<!-- NAVBAR -->
-
 <nav class="navbar">
-
-    <div class="nav-container">
-
-        <a href="index.php" class="nav-logo">
-            AutoDeal
-        </a>
-
-        <ul class="nav-links">
-
-            <li><a href="index.php">Home</a></li>
-
-            <li><a href="downpayment.php">Down Payment</a></li>
-
-            <li><a href="reservation.php">Reservation</a></li>
-
-            <li><a href="view_status.php">View Status</a></li>
-
-        </ul>
-
-        <div class="nav-actions">
-
-            <span style="font-size:14px; color:var(--text-light);">
-
-                Welcome,
-                <strong>
-                    <?php echo htmlspecialchars($user['user_name']); ?>
-                </strong>
-
-            </span>
-
-        </div>
-
+    <div class="logo">AutoDeal</div>
+    <div class="nav-links">
+        <a href="index.php">Home</a>
+        <a href="view_status.php">View Status</a>
+        <a href="logout.php">Logout</a>
     </div>
-
 </nav>
 
-<!-- HERO -->
-
-<div class="page-hero">
-
-    <div class="container">
-
-        <h1>Down Payment Calculator</h1>
-
-        <p>
-            Calculate your estimated down payment
-            for new and used cars.
-        </p>
-
-    </div>
-
+<div class="hero">
+    <h1>Insurance & Down Payment Portal</h1>
+    <p>Complete your insurance documentation and proceed with down payment securely.</p>
 </div>
 
 <div class="container">
+    <div class="portal-grid">
 
-<?php if ($car): ?>
+        <div class="card">
+            <img src="<?php echo htmlspecialchars($snapshot['car_image'] ?? 'images/default_car.jpg'); ?>" class="car-image" alt="Vehicle Asset Image">
+            <div class="car-title"><?php echo htmlspecialchars($car_name); ?></div>
+            <div class="car-price">RM <?php echo number_format($car_price, 2); ?></div>
 
-<!-- SELECTED CAR -->
-
-<div class="section-card">
-
-    <h2>Selected Car</h2>
-
-    <div class="car-info-inner">
-
-        <?php if ($car_image): ?>
-
-            <img src="<?php echo htmlspecialchars($car_image); ?>" alt="Car"/>
-
-        <?php else: ?>
-
-            <div class="no-image">
-                No Image Available
+            <div class="info-row">
+                <div class="info-label">Application Status</div>
+                <div class="info-value">
+                    <span class="badge approved">
+                        <?php echo htmlspecialchars($reservation['reservation_status']); ?>
+                    </span>
+                </div>
             </div>
 
-        <?php endif; ?>
-
-        <table>
-
-            <tr>
-                <td>Brand</td>
-                <td><?php echo htmlspecialchars($car['car_brand']); ?></td>
-            </tr>
-
-            <tr>
-                <td>Model</td>
-                <td><?php echo htmlspecialchars($car['car_model']); ?></td>
-            </tr>
-
-            <tr>
-                <td>Year</td>
-                <td><?php echo htmlspecialchars($car['car_year']); ?></td>
-            </tr>
-
-            <tr>
-                <td>Type</td>
-                <td><?php echo htmlspecialchars($car['car_origin']); ?></td>
-            </tr>
-
-            <tr>
-                <td>Fuel Type</td>
-                <td><?php echo htmlspecialchars($car['fuel_type']); ?></td>
-            </tr>
-
-            <tr>
-                <td>Transmission</td>
-                <td><?php echo htmlspecialchars($car['transmission']); ?></td>
-            </tr>
-
-        </table>
-
-    </div>
-
-</div>
-
-<?php else: ?>
-
-<div class="alert">
-
-    No car selected.
-
-    <a href="index.php">
-        Go back to Home
-    </a>
-
-</div>
-
-<?php endif; ?>
-
-<!-- CALCULATOR -->
-
-<div class="section-card">
-
-    <h2>Calculator</h2>
-
-    <div class="tab-group">
-
-        <button id="btn-new"
-                class="tab-btn active"
-                onclick="switchType('new')">
-
-            New Car
-
-        </button>
-
-        <button id="btn-used"
-                class="tab-btn"
-                onclick="switchType('used')">
-
-            Used Car
-
-        </button>
-
-    </div>
-
-    <div class="form-group">
-
-        <label class="auth-label">
-            Car Price (RM)
-        </label>
-
-        <input type="number"
-               id="car-price"
-               class="form-control"
-               placeholder="e.g. 80000"
-               min="1"
-               oninput="calculateDP()"/>
-
-    </div>
-
-    <div class="form-group">
-
-        <label class="auth-label">
-
-            Down Payment Rate:
-
-            <span id="dp-rate-val"
-                  style="color:var(--primary-color);font-weight:600;">
-
-                10%
-
-            </span>
-
-        </label>
-
-        <input type="range"
-               id="dp-rate"
-               min="0"
-               max="50"
-               step="1"
-               value="10"
-
-               oninput="
-                    document.getElementById('dp-rate-val').textContent=this.value+'%';
-                    calculateDP();
-               "/>
-
-    </div>
-
-    <div class="form-group">
-
-        <label class="auth-label">
-            Loan Tenure
-        </label>
-
-        <select id="tenure"
-                class="form-control"
-                onchange="calculateDP()">
-
-            <option value="3">3 Years</option>
-            <option value="5">5 Years</option>
-            <option value="7" selected>7 Years</option>
-            <option value="9">9 Years</option>
-
-        </select>
-
-    </div>
-
-    <div class="form-group">
-
-        <label class="auth-label">
-            Interest Rate (% per year)
-        </label>
-
-        <input type="number"
-               id="interest-rate"
-               class="form-control"
-               placeholder="e.g. 3.5"
-               step="0.1"
-               min="0"
-               oninput="calculateDP()"/>
-
-    </div>
-
-    <!-- RESULT -->
-
-    <div id="result-box"
-         class="result-box"
-         style="display:none;">
-
-        <h2>Estimated Summary</h2>
-
-        <table class="result-table">
-
-            <tr><td>Car Price</td><td id="r-price">-</td></tr>
-
-            <tr>
-                <td>
-                    Down Payment
-                    (<span id="r-rate">-</span>)
-                </td>
-
-                <td id="r-dp">-</td>
-            </tr>
-
-            <tr><td>Loan Amount</td><td id="r-loan">-</td></tr>
-
-            <tr><td>Total Interest</td><td id="r-interest">-</td></tr>
-
-            <tr><td>Total Payable</td><td id="r-total">-</td></tr>
-
-            <tr><td>Monthly Instalment</td><td id="r-monthly">-</td></tr>
-
-            <tr><td>Tenure</td><td id="r-tenure">-</td></tr>
-
-        </table>
-
-        <p class="result-note">
-
-            *Estimate only.
-            Actual figures depend on bank approval and additional fees.
-
-        </p>
-
-        <!-- FORM -->
-
-        <form method="POST"
-              action="payment.php"
-              id="proceed-form"
-              enctype="multipart/form-data"
-              style="margin-top:20px;">
-
-            <!-- DOCUMENTS -->
-
-            <div class="section-card">
-
-                <h2>Supporting Documents</h2>
-
-                <div class="form-group">
-
-                    <label class="auth-label">
-                        Upload IC / Passport
-                    </label>
-
-                    <input type="file"
-                           name="ic_file"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf"
-                           required>
-
-                </div>
-
-                <div class="form-group">
-
-                    <label class="auth-label">
-                        Upload Driving License
-                    </label>
-
-                    <input type="file"
-                           name="license_file"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf">
-
-                </div>
-
-                <div class="form-group">
-
-                    <label class="auth-label">
-                        Upload Payslip
-                    </label>
-
-                    <input type="file"
-                           name="payslip_file"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf"
-                           required>
-
-                </div>
-
-                <div class="form-group">
-
-                    <label class="auth-label">
-                        Upload Bank Statement
-                    </label>
-
-                    <input type="file"
-                           name="bank_statement"
-                           class="form-control"
-                           accept=".jpg,.jpeg,.png,.pdf"
-                           required>
-
-                </div>
-
+            <div class="info-row">
+                <div class="info-label">Plate Number</div>
+                <div class="info-value"><?php echo htmlspecialchars($plate_number); ?></div>
             </div>
 
-            <!-- HIDDEN INPUTS -->
+            <div class="info-row">
+                <div class="info-label">Loan Duration</div>
+                <div class="info-value"><?php echo htmlspecialchars($loan_duration); ?></div>
+            </div>
 
-            <input type="hidden"
-                   name="source"
-                   value="downpayment"/>
+            <div class="info-row">
+                <div class="info-label">Monthly Installment</div>
+                <div class="info-value">RM <?php echo number_format($monthly_installment, 2); ?> / month</div>
+            </div>
 
-            <input type="hidden"
-                   name="car_id"
-                   value="<?php echo $car_id; ?>"/>
+            <div class="summary-box">
+                <div class="summary-title">Payment Summary</div>
+                
+                <div class="summary-row">
+                    <div class="summary-label">Vehicle Down Payment (10%)</div>
+                    <div class="summary-value">RM <?php echo number_format($base_downpayment, 2); ?></div>
+                </div>
 
-            <input type="hidden"
-                   name="payment_amount"
-                   id="h-dp"/>
+                <div class="summary-row">
+                    <div class="summary-label">Flat Insurance Fee</div>
+                    <div class="summary-value">RM <?php echo number_format($insurance_fee, 2); ?></div>
+                </div>
 
-            <input type="hidden"
-                   name="payment_label"
-                   id="h-label"/>
+                <hr style="margin:15px 0; border:0; border-top:1px solid #cbd5e1;">
 
-            <input type="hidden"
-                   name="detail_price"
-                   id="h-price"/>
+                <div class="summary-row">
+                    <div class="summary-label">Total Outstanding Balance Due</div>
+                    <div class="summary-value highlight">RM <?php echo number_format($final_amount_due, 2); ?></div>
+                </div>
+            </div>
+        </div>
 
-            <input type="hidden"
-                   name="detail_loan"
-                   id="h-loan"/>
+        <div class="card">
+            <h2 class="section-title">Insurance Documentation</h2>
 
-            <input type="hidden"
-                   name="detail_monthly"
-                   id="h-monthly"/>
+            <?php if ($upload_error): ?>
+                <div class="alert-danger">⚠️ <?php echo htmlspecialchars($upload_error); ?></div>
+            <?php endif; ?>
 
-            <input type="hidden"
-                   name="detail_tenure"
-                   id="h-tenure"/>
+            <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']) . '?reservation_id=' . htmlspecialchars($reservation_id); ?>" method="POST" enctype="multipart/form-data">
 
-            <button type="button"
-                    class="btn-primary"
-                    onclick="proceedToPayment()">
+                <div class="doc-box">
+                    <div class="doc-title">📄 Download Insurance Agreement</div>
+                    <div class="doc-text">Download the insurance agreement form, complete the required information, sign the document, and upload the modified version below.</div>
+                    <a href="documents/insurance_form.pdf" class="btn btn-download" download>Download Insurance Form</a>
+                </div>
 
-                Proceed to Down Payment →
+                <div class="doc-box">
+                    <div class="doc-title">☁️ Upload Signed Insurance File</div>
+                    <div class="doc-text">Upload the completed and signed insurance agreement in PDF, JPG, or PNG format. (Max size: 5MB)</div>
+                    <input type="file" name="insurance_file" class="file-input" accept=".pdf,.png,.jpg,.jpeg" required>
+                </div>
 
-            </button>
+                <div class="security-box">
+                    <div class="security-title">🔒 Secure Verification Process</div>
+                    <div class="security-text">All uploaded insurance and financing documents are securely stored and verified by authorized dealership personnel.</div>
+                </div>
 
-        </form>
+                <input type="hidden" name="source" value="downpayment">
+                <input type="hidden" name="reservation_id" value="<?php echo htmlspecialchars($reservation_id); ?>">
+                <input type="hidden" name="payment_amount" value="<?php echo htmlspecialchars($final_amount_due); ?>">
+
+                <button type="submit" class="btn-pay">Upload & Proceed To Down Payment →</button>
+            </form>
+        </div>
 
     </div>
-
 </div>
-
-</div>
-
-<script>
-
-let carType = 'new';
-
-function switchType(type) {
-
-    carType = type;
-
-    document.getElementById('btn-new')
-        .classList.toggle('active', type==='new');
-
-    document.getElementById('btn-used')
-        .classList.toggle('active', type==='used');
-
-    calculateDP();
-}
-
-function fmt(n) {
-
-    return 'RM ' + n.toFixed(2)
-        .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-function calculateDP() {
-
-    const price =
-        parseFloat(document.getElementById('car-price').value);
-
-    const dpRate =
-        parseFloat(document.getElementById('dp-rate').value)/100;
-
-    const tenure =
-        parseInt(document.getElementById('tenure').value);
-
-    const rateInput =
-        parseFloat(document.getElementById('interest-rate').value);
-
-    if (!price || price <= 0) {
-
-        document.getElementById('result-box')
-            .style.display='none';
-
-        return;
-    }
-
-    const rate =
-        (!rateInput || isNaN(rateInput))
-        ? (carType==='new' ? 0.03 : 0.04)
-        : rateInput/100;
-
-    const dp       = price * dpRate;
-    const loan     = price - dp;
-    const interest = loan * rate * tenure;
-    const total    = loan + interest;
-    const monthly  = total / (tenure*12);
-
-    document.getElementById('r-price').textContent    = fmt(price);
-    document.getElementById('r-rate').textContent     = (dpRate*100).toFixed(0)+'%';
-    document.getElementById('r-dp').textContent       = fmt(dp);
-    document.getElementById('r-loan').textContent     = fmt(loan);
-    document.getElementById('r-interest').textContent = fmt(interest);
-    document.getElementById('r-total').textContent    = fmt(total);
-    document.getElementById('r-monthly').textContent  = fmt(monthly);
-    document.getElementById('r-tenure').textContent   = tenure+' years ('+tenure*12+' months)';
-
-    document.getElementById('h-dp').value = dp.toFixed(2);
-
-    document.getElementById('h-label').value =
-        'Down Payment ('+(dpRate*100).toFixed(0)+'%) — <?php echo addslashes(($car['car_brand']??'').' '.($car['car_model']??'Car')); ?>';
-
-    document.getElementById('h-price').value   = fmt(price);
-    document.getElementById('h-loan').value    = fmt(loan);
-    document.getElementById('h-monthly').value = fmt(monthly);
-    document.getElementById('h-tenure').value  = tenure+' years';
-
-    document.getElementById('result-box')
-        .style.display='block';
-}
-
-function proceedToPayment() {
-
-    if (!document.getElementById('h-dp').value ||
-        parseFloat(document.getElementById('h-dp').value) <= 0) {
-
-        alert('Please calculate first.');
-
-        return;
-    }
-
-    document.getElementById('proceed-form').submit();
-}
-
-</script>
 
 </body>
 </html>
