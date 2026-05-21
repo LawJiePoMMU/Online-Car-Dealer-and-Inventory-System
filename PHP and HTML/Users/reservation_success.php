@@ -1,489 +1,735 @@
 <?php
 session_start();
-require 'db.php';
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
+require 'database.php';
+
+// ======================================================
+// SECURITY CHECK
+// ======================================================
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-// Make sure reservation exists
-$reservation_id = $_SESSION['reservation_id'] ?? 0;
+if (
+    !isset($_SESSION['reservation_id']) ||
+    empty($_SESSION['reservation_id'])
+) {
+    die("Reservation session expired.");
+}
+
+$reservation_id = intval($_SESSION['reservation_id']);
 
 if ($reservation_id <= 0) {
     die("Invalid reservation reference.");
 }
 
-// Fetch reservation directly from database
-$stmt = $pdo->prepare("
-    SELECT * 
-    FROM reservations 
-    WHERE reservation_id = ?
-");
+$user_id = $_SESSION['user_id'];
 
-$stmt->execute([$reservation_id]);
+// ======================================================
+// FETCH RESERVATION
+// ======================================================
 
-$reservation = $stmt->fetch(PDO::FETCH_ASSOC);
+$reservation_sql = "
+SELECT
+    reservation_id,
+    reservation_status,
+    reservation_created_at,
+    preferred_test_drive_at,
+    snapshot_data
+FROM reservations
+WHERE reservation_id = ?
+AND user_id = ?
+LIMIT 1
+";
 
-if (!$reservation) {
-    die("Reservation data could not be retrieved.");
+$reservation_stmt = mysqli_prepare($conn, $reservation_sql);
+
+if (!$reservation_stmt) {
+    die("Reservation Query Prepare Failed: " . mysqli_error($conn));
 }
 
-// Decode snapshot JSON
-$snapshot = json_decode(
-    $reservation['snapshot_data'],
-    true
-);
-
-// Customer Information
-$reserve_name   = $snapshot['user_name']   ?? '';
-$reserve_phone  = $snapshot['user_phone']  ?? '';
-$reserve_email  = $snapshot['user_email']  ?? '';
-$reserve_ic     = $snapshot['user_ic']     ?? '';
-
-// Vehicle Information
-$reserve_brand   = $snapshot['car_brand']   ?? 'Unknown Vehicle';
-$reserve_model   = $snapshot['car_model']   ?? '';
-$reserve_year    = $snapshot['car_year']    ?? '';
-$reserve_origin  = $snapshot['car_origin']  ?? '';
-$reserve_image   = $snapshot['car_image']   ?? '';
-$reserve_plate   = $snapshot['car_plate']   ?? '';
-$reserve_variant = $snapshot['car_variant'] ?? '';
-$reserve_color   = $snapshot['car_color']   ?? '';
-
-// Reservation Details
-$reserve_datetime = $reservation['preferred_test_drive_at'] ?? '';
-$status            = $reservation['reservation_status'] ?? 'Pending Viewing';
-
-// Format Date & Time
-$formatted_date = !empty($reserve_datetime)
-    ? date('d M Y', strtotime($reserve_datetime))
-    : 'Not Scheduled';
-
-$formatted_time = !empty($reserve_datetime)
-    ? date('h:i A', strtotime($reserve_datetime))
-    : 'Not Scheduled';
-
-// Generate Reference Number
-$reserve_ref = 'RSV-' . str_pad(
+mysqli_stmt_bind_param(
+    $reservation_stmt,
+    "ii",
     $reservation_id,
-    6,
-    '0',
-    STR_PAD_LEFT
+    $user_id
 );
+
+if (!mysqli_stmt_execute($reservation_stmt)) {
+    die(
+        "Reservation Query Execute Failed: " .
+        mysqli_stmt_error($reservation_stmt)
+    );
+}
+
+$reservation_result =
+    mysqli_stmt_get_result($reservation_stmt);
+
+if (!$reservation_result) {
+    die("Reservation Query Result Failed.");
+}
+
+$reservation =
+    mysqli_fetch_assoc($reservation_result);
+
+mysqli_stmt_close($reservation_stmt);
+
+// ======================================================
+// VALIDATE RESERVATION
+// ======================================================
+
+if (!$reservation) {
+    die("Reservation record not found.");
+}
+
+// ======================================================
+// DECODE SNAPSHOT DATA
+// ======================================================
+
+$snapshot =
+    json_decode(
+        $reservation['snapshot_data'],
+        true
+    );
+
+if (!is_array($snapshot)) {
+    $snapshot = [];
+}
+
+// ======================================================
+// SAFE DATA FALLBACKS
+// ======================================================
+
+$car_brand   = $snapshot['car_brand'] ?? 'Unknown Brand';
+$car_model   = $snapshot['car_model'] ?? 'Unknown Model';
+$car_year    = $snapshot['car_year'] ?? 'N/A';
+$car_origin  = $snapshot['car_origin'] ?? 'N/A';
+$car_price   = $snapshot['car_price'] ?? 0;
+$car_variant = $snapshot['car_variant'] ?? 'Standard';
+
+$user_name   = $snapshot['user_name'] ?? 'Customer';
+$user_email  = $snapshot['user_email'] ?? 'N/A';
+$user_phone  = $snapshot['user_phone'] ?? 'N/A';
+$user_ic     = $snapshot['user_ic'] ?? 'N/A';
+
+// Safe price type
+$car_price = floatval($car_price);
+
+// Safe image fallback
+$car_image =
+    !empty($snapshot['car_image'])
+    ? $snapshot['car_image']
+    : 'https://via.placeholder.com/500x300.png?text=Vehicle+Image';
+
+// ======================================================
+// FORMAT REFERENCE NUMBER
+// ======================================================
+
+$reservation_ref =
+    $_SESSION['ref_number']
+    ?? (
+        'RSV-' .
+        str_pad(
+            $reservation_id,
+            6,
+            '0',
+            STR_PAD_LEFT
+        )
+    );
+
+// ======================================================
+// STATUS
+// ======================================================
+
+$reservation_status =
+    $reservation['reservation_status'] ?? 'Pending';
+
+$status_lower =
+    strtolower($reservation_status);
+
+// ======================================================
+// FORMAT CREATED DATE
+// ======================================================
+
+$created_at = 'N/A';
+
+if (!empty($reservation['reservation_created_at'])) {
+
+    $created_timestamp =
+        strtotime($reservation['reservation_created_at']);
+
+    if ($created_timestamp !== false) {
+
+        $created_at =
+            date(
+                'd M Y, h:i A',
+                $created_timestamp
+            );
+    }
+}
+
+// ======================================================
+// FORMAT TEST DRIVE DATE
+// ======================================================
+
+$test_drive_at = 'Not Scheduled';
+
+if (!empty($reservation['preferred_test_drive_at'])) {
+
+    $timestamp =
+        strtotime($reservation['preferred_test_drive_at']);
+
+    if ($timestamp !== false) {
+
+        $test_drive_at =
+            date(
+                'd M Y, h:i A',
+                $timestamp
+            );
+    }
+}
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
-    <meta charset="UTF-8"/>
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
 
-    <title>Reservation Confirmation</title>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"/>
+<title>
+    Reservation Successful
+</title>
 
-    <link rel="stylesheet"
-          href="styles.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet">
 
-    <style>
+<style>
 
-        body {
-            background: #f5f7fb;
-            font-family: 'Poppins', sans-serif;
-        }
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
 
-        .page-hero {
-            background: linear-gradient(
-                135deg,
-                var(--primary-color, #007bff),
-                #0056b3
-            );
+body{
+    background:#f4f7fb;
+    color:#1e293b;
+    padding:40px 20px;
+}
 
-            color: white;
-            padding: 45px 0 35px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
+.success-container{
+    max-width:850px;
+    margin:0 auto;
+    background:white;
+    border-radius:22px;
+    overflow:hidden;
+    border:1px solid #e2e8f0;
+    box-shadow:0 4px 25px rgba(0,0,0,0.04);
+}
 
-        .page-hero h1 {
-            font-size: 34px;
-            margin-bottom: 10px;
-        }
+.success-header{
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #1d4ed8
+    );
+    color:white;
+    padding:40px;
+    text-align:center;
+}
 
-        .page-hero p {
-            opacity: 0.9;
-        }
+.success-icon{
+    width:85px;
+    height:85px;
+    background:white;
+    color:#2563eb;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:40px;
+    font-weight:bold;
+    margin:0 auto 20px;
+}
 
-        .section-card {
-            background: #fff;
-            border-radius: 10px;
-            padding: 28px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
+.success-header h1{
+    font-size:34px;
+    margin-bottom:10px;
+}
 
-        .section-card h2 {
-            font-size: 18px;
-            color: var(--primary-color, #007bff);
-            margin-bottom: 18px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 10px;
-        }
+.success-header p{
+    opacity:0.92;
+    font-size:15px;
+}
 
-        .success-box {
-            text-align: center;
-            padding: 30px;
-        }
+.content-wrapper{
+    padding:35px;
+}
 
-        .success-icon {
-            width: 90px;
-            height: 90px;
-            background: #28a745;
-            color: white;
-            border-radius: 50%;
-            margin: 0 auto 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 42px;
-            font-weight: bold;
-        }
+.reference-box{
+    background:#eff6ff;
+    border:1px solid #bfdbfe;
+    padding:18px;
+    border-radius:14px;
+    margin-bottom:28px;
+}
 
-        .status-badge {
-            display: inline-block;
-            background: #fff3cd;
-            color: #856404;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-top: 12px;
-        }
+.reference-box h3{
+    color:#1d4ed8;
+    font-size:14px;
+    margin-bottom:6px;
+}
 
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+.reference-box p{
+    font-size:24px;
+    font-weight:700;
+    letter-spacing:1px;
+}
 
-        .info-table td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-        }
+.vehicle-section{
+    display:flex;
+    gap:25px;
+    align-items:flex-start;
+    margin-bottom:35px;
+}
 
-        .info-table td:first-child {
-            width: 180px;
-            color: #666;
-            font-weight: 500;
-        }
+.vehicle-image{
+    width:320px;
+    height:220px;
+    object-fit:cover;
+    border-radius:16px;
+    border:1px solid #e2e8f0;
+}
 
-        .car-image {
-            width: 100%;
-            max-height: 260px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
+.vehicle-info{
+    flex:1;
+}
 
-        .btn-group {
-            display: flex;
-            gap: 16px;
-            margin-top: 30px;
-        }
+.vehicle-info h2{
+    font-size:30px;
+    margin-bottom:10px;
+    color:#0f172a;
+}
 
-        .btn-primary,
-        .btn-secondary {
-            flex: 1;
-            text-align: center;
-            padding: 14px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-        }
+.info-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+    margin-top:25px;
+}
 
-        .btn-primary {
-            background: var(--primary-color, #007bff);
-            color: white;
-        }
+.info-card{
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    padding:18px;
+    border-radius:14px;
+}
 
-        .btn-secondary {
-            background: #f1f1f1;
-            color: #333;
-        }
+.info-card h4{
+    font-size:13px;
+    color:#64748b;
+    margin-bottom:8px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
 
-        @media (max-width:768px) {
+.info-card p{
+    font-size:15px;
+    font-weight:600;
+    color:#1e293b;
+}
 
-            .btn-group {
-                flex-direction: column;
-            }
+.status-badge{
+    display:inline-block;
+    padding:8px 16px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    margin-top:12px;
+}
 
-        }
+.status-pending{
+    background:#fef3c7;
+    color:#92400e;
+}
 
-    </style>
+.status-approved{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.status-rejected{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.customer-section{
+    margin-top:35px;
+}
+
+.customer-section h3{
+    margin-bottom:20px;
+    font-size:24px;
+}
+
+.note-box{
+    margin-top:30px;
+    background:#f8fafc;
+    border-left:5px solid #2563eb;
+    padding:20px;
+    border-radius:12px;
+}
+
+.note-box p{
+    font-size:14px;
+    line-height:1.7;
+    color:#475569;
+}
+
+.button-group{
+    display:flex;
+    gap:15px;
+    margin-top:35px;
+    flex-wrap:wrap;
+}
+
+.action-btn{
+    flex:1;
+    min-width:220px;
+    text-align:center;
+    padding:15px;
+    border-radius:12px;
+    text-decoration:none;
+    font-weight:700;
+    transition:0.2s;
+}
+
+.primary-btn{
+    background:#2563eb;
+    color:white;
+}
+
+.primary-btn:hover{
+    background:#1d4ed8;
+}
+
+.secondary-btn{
+    background:#f1f5f9;
+    color:#1e293b;
+    border:1px solid #cbd5e1;
+}
+
+.secondary-btn:hover{
+    background:#e2e8f0;
+}
+
+@media(max-width:768px){
+
+    .content-wrapper{
+        padding:25px;
+    }
+
+    .vehicle-section{
+        flex-direction:column;
+    }
+
+    .vehicle-image{
+        width:100%;
+        height:240px;
+    }
+
+    .success-header h1{
+        font-size:28px;
+    }
+
+    .button-group{
+        flex-direction:column;
+    }
+}
+
+</style>
 
 </head>
+
 <body>
 
-<nav class="navbar">
+<div class="success-container">
 
-    <div class="nav-container">
+    <!-- HEADER -->
 
-        <a href="index.php"
-           class="nav-logo">
-
-            AutoDeal
-
-        </a>
-
-        <ul class="nav-links">
-
-            <li><a href="index.php">Home</a></li>
-            <li><a href="booking.php">Booking</a></li>
-            <li><a href="downpayment.php">Down Payment</a></li>
-            <li><a href="view_status.php">View Status</a></li>
-
-        </ul>
-
-    </div>
-
-</nav>
-
-<div class="page-hero">
-
-    <div class="container">
-
-        <h1>Reservation Submitted</h1>
-
-        <p>
-            Your reserve / test drive request
-            has been submitted successfully.
-        </p>
-
-    </div>
-
-</div>
-
-<div class="container"
-     style="max-width:900px;
-            margin:0 auto;
-            padding:0 20px;">
-
-    <div class="section-card success-box">
+    <div class="success-header">
 
         <div class="success-icon">
             ✓
         </div>
 
-        <h2 style="border:none;
-                   margin-bottom:10px;">
-
-            Request Successfully Submitted
-
-        </h2>
+        <h1>
+            Reservation Submitted Successfully
+        </h1>
 
         <p>
-            Our team will review your
-            reservation request shortly.
+            Thank you,
+            <?php echo htmlspecialchars($user_name); ?>.
+            Your test drive reservation request
+            has been submitted successfully.
         </p>
 
-        <div class="status-badge">
+    </div>
 
-            <?php echo htmlspecialchars($status); ?>
+    <!-- CONTENT -->
+
+    <div class="content-wrapper">
+
+        <!-- REFERENCE -->
+
+        <div class="reference-box">
+
+            <h3>
+                Reservation Reference Number
+            </h3>
+
+            <p>
+                <?php echo htmlspecialchars($reservation_ref); ?>
+            </p>
+
+        </div>
+
+        <!-- VEHICLE -->
+
+        <div class="vehicle-section">
+
+            <img
+                src="<?php echo htmlspecialchars($car_image); ?>"
+                class="vehicle-image"
+                alt="Vehicle Image"
+            >
+
+            <div class="vehicle-info">
+
+                <h2>
+                    <?php
+                    echo htmlspecialchars(
+                        $car_brand . ' ' . $car_model
+                    );
+                    ?>
+                </h2>
+
+                <p>
+                    <?php
+                    echo htmlspecialchars(
+                        $car_origin
+                    );
+                    ?>
+                </p>
+
+                <div class="status-badge
+                    <?php
+
+                    if ($status_lower === 'approved') {
+                        echo 'status-approved';
+                    }
+                    elseif ($status_lower === 'rejected') {
+                        echo 'status-rejected';
+                    }
+                    else {
+                        echo 'status-pending';
+                    }
+
+                    ?>
+                ">
+
+                    <?php
+                    echo htmlspecialchars($reservation_status);
+                    ?>
+
+                </div>
+
+                <div class="info-grid">
+
+                    <div class="info-card">
+
+                        <h4>
+                            Vehicle Year
+                        </h4>
+
+                        <p>
+                            <?php echo htmlspecialchars($car_year); ?>
+                        </p>
+
+                    </div>
+
+                    <div class="info-card">
+
+                        <h4>
+                            Preferred Variant
+                        </h4>
+
+                        <p>
+                            <?php echo htmlspecialchars($car_variant); ?>
+                        </p>
+
+                    </div>
+
+                    <div class="info-card">
+
+                        <h4>
+                            Vehicle Price
+                        </h4>
+
+                        <p>
+                            RM <?php echo number_format($car_price, 2); ?>
+                        </p>
+
+                    </div>
+
+                    <div class="info-card">
+
+                        <h4>
+                            Reservation Date
+                        </h4>
+
+                        <p>
+                            <?php echo htmlspecialchars($created_at); ?>
+                        </p>
+
+                    </div>
+
+                    <div class="info-card">
+
+                        <h4>
+                            Test Drive Schedule
+                        </h4>
+
+                        <p>
+                            <?php echo htmlspecialchars($test_drive_at); ?>
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- CUSTOMER -->
+
+        <div class="customer-section">
+
+            <h3>
+                Customer Information
+            </h3>
+
+            <div class="info-grid">
+
+                <div class="info-card">
+
+                    <h4>
+                        Full Name
+                    </h4>
+
+                    <p>
+                        <?php echo htmlspecialchars($user_name); ?>
+                    </p>
+
+                </div>
+
+                <div class="info-card">
+
+                    <h4>
+                        Email Address
+                    </h4>
+
+                    <p>
+                        <?php echo htmlspecialchars($user_email); ?>
+                    </p>
+
+                </div>
+
+                <div class="info-card">
+
+                    <h4>
+                        Phone Number
+                    </h4>
+
+                    <p>
+                        <?php echo htmlspecialchars($user_phone); ?>
+                    </p>
+
+                </div>
+
+                <div class="info-card">
+
+                    <h4>
+                        IC / Passport
+                    </h4>
+
+                    <p>
+                        <?php echo htmlspecialchars($user_ic); ?>
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- NOTE -->
+
+        <div class="note-box">
+
+            <p>
+                Our sales advisor will contact you shortly
+                to confirm your test drive appointment.
+                Please keep your reservation reference number
+                for future tracking and verification.
+            </p>
+
+        </div>
+
+        <!-- BUTTONS -->
+
+        <div class="button-group">
+
+            <a
+                href="cars.php"
+                class="action-btn primary-btn"
+            >
+                Browse More Vehicles
+            </a>
+
+            <a
+                href="index.php"
+                class="action-btn secondary-btn"
+            >
+                Return Home
+            </a>
 
         </div>
 
     </div>
 
-    <div class="section-card">
-
-        <h2>Reservation Reference</h2>
-
-        <table class="info-table">
-
-            <tr>
-                <td>Reference Number</td>
-
-                <td>
-                    <strong>
-
-                        <?php echo htmlspecialchars($reserve_ref); ?>
-
-                    </strong>
-                </td>
-            </tr>
-
-            <tr>
-                <td>Status</td>
-
-                <td>
-
-                    <?php echo htmlspecialchars($status); ?>
-
-                </td>
-            </tr>
-
-            <tr>
-                <td>Submission Date</td>
-
-                <td>
-
-                    <?php echo date('d M Y'); ?>
-
-                </td>
-            </tr>
-
-        </table>
-
-    </div>
-
-    <div class="section-card">
-
-        <h2>Selected Vehicle</h2>
-
-        <?php if (!empty($reserve_image)): ?>
-
-            <img src="<?php echo htmlspecialchars($reserve_image); ?>"
-                 class="car-image"
-                 alt="Car Image"/>
-
-        <?php endif; ?>
-
-        <table class="info-table">
-
-            <tr>
-                <td>Brand</td>
-                <td><?php echo htmlspecialchars($reserve_brand); ?></td>
-            </tr>
-
-            <tr>
-                <td>Model</td>
-                <td><?php echo htmlspecialchars($reserve_model); ?></td>
-            </tr>
-
-            <tr>
-                <td>Year</td>
-                <td><?php echo htmlspecialchars($reserve_year); ?></td>
-            </tr>
-
-            <tr>
-                <td>Type</td>
-                <td><?php echo htmlspecialchars($reserve_origin); ?></td>
-            </tr>
-
-            <tr>
-                <td>Plate Number</td>
-                <td><?php echo htmlspecialchars($reserve_plate); ?></td>
-            </tr>
-
-            <tr>
-                <td>Variant</td>
-                <td><?php echo htmlspecialchars($reserve_variant); ?></td>
-            </tr>
-
-            <tr>
-                <td>Color</td>
-                <td><?php echo htmlspecialchars($reserve_color); ?></td>
-            </tr>
-
-        </table>
-
-    </div>
-
-    <div class="section-card">
-
-        <h2>Customer Information</h2>
-
-        <table class="info-table">
-
-            <tr>
-                <td>Full Name</td>
-                <td><?php echo htmlspecialchars($reserve_name); ?></td>
-            </tr>
-
-            <tr>
-                <td>IC Number</td>
-                <td><?php echo htmlspecialchars($reserve_ic); ?></td>
-            </tr>
-
-            <tr>
-                <td>Phone Number</td>
-                <td><?php echo htmlspecialchars($reserve_phone); ?></td>
-            </tr>
-
-            <tr>
-                <td>Email Address</td>
-                <td><?php echo htmlspecialchars($reserve_email); ?></td>
-            </tr>
-
-        </table>
-
-    </div>
-
-    <div class="section-card">
-
-        <h2>Reservation Details</h2>
-
-        <table class="info-table">
-
-            <tr>
-                <td>Preferred Date</td>
-
-                <td>
-
-                    <?php echo htmlspecialchars($formatted_date); ?>
-
-                </td>
-            </tr>
-
-            <tr>
-                <td>Preferred Time</td>
-
-                <td>
-
-                    <?php echo htmlspecialchars($formatted_time); ?>
-
-                </td>
-            </tr>
-
-        </table>
-
-    </div>
-
-    <div class="btn-group">
-
-        <a href="view_status.php"
-           class="btn-primary">
-
-            View Status
-
-        </a>
-
-        <a href="index.php"
-           class="btn-secondary">
-
-            Back to Home
-
-        </a>
-
-    </div>
-
 </div>
 
-<footer class="footer text-center"
-        style="margin-top:60px;
-               padding:20px 0;
-               color:#aaa;">
+<?php
 
-    <p>
-        &copy; 2026 AutoDeal.
-        All rights reserved.
-    </p>
+// ======================================================
+// CLEAN SESSION AFTER PAGE RENDERS
+// ======================================================
 
-</footer>
+unset($_SESSION['reservation_id']);
+unset($_SESSION['ref_number']);
+
+?>
 
 </body>
 </html>

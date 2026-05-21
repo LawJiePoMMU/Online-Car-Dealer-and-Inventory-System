@@ -221,11 +221,57 @@ try {
 <?php endif; ?>
 
 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;">
+
 <div style="display: flex; gap: 12px; margin-bottom: 40px;">
-    <button onclick="alert('Proceeding to Booking...')" style="flex: 1; padding: 14px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s;">
+
+    <!-- BOOKING BUTTON -->
+
+    <a
+        href="start_booking.php?car_id=<?php echo $car_id; ?>"
+        style="
+            flex:1;
+            padding:14px;
+            background:#0f172a;
+            color:white;
+            border:none;
+            border-radius:8px;
+            font-weight:700;
+            font-size:15px;
+            cursor:pointer;
+            transition:0.2s;
+            text-align:center;
+            text-decoration:none;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        "
+    >
         Booking
-    </button>
-    <button onclick="alert('Proceeding to Test Drive...')" style="flex: 1; padding: 14px; background: white; color: #0f172a; border: 2px solid #0f172a; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s;">
+    </a>
+
+    <!-- TEST DRIVE BUTTON -->
+
+    <a
+        href="reservation.php?car_id=<?php echo $car_id; ?>"
+        style="
+            flex:1;
+            padding:14px;
+            background:white;
+            color:#0f172a;
+            border:2px solid #0f172a;
+            border-radius:8px;
+            font-weight:700;
+            font-size:15px;
+            cursor:pointer;
+            transition:0.2s;
+            text-align:center;
+            text-decoration:none;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        "
+    >
         Test Drive
-    </button>
+    </a>
+
 </div>
