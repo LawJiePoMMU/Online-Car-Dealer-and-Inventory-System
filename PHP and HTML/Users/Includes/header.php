@@ -28,7 +28,7 @@ if (session_status() === PHP_SESSION_NONE) {
         </ul>
 
         <div class="nav-actions">
-            <?php if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true): ?>
+           <?php if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true && isset($_SESSION["role"]) && strcasecmp($_SESSION["role"], "Customer") === 0): ?>
                 
                 <div class="user-menu">
                     <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/wishlist.php" class="icon-link" title="My Wishlist">

@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // 已经登录的话，跳回主页 (退两层到根目录)
-if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true){
+if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true && isset($_SESSION["role"]) && strcasecmp($_SESSION["role"], "Customer") === 0){
     header("location: ../index.php");
     exit;
 }
