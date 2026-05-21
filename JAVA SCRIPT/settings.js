@@ -38,6 +38,13 @@ async function loadSettings() {
     try {
         const response = await fetch('settings.php?ajax=1', { cache: 'no-store' });
         const data = await response.json();
+        const fixPath = (p) => {
+            if (!p) return '';
+            if (p.startsWith('../../')) {
+                return p.replace('../../', '/Online-Car-Dealer-and-Inventory-System/');
+            }
+            return p;
+        };
 
         if (data.success) {
             for (const key in data.data) {
@@ -51,6 +58,16 @@ async function loadSettings() {
                 }
             }
 
+            if (data.data.company_logo) {
+                const logoImg = document.getElementById('logoPreview');
+                const placeholder = document.getElementById('logoPlaceholder');
+                if (logoImg && placeholder) {
+                    logoImg.src = fixPath(data.data.company_logo);
+                    logoImg.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+            }
+
             if (data.user) {
                 const n = document.getElementById('user_name');
                 const e = document.getElementById('user_email');
@@ -61,7 +78,7 @@ async function loadSettings() {
                     const img = document.getElementById('avatar_preview_img');
                     const icon = document.getElementById('avatar_icon');
                     if (img && icon) {
-                        img.src = data.user.user_avatar;
+                        img.src = fixPath(data.user.user_avatar);
                         img.style.display = 'block';
                         icon.style.display = 'none';
                     }

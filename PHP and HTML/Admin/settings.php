@@ -113,7 +113,7 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
 
                 if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] === UPLOAD_ERR_OK) {
                     $file_name = time() . '_' . basename($_FILES['banner_image']['name']);
-                    $uploadDir = 'uploads/banners/';
+                    $uploadDir = '../../Images/Uploads/Banners/';
 
                     if (!is_dir($uploadDir)) {
                         mkdir($uploadDir, 0777, true);
@@ -889,7 +889,7 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                                 if ($sql_banners && mysqli_num_rows($sql_banners) > 0) {
                                     while ($row = mysqli_fetch_assoc($sql_banners)) {
                                         echo "<tr>";
-                                        echo "<td><img src='uploads/banners/" . htmlspecialchars($row['Image_Path']) . "' class='banner-preview' alt='Banner'></td>";
+                                        echo "<td><img src='/Online-Car-Dealer-and-Inventory-System/Images/Uploads/Banners/" . htmlspecialchars($row['Image_Path']) . "' class='banner-preview' alt='Banner'></td>";
                                         echo "<td><span style='font-weight: 700; color: #1e3a8a;'>" . $row['Display_Order'] . "</span></td>";
                                         if ($row['Is_Active'] == 'Yes') {
                                             echo "<td><button type='button' class='badge badge-active' onclick='toggleBannerStatus(" . $row['Banner_ID'] . ", \"Yes\")'><i class='fas fa-eye'></i> Active</button></td>";
@@ -988,7 +988,8 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                                 <span>Send notification when a new down payment is received.</span>
                             </div>
                             <label class="switch">
-                                <input type="checkbox" id="alert_new_down_payment" name="alert_new_down_payment" value="1">
+                                <input type="checkbox" id="alert_new_down_payment" name="alert_new_down_payment"
+                                    value="1">
                                 <span class="slider"></span>
                             </label>
                         </div>

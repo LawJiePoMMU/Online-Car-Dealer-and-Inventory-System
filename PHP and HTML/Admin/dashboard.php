@@ -1,11 +1,19 @@
 <?php
 session_start();
+if (!isset($_SESSION["loggedin"]) 
+    || $_SESSION["loggedin"] !== true
+    || !isset($_SESSION["user_role"])
+    || (strcasecmp($_SESSION["user_role"], "Admin") !== 0 
+        && strcasecmp($_SESSION["user_role"], "Super Admin") !== 0)) {
+    header("Location: /Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/Auth/admin_login.php");
+    exit;
+}
+
 include '../Config/database.php';
-$logged_in_id = $_SESSION['user_id'] ?? null;
+$logged_in_id = $_SESSION['user_id'];   
 $logged_in_name = 'Admin';
 $avatar_letters = 'A';
 $user_avatar = null;
-
 if ($logged_in_id) {
     $user_query = "SELECT user_name, user_avatar FROM users WHERE user_id = '$logged_in_id'";
     $user_result = mysqli_query($conn, $user_query);

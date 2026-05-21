@@ -1216,10 +1216,10 @@ if (isset($_POST['save_all_details'])) {
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-wave-square"></i> Suspension Specifications</h3>
                     <div class="grid-2">
-                        <div class="form-group"><label>Front Suspension</label><input type="number" step="0.01"
+                        <div class="form-group"><label>Front Suspension</label><input type="text" 
                                 name="front_suspension" class="form-control" placeholder="e.g., MacPherson Strut"
                                 value="<?= htmlspecialchars($car['front_suspension']) ?>"></div>
-                        <div class="form-group"><label>Rear Suspension</label><input type="number" step="0.01"
+                        <div class="form-group"><label>Rear Suspension</label><input type="text" 
                                 name="rear_suspension" class="form-control" placeholder="e.g., Multi-link"
                                 value="<?= htmlspecialchars($car['rear_suspension']) ?>"></div>
                     </div>
