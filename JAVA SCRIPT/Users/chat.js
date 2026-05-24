@@ -1,7 +1,7 @@
 const ajaxUrl = window.location.href;
 let pollInterval;
 let directoryUsers = [];
-let currentDirTab = 'Admin'; 
+let currentDirTab = 'Admin';
 
 function getAvatarHTML(name, avatarUrl, size = 42) {
     if (avatarUrl && avatarUrl !== 'NULL' && avatarUrl !== '') {
@@ -60,8 +60,8 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function switchTab(tabName, btn) {
-    document.querySelectorAll('.chat-search-wrap .chat-tabs .chat-tab-btn').forEach(b => {
-        b.classList.remove('active');
+    document.querySelectorAll('.chat-tabs .chat-tab-btn').forEach(b => {
+        if (b.id !== 'tabDirAdmin' && b.id !== 'tabDirCustomer') b.classList.remove('active');
     });
     btn.classList.add('active');
 
@@ -77,6 +77,18 @@ function switchTab(tabName, btn) {
     });
 }
 
+function applyBellState(isMuted) {
+    let bellIcon = document.getElementById('notifBellIcon');
+    if (!bellIcon) return;
+    if (isMuted) {
+        bellIcon.className = 'fas fa-bell-slash';
+        bellIcon.style.color = '#9ca3af';
+    } else {
+        bellIcon.className = 'fas fa-bell';
+        bellIcon.style.color = '#f59e0b';
+    }
+}
+
 function loadUsers() {
     let formData = new FormData();
     formData.append('action', 'fetch_users');
@@ -86,16 +98,16 @@ function loadUsers() {
         .then(data => {
             let list = document.getElementById('chatList');
             list.innerHTML = '';
-
             if (data.users && data.users.length > 0) {
-                data.users.forEach((u, index) => {
+                data.users.forEach((u) => {
                     let phone = u.user_phone ? u.user_phone : '';
                     let avatarHTML = getAvatarHTML(u.user_name, u.user_avatar);
-                    let unreadBadge = index === 0 ? `<div class="unread-badge">New</div>` : '';
+                    let unreadBadge = (u.unread_count && parseInt(u.unread_count) > 0) ? `<div class="unread-badge">${u.unread_count}</div>` : '';
                     let div = document.createElement('div');
                     div.className = 'contact-item';
                     div.dataset.id = u.user_id;
                     div.dataset.type = 'user';
+                    div.dataset.muted = (u.is_muted == 1) ? '1' : '0';
                     div.onclick = () => openChat(u.user_id, 'user', u.user_name, u.user_avatar, phone, div);
                     div.innerHTML = `<div class="avatar-wrap">${avatarHTML}</div><div style="flex:1;"><div class="contact-name" style="font-size: 15px; font-weight: 600; color: #111827;">${u.user_name}</div><div class="contact-msg" style="font-size: 13px; color: #6b7280;">${phone}</div></div>${unreadBadge}`;
                     list.appendChild(div);
@@ -104,18 +116,52 @@ function loadUsers() {
 
             if (data.groups && data.groups.length > 0) {
                 data.groups.forEach(g => {
-                    let avatarHTML = getAvatarHTML(g.group_name, null);
-                    let div = document.createElement('div');
-                    div.className = 'contact-item';
-                    div.dataset.id = g.group_id;
-                    div.dataset.type = 'group';
-                    div.onclick = () => openChat(g.group_id, 'group', g.group_name, null, 'Group Chat', div);
-                    div.innerHTML = `<div class="avatar-wrap">${avatarHTML}</div><div style="flex:1;"><div class="contact-name" style="font-size: 15px; font-weight: 600; color: #111827;">${g.group_name}</div><div class="contact-msg" style="font-size: 13px; color: #6b7280;">Group Chat</div></div>`;
-                    list.appendChild(div);
-                });
+                    let avatarHTML = getAvatarHTML(g.group_name, null)
+                    let unreadBadge = (g.unread_count && parseInt(g.unread_count) > 0)
+                        ? `<div class="unread-badge"> ${g.unread_count} </div>` : ''
+                    let div = document.createElement('div')
+                    div.className =
+                        'contact-item'
+                    div.dataset.id =
+                        g.group_id
+                    div.dataset.type =
+                        'group'
+                    div.dataset.muted =
+                        (
+                            g.is_muted == 1
+                        )
+                            ? '1' : '0'
+                    div.onclick =
+                        () =>
+                            openChat(
+                                g.group_id,
+                                'group',
+                                g.group_name,
+                                null,
+                                'Group Chat',
+                                div
+                            )
+                    div.innerHTML =
+                        `
+                        <div class="avatar-wrap">
+                    ${avatarHTML}
+                    </div>
+                        <div style="flex:1">
+                            <div class="contact-name">
+                    ${g.group_name}
+                </div>
+            <div class="contact-msg">                           
+        Group Chat
+    </div>
+</div>
+        ${unreadBadge}`
+                    list.appendChild(div)
+                    if (sessionStorage.getItem('lastActiveChatId') == g.group_id && sessionStorage.getItem('lastActiveChatType') === 'group') { div.classList.add('active') }
+                })
             }
         });
 }
+
 
 function openNewChatModal() {
     document.getElementById('newChatModal').classList.add('active');
@@ -136,8 +182,8 @@ function closeNewChatModal() {
 
 function switchDirectoryTab(role) {
     currentDirTab = role;
-    if(document.getElementById('tabDirAdmin')) document.getElementById('tabDirAdmin').classList.toggle('active', role === 'Admin');
-    if(document.getElementById('tabDirCustomer')) document.getElementById('tabDirCustomer').classList.toggle('active', role === 'Customer');
+    document.getElementById('tabDirAdmin').classList.toggle('active', role === 'Admin');
+    document.getElementById('tabDirCustomer').classList.toggle('active', role === 'Customer');
     renderDirectory();
 }
 
@@ -186,6 +232,7 @@ function startNewChat(id, name, avatar, phone) {
         div.className = 'contact-item active';
         div.dataset.id = id;
         div.dataset.type = 'user';
+        div.dataset.muted = '0';
         div.onclick = () => openChat(id, 'user', name, avatar, phone, div);
         let avatarHTML = getAvatarHTML(name, avatar);
         div.innerHTML = `<div class="avatar-wrap">${avatarHTML}</div><div style="flex:1;"><div class="contact-name" style="font-weight:600;">${name}</div><div style="font-size:13px; color:#6b7280;">New Chat</div></div>`;
@@ -220,8 +267,8 @@ function openCreateGroupModal() {
 
 function switchGroupTab(role) {
     currentGroupTab = role;
-    if(document.getElementById('tabGroupAdmin')) document.getElementById('tabGroupAdmin').classList.toggle('active', role === 'Admin');
-    if(document.getElementById('tabGroupCustomer')) document.getElementById('tabGroupCustomer').classList.toggle('active', role === 'Customer');
+    document.getElementById('tabGroupAdmin').classList.toggle('active', role === 'Admin');
+    document.getElementById('tabGroupCustomer').classList.toggle('active', role === 'Customer');
     renderGroupDirectory();
 }
 
@@ -303,20 +350,17 @@ function openChat(id, type, name, avatarUrl, phone, element) {
         element.classList.add('active');
         let badge = element.querySelector('.unread-badge');
         if (badge) badge.remove();
-        let bellIcon = document.getElementById('notifBellIcon');
-        let uniqueId = type + '_' + id;
-        let mutedChats = JSON.parse(localStorage.getItem('mutedChats')) || [];
-        if (bellIcon) {
-            if (mutedChats.includes(uniqueId)) {
-                bellIcon.className = 'fas fa-bell-slash';
-                bellIcon.style.color = '#9ca3af';
-            } else {
-                bellIcon.className = 'fas fa-bell';
-                bellIcon.style.color = '#f59e0b';
-            }
-        }
     }
+
+    let isMuted = element ? element.dataset.muted === '1' : false;
+    applyBellState(isMuted);
+
     loadMessages(id, type);
+    if (type === "group") {
+        setTimeout(() => {
+            loadUsers();
+        }, 300);
+    }
     loadProfileMedia(id, type);
     loadProfileDetails(id, type);
     if (pollInterval) clearInterval(pollInterval);
@@ -351,18 +395,25 @@ function loadProfileMedia(id, type) {
                         grid.innerHTML += `<img src="${path}" class="media-item" style="cursor:pointer;" onclick="openLightbox(this.src)">`;
                         hasMedia = true;
                     } else if (path.match(/\.(pdf)$/i)) {
-                        docsList.innerHTML += `<a href="${path}" target="_blank" style="display:flex; align-items:center; background:#fee2e2; color:#ef4444; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;"><i class="fas fa-file-pdf" style="font-size:16px; margin-right:8px;"></i>${fileName}</a>`;
+                        docsList.innerHTML += `
+                <a href="${path}" target="_blank" title="${fileName}"
+                   style="display:flex; align-items:center; background:#fee2e2; color:#ef4444; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold; overflow:hidden; min-width:0;">
+                    <i class="fas fa-file-pdf" style="font-size:16px; margin-right:8px; flex-shrink:0;"></i>
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;">${fileName}</span>
+                </a>`;
                         hasDocs = true;
                     } else {
-                        docsList.innerHTML += `<a href="${path}" target="_blank" style="display:flex; align-items:center; background:#f3f4f6; color:#4b5563; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;"><i class="fas fa-file" style="font-size:16px; margin-right:8px;"></i>${fileName}</a>`;
+                        docsList.innerHTML += `
+                <a href="${path}" target="_blank" title="${fileName}"
+                   style="display:flex; align-items:center; background:#f3f4f6; color:#4b5563; padding:8px 12px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold; overflow:hidden; min-width:0;">
+                    <i class="fas fa-file" style="font-size:16px; margin-right:8px; flex-shrink:0;"></i>
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;">${fileName}</span>
+                </a>`;
                         hasDocs = true;
                     }
                 });
                 if (!hasMedia) grid.innerHTML = `<div style="grid-column: span 3; color: #9ca3af; font-size: 12px;">No images.</div>`;
                 if (!hasDocs) docsList.innerHTML = `<div style="color: #9ca3af; font-size: 12px;">No documents.</div>`;
-            } else {
-                grid.innerHTML = `<div style="grid-column: span 3; color: #9ca3af; font-size: 12px;">No media shared yet.</div>`;
-                docsList.innerHTML = `<div style="color: #9ca3af; font-size: 12px;">No documents shared yet.</div>`;
             }
         });
 }
@@ -387,9 +438,11 @@ function loadMessages(id, type, scrollToBottom = true) {
                     let div = document.createElement('div');
                     div.className = `message-row ${isSent ? 'outgoing' : 'incoming'}`;
                     let contentHTML = m.message ? `<div>${m.message}</div>` : '';
+
                     if (m.file_path) {
                         let rawName = m.file_path.split('/').pop();
                         let fileName = rawName.includes('_') ? rawName.substring(rawName.indexOf('_') + 1) : rawName;
+
                         if (m.file_path.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
                             contentHTML += `<img src="${m.file_path}" style="max-width: 220px; border-radius: 8px; margin-top: 8px; cursor:pointer;" onclick="openLightbox(this.src)">`;
                         } else if (m.file_path.match(/\.(pdf)$/i)) {
@@ -398,7 +451,8 @@ function loadMessages(id, type, scrollToBottom = true) {
                             contentHTML += `<div style="margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 6px;"><i class="fas fa-file" style="color:#6b7280; margin-right:8px;"></i> <a href="${m.file_path}" target="_blank" style="color: inherit; text-decoration: none; font-weight: bold; font-size: 13px;">${fileName}</a></div>`;
                         }
                     }
-                    div.innerHTML = `<div class="message-bubble">${senderName}${contentHTML}<span class="message-time">${msgTime}</span></div>`;
+                    let readStatus = (isSent && m.is_read == 1) ? `<span style="font-size: 10px; color: #10b981; margin-left: 6px;"><i class="fas fa-check-double"></i> Read</span>` : '';
+                    div.innerHTML = `<div class="message-bubble">${senderName}${contentHTML}<div style="display:flex; justify-content:flex-end; align-items:center; margin-top:4px;"><span class="message-time">${msgTime}</span> ${readStatus}</div></div>`;
                     area.appendChild(div);
                 });
                 if (scrollToBottom || isAtBottom) {
@@ -407,7 +461,6 @@ function loadMessages(id, type, scrollToBottom = true) {
             }
         });
 }
-
 function sendMessage() {
     let id = document.getElementById('currentChatId').value;
     let type = document.getElementById('currentChatType').value;
@@ -446,32 +499,38 @@ function sendMessage() {
 function dismissNotification() {
     let currentId = document.getElementById('currentChatId').value;
     let currentType = document.getElementById('currentChatType').value;
-    let uniqueId = currentType + '_' + currentId; 
+    if (!currentId) return;
 
     let bellIcon = document.getElementById('notifBellIcon');
-    let mutedChats = JSON.parse(localStorage.getItem('mutedChats')) || [];
-
-    if (bellIcon) {
-        if (bellIcon.classList.contains('fa-bell-slash')) {
-            bellIcon.className = 'fas fa-bell';
-            bellIcon.style.color = '#f59e0b';
-            mutedChats = mutedChats.filter(id => id !== uniqueId);
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Notifications unmuted', showConfirmButton: false, timer: 2000 });
-        } else {
-            bellIcon.className = 'fas fa-bell-slash';
-            bellIcon.style.color = '#9ca3af';
-            if (!mutedChats.includes(uniqueId)) mutedChats.push(uniqueId);
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Notifications muted', showConfirmButton: false, timer: 2000 });
-        }
-    }
-
-    localStorage.setItem('mutedChats', JSON.stringify(mutedChats)); 
-
+    if (!bellIcon) return;
+    let isMutingNow = !bellIcon.classList.contains('fa-bell-slash');
+    applyBellState(isMutingNow);
     let activeItem = Array.from(document.querySelectorAll('#chatList .contact-item')).find(el => el.dataset.id == currentId && el.dataset.type == currentType);
     if (activeItem) {
-        let badge = activeItem.querySelector('.unread-badge');
-        if (badge) badge.remove();
+        activeItem.dataset.muted = isMutingNow ? '1' : '0';
     }
+
+    let formData = new FormData();
+    formData.append('action', 'toggle_mute');
+    formData.append('other_id', currentId);
+    formData.append('chat_type', currentType);
+    formData.append('is_muted', isMutingNow ? 'true' : 'false');
+
+    fetch(ajaxUrl, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let msg = isMutingNow ? 'Notifications muted' : 'Notifications unmuted';
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: msg, showConfirmButton: false, timer: 2000 });
+            } else {
+                applyBellState(!isMutingNow);
+                if (activeItem) activeItem.dataset.muted = !isMutingNow ? '1' : '0';
+            }
+        })
+        .catch(() => {
+            applyBellState(!isMutingNow);
+            if (activeItem) activeItem.dataset.muted = !isMutingNow ? '1' : '0';
+        });
 }
 
 function confirmAction(type) {
@@ -480,8 +539,12 @@ function confirmAction(type) {
     if (!id) return;
 
     let isGroup = (chatType === 'group');
-    let titleText = type === 'clear' ? 'Clear all messages?' : (isGroup ? 'Leave Group?' : 'Delete Chat?');
-    let textDesc = type === 'clear' ? 'This empties the conversation.' : (isGroup ? 'You will leave this group chat.' : 'This removes the conversation entirely.');
+    let titleText = type === 'clear'
+        ? 'Clear all messages?'
+        : (isGroup ? 'Leave Group?' : 'Delete Chat?');
+    let textDesc = type === 'clear'
+        ? 'This hides the conversation from your view only. The other side still sees it.'
+        : (isGroup ? 'You will leave this group chat.' : 'The chat will be removed from your list. The other party still has it.');
 
     Swal.fire({
         title: titleText,
@@ -503,8 +566,14 @@ function confirmAction(type) {
                 .then(data => {
                     if (data.status === 'success') {
                         if (type === 'clear') {
+                            // SOFT DELETE for current user only.
+                            // Keep chat box open, just refresh content to reflect cleared_at cutoff.
                             loadMessages(id, chatType);
+                            loadProfileMedia(id, chatType);
+                            // Do NOT call loadUsers() here — the contact stays in the list
+                            // because deleted_at is NOT set by clear_chat.
                         } else {
+                            // delete_chat: hide chat for current user only.
                             document.getElementById('mainChatArea').style.display = 'none';
                             document.getElementById('emptyChatArea').style.display = 'flex';
                             sessionStorage.removeItem('lastActiveChatId');
@@ -554,7 +623,11 @@ function loadProfileDetails(id, type) {
                     membersHTML = '<div style="padding: 12px; background: #f3f4f6; border-radius: 8px;">No members</div>';
                 }
                 let addBtnHTML = `<button onclick="openAddMemberModal()" style="margin-top: 15px; width: 100%; padding: 10px; border-radius: 8px; border: 1px dashed #1e3a8a; background: transparent; color: #1e3a8a; cursor: pointer; font-weight: 600; transition: 0.2s;"><i class="fas fa-user-plus" style="margin-right: 6px;"></i> Add Member</button>`;
-                list.innerHTML = membersHTML + addBtnHTML;
+                if (window.myRole === 'Admin') {
+                    list.innerHTML = membersHTML + addBtnHTML;
+                } else {
+                    list.innerHTML = membersHTML;
+                }
             }
         });
 }
@@ -583,8 +656,8 @@ function closeAddMemberModal() { document.getElementById('addMemberModal').class
 
 function switchAddMemberTab(role) {
     currentAddTab = role;
-    if(document.getElementById('tabAddAdmin')) document.getElementById('tabAddAdmin').classList.toggle('active', role === 'Admin');
-    if(document.getElementById('tabAddCustomer')) document.getElementById('tabAddCustomer').classList.toggle('active', role === 'Customer');
+    document.getElementById('tabAddAdmin').classList.toggle('active', role === 'Admin');
+    document.getElementById('tabAddCustomer').classList.toggle('active', role === 'Customer');
     renderAddMemberDirectory();
 }
 
@@ -596,7 +669,6 @@ function toggleAddMember(cb) {
 function renderAddMemberDirectory() {
     let list = document.getElementById('addMembersList');
     list.innerHTML = '';
-    
     let filtered = addMemberUsers.filter(u => u.user_role === currentAddTab);
 
     if (filtered.length === 0) {

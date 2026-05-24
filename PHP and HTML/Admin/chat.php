@@ -11,19 +11,108 @@ mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `chat_groups` (`id` int(11) NOT 
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `chat_group_members` (`group_id` int(11) NOT NULL, `user_id` int(11) NOT NULL, PRIMARY KEY (`group_id`, `user_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `group_messages` (`id` int(11) NOT NULL AUTO_INCREMENT, `group_id` int(11) NOT NULL, `sender_id` int(11) NOT NULL, `message` text, `file_path` varchar(255), `created_at` datetime NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `messages` (`id` int(11) NOT NULL AUTO_INCREMENT, `sender_id` int(11) NOT NULL, `receiver_id` int(11) NOT NULL, `message` text DEFAULT NULL, `file_path` varchar(255) DEFAULT NULL, `created_at` datetime NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+mysqli_query($conn, "ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read TINYINT(1) DEFAULT 0");
+mysqli_query($conn, "ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS is_read TINYINT(1) DEFAULT 0");
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `muted_chats` (
+    `user_id` INT NOT NULL,
+    `muted_target_id` INT NOT NULL,
+    `chat_type` VARCHAR(10) NOT NULL,
+    PRIMARY KEY (`user_id`, `muted_target_id`, `chat_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `chat_state` (
+    `user_id` INT NOT NULL,
+    `target_id` INT NOT NULL,
+    `chat_type` VARCHAR(10) NOT NULL,
+    `cleared_at` DATETIME DEFAULT NULL,
+    `deleted_at` DATETIME DEFAULT NULL,
+    PRIMARY KEY (`user_id`, `target_id`, `chat_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
 $action = isset($_POST['action']) ? $_POST['action'] : '';
+function safe_chat_type($t)
+{
+    return ($t === 'group') ? 'group' : 'user';
+}
 
 if ($action !== '') {
+
     if ($action == 'fetch_users') {
-        $sql_users = "SELECT DISTINCT u.user_id, u.user_name, u.user_phone, u.user_avatar FROM users u JOIN messages m ON (u.user_id = m.sender_id OR u.user_id = m.receiver_id) WHERE u.user_id != $my_id AND (m.sender_id = $my_id OR m.receiver_id = $my_id)";
+        $sql_users = "SELECT DISTINCT u.user_id, u.user_name, u.user_phone, u.user_avatar,
+                (SELECT COUNT(*) FROM messages
+                 WHERE sender_id = u.user_id
+                   AND receiver_id = $my_id
+                   AND (is_read = 0 OR is_read IS NULL)
+                   AND created_at > IFNULL(
+                        (SELECT cleared_at FROM chat_state
+                         WHERE user_id = $my_id AND target_id = u.user_id AND chat_type = 'user'),
+                        '1970-01-01 00:00:00'
+                   )
+                ) AS unread_count,
+                CASE WHEN mc.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_muted
+            FROM users u
+            JOIN messages m ON (u.user_id = m.sender_id OR u.user_id = m.receiver_id)
+            LEFT JOIN muted_chats mc
+                ON mc.user_id = $my_id
+               AND mc.muted_target_id = u.user_id
+               AND mc.chat_type = 'user'
+            LEFT JOIN chat_state cs
+                ON cs.user_id = $my_id
+               AND cs.target_id = u.user_id
+               AND cs.chat_type = 'user'
+            WHERE u.user_id != $my_id
+              AND (m.sender_id = $my_id OR m.receiver_id = $my_id)
+              AND (cs.deleted_at IS NULL OR m.created_at > cs.deleted_at)";
         $res_users = mysqli_query($conn, $sql_users);
         $users = [];
         if ($res_users)
             while ($row = mysqli_fetch_assoc($res_users))
                 $users[] = $row;
+$sql_groups = "SELECT g.id as group_id, g.name as group_name,
 
-        $sql_groups = "SELECT g.id as group_id, g.name as group_name FROM chat_groups g JOIN chat_group_members gm ON g.id = gm.group_id WHERE gm.user_id = $my_id";
+(
+SELECT COUNT(*)
+
+FROM group_messages gm2
+
+WHERE gm2.group_id=g.id
+
+AND gm2.sender_id!=$my_id
+
+AND (
+gm2.is_read=0
+OR gm2.is_read IS NULL
+)
+
+AND gm2.created_at>
+
+IFNULL(
+(
+SELECT cleared_at
+FROM chat_state
+WHERE user_id=$my_id
+AND target_id=g.id
+AND chat_type='group'
+),
+'1970-01-01'
+)
+
+)
+
+as unread_count,
+
+CASE WHEN mc.user_id IS NOT NULL THEN 1 ELSE 0 END as is_muted
+
+FROM chat_groups g
+
+JOIN chat_group_members gm
+ON g.id=gm.group_id
+
+LEFT JOIN muted_chats mc
+ON mc.user_id=$my_id
+AND mc.muted_target_id=g.id
+AND mc.chat_type='group'
+
+WHERE gm.user_id=$my_id";
         $res_groups = mysqli_query($conn, $sql_groups);
         $groups = [];
         if ($res_groups)
@@ -47,15 +136,34 @@ if ($action !== '') {
 
     if ($action == 'fetch_messages') {
         $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
-        $chat_type = isset($_POST['chat_type']) ? $_POST['chat_type'] : 'user';
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
+
         if ($chat_type === 'user') {
             mysqli_query($conn, "UPDATE messages SET is_read = 1 WHERE sender_id = $other_id AND receiver_id = $my_id AND is_read = 0");
         }
+
         $msgs = [];
         if ($chat_type === 'group') {
-            $sql = "SELECT m.*, u.user_name, u.user_avatar FROM group_messages m JOIN users u ON m.sender_id = u.user_id WHERE m.group_id = $other_id ORDER BY m.created_at ASC";
+ mysqli_query(
+        $conn,
+        "UPDATE group_messages
+        SET is_read = 1
+        WHERE group_id = $other_id
+        AND sender_id != $my_id
+        AND (is_read = 0 OR is_read IS NULL)"
+    );
+
+    $sql = "SELECT  gm.*, u.user_name FROM group_messages gm LEFT JOIN users u ON gm.sender_id = u.user_id WHERE gm.group_id = $other_id AND gm.created_at > IFNULL((SELECT cleared_at FROM chat_state WHERE user_id=$my_id AND target_id=$other_id AND chat_type='group'),'1970-01-01 00:00:00') ORDER BY gm.created_at ASC";
         } else {
-            $sql = "SELECT * FROM messages WHERE (sender_id = $my_id AND receiver_id = $other_id) OR (sender_id = $other_id AND receiver_id = $my_id) ORDER BY created_at ASC";
+            $sql = "SELECT * FROM messages
+                    WHERE ((sender_id = $my_id AND receiver_id = $other_id)
+                        OR (sender_id = $other_id AND receiver_id = $my_id))
+                      AND created_at > IFNULL(
+                            (SELECT cleared_at FROM chat_state
+                             WHERE user_id = $my_id AND target_id = $other_id AND chat_type = 'user'),
+                            '1970-01-01 00:00:00'
+                      )
+                    ORDER BY created_at ASC";
         }
 
         $result = mysqli_query($conn, $sql);
@@ -68,12 +176,29 @@ if ($action !== '') {
 
     if ($action == 'fetch_shared_media') {
         $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
-        $chat_type = isset($_POST['chat_type']) ? $_POST['chat_type'] : 'user';
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
 
         if ($chat_type === 'group') {
-            $sql = "SELECT file_path FROM group_messages WHERE group_id = $other_id AND file_path IS NOT NULL AND file_path != '' ORDER BY created_at DESC";
+            $sql = "SELECT file_path FROM group_messages
+                    WHERE group_id = $other_id
+                      AND file_path IS NOT NULL AND file_path != ''
+                      AND created_at > IFNULL(
+                            (SELECT cleared_at FROM chat_state
+                             WHERE user_id = $my_id AND target_id = $other_id AND chat_type = 'group'),
+                            '1970-01-01 00:00:00'
+                      )
+                    ORDER BY created_at DESC";
         } else {
-            $sql = "SELECT file_path FROM messages WHERE ((sender_id = $my_id AND receiver_id = $other_id) OR (sender_id = $other_id AND receiver_id = $my_id)) AND file_path IS NOT NULL AND file_path != '' ORDER BY created_at DESC";
+            $sql = "SELECT file_path FROM messages
+                    WHERE ((sender_id = $my_id AND receiver_id = $other_id)
+                        OR (sender_id = $other_id AND receiver_id = $my_id))
+                      AND file_path IS NOT NULL AND file_path != ''
+                      AND created_at > IFNULL(
+                            (SELECT cleared_at FROM chat_state
+                             WHERE user_id = $my_id AND target_id = $other_id AND chat_type = 'user'),
+                            '1970-01-01 00:00:00'
+                      )
+                    ORDER BY created_at DESC";
         }
 
         $result = mysqli_query($conn, $sql);
@@ -87,7 +212,7 @@ if ($action !== '') {
 
     if ($action == 'fetch_profile_details') {
         $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
-        $chat_type = isset($_POST['chat_type']) ? $_POST['chat_type'] : 'user';
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
 
         if ($chat_type === 'user') {
             $sql = "SELECT g.name FROM chat_groups g JOIN chat_group_members m1 ON g.id = m1.group_id JOIN chat_group_members m2 ON g.id = m2.group_id WHERE m1.user_id = $my_id AND m2.user_id = $other_id";
@@ -111,7 +236,7 @@ if ($action !== '') {
 
     if ($action == 'send_message') {
         $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
-        $chat_type = isset($_POST['chat_type']) ? $_POST['chat_type'] : 'user';
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
         $msg = mysqli_real_escape_string($conn, $_POST['message']);
 
         $file_paths = [];
@@ -193,8 +318,8 @@ if ($action !== '') {
 
     if ($action == 'toggle_mute') {
         $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
-        $chat_type = isset($_POST['chat_type']) ? $_POST['chat_type'] : 'user';
-        $is_muted = $_POST['is_muted']; // 'true' or 'false'
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
+        $is_muted = $_POST['is_muted']; 
 
         if ($is_muted === 'true') {
             mysqli_query($conn, "INSERT IGNORE INTO muted_chats (user_id, muted_target_id, chat_type) VALUES ($my_id, $other_id, '$chat_type')");
@@ -206,20 +331,31 @@ if ($action !== '') {
         exit();
     }
 
-    if ($action == 'clear_chat' || $action == 'delete_chat') {
+    if ($action == 'clear_chat') {
         $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
-        $chat_type = isset($_POST['chat_type']) ? $_POST['chat_type'] : 'user';
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
+
+        mysqli_query($conn, "INSERT INTO chat_state (user_id, target_id, chat_type, cleared_at)
+            VALUES ($my_id, $other_id, '$chat_type', NOW())
+            ON DUPLICATE KEY UPDATE cleared_at = NOW()");
+
+        echo json_encode(['status' => 'success']);
+        exit();
+    }
+
+    if ($action == 'delete_chat') {
+        $other_id = isset($_POST['other_id']) ? (int) $_POST['other_id'] : 0;
+        $chat_type = safe_chat_type($_POST['chat_type'] ?? 'user');
 
         if ($chat_type === 'group') {
-            if ($action == 'delete_chat') {
-                mysqli_query($conn, "DELETE FROM chat_group_members WHERE group_id = $other_id AND user_id = $my_id");
-            } else if ($action == 'clear_chat') {
-                mysqli_query($conn, "DELETE FROM group_messages WHERE group_id = $other_id");
-            }
+            mysqli_query($conn, "DELETE FROM chat_group_members WHERE group_id = $other_id AND user_id = $my_id");
+            mysqli_query($conn, "DELETE FROM chat_state WHERE user_id = $my_id AND target_id = $other_id AND chat_type = 'group'");
         } else {
-            $sql = "DELETE FROM messages WHERE (sender_id = $my_id AND receiver_id = $other_id) OR (sender_id = $other_id AND receiver_id = $my_id)";
-            mysqli_query($conn, $sql);
+            mysqli_query($conn, "INSERT INTO chat_state (user_id, target_id, chat_type, cleared_at, deleted_at)
+                VALUES ($my_id, $other_id, 'user', NOW(), NOW())
+                ON DUPLICATE KEY UPDATE cleared_at = NOW(), deleted_at = NOW()");
         }
+
         echo json_encode(['status' => 'success']);
         exit();
     }
@@ -591,7 +727,7 @@ if ($action !== '') {
                     </div>
                     <div class="action-icons" style="display:flex; gap: 15px; align-items: center;">
                         <a href="javascript:void(0)" onclick="event.stopPropagation(); dismissNotification()"
-                            title="Dismiss Unread"><i id="notifBellIcon" class="fas fa-bell"
+                            title="Mute/Unmute Notifications"><i id="notifBellIcon" class="fas fa-bell"
                                 style="color: #f59e0b; font-size: 16px;"></i></a>
                         <a href="javascript:void(0)" onclick="event.stopPropagation(); confirmAction('clear')"
                             title="Clear Messages"><i class="fas fa-eraser"
@@ -640,7 +776,6 @@ if ($action !== '') {
                     <div style="text-align: left; margin-top: 24px;">
                         <h4 style="font-size: 14px; color: #4b5563; margin-bottom: 10px;">Media</h4>
                         <div class="media-grid" id="profileMediaGrid"></div>
-
                         <h4 style="font-size: 14px; color: #4b5563; margin-top: 15px; margin-bottom: 10px;">Docs</h4>
                         <div id="profileDocsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
                     </div>
@@ -649,8 +784,7 @@ if ($action !== '') {
                             Groups in common</h4>
                         <div id="profileDynamicList"
                             style="padding: 12px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280;">
-                            No data available.
-                        </div>
+                            No data available.</div>
                     </div>
                 </div>
             </div>
@@ -690,7 +824,6 @@ if ($action !== '') {
                 </div>
                 <input type="text" id="groupNameInput" class="form-control" placeholder="Group Name (e.g. Project Team)"
                     style="margin-bottom: 15px;">
-
                 <div class="chat-tabs" style="gap: 15px;">
                     <button class="chat-tab-btn active" id="tabGroupAdmin" onclick="switchGroupTab('Admin')"
                         style="flex:1; border-radius: 8px;">Admins</button>
@@ -698,9 +831,7 @@ if ($action !== '') {
                         style="flex:1; border-radius: 8px;">Customers</button>
                 </div>
             </div>
-
             <div id="groupMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
-
             <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                 <button class="btn-add-blue" style="width: 100%; justify-content: center;"
                     onclick="submitCreateGroup()">Create Group</button>
