@@ -136,8 +136,8 @@ if (isset($conn) && $current_user_id > 0) {
                         class="<?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">Home</a></li>
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/cars.php"
                         class="<?= basename($_SERVER['PHP_SELF']) == 'cars.php' ? 'active' : '' ?>">Cars</a></li>
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/booking.php"
-                        class="<?= basename($_SERVER['PHP_SELF']) == 'booking.php' ? 'active' : '' ?>">Status</a></li>
+                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/view_status.php"
+                        class="<?= basename($_SERVER['PHP_SELF']) == 'view_status.php' ? 'active' : '' ?>">Status</a></li>
                 <li>
                     <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/chat.php" class="nav-chat-link <?= basename($_SERVER['PHP_SELF']) == 'chat.php' ? 'active' : '' ?>">
                         Chat
