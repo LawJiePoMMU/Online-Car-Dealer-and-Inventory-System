@@ -2,15 +2,15 @@
 session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
-require '../Config/database.php';
+require 'database.php';
 
 // ======================================================
 // SECURITY CHECK
 // ======================================================
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: Auth/login.php");
-exit();
+    header("Location: login.php");
+    exit();
 }
 
 $user_id = $_SESSION['user_id'];
