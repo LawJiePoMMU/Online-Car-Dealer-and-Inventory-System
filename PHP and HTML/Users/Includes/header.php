@@ -1,53 +1,7 @@
 <?php
+// 确保 session 已经启动 (这样才能判断用户有没有登录)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
-}
-
-$current_user_id = $_SESSION['id'] ?? $_SESSION['user_id'] ?? 0;
-$unread_count = 0;
-$chat_unread_count = 0;
-
-if (isset($conn) && $current_user_id > 0) {
-    $chat_stmt = $conn->prepare("
-        SELECT COUNT(*) 
-        FROM messages m 
-        WHERE m.receiver_id = ? 
-        AND m.is_read = 0 
-        AND m.sender_id NOT IN (
-            SELECT muted_target_id FROM muted_chats WHERE user_id = ? AND chat_type = 'user'
-        )
-    ");
-    $chat_stmt->bind_param("ii", $current_user_id, $current_user_id);
-    $chat_stmt->execute();
-    $chat_stmt->bind_result($chat_unread_count);
-    $chat_stmt->fetch();
-    $chat_stmt->close();
-
-    $group_unread_count = 0;
-    $group_stmt = $conn->prepare("
-        SELECT COUNT(*)
-        FROM group_messages gm
-        JOIN chat_group_members cgm ON gm.group_id = cgm.group_id
-        WHERE cgm.user_id = ?
-          AND gm.sender_id != ?
-          AND (gm.is_read = 0 OR gm.is_read IS NULL)
-          AND gm.group_id NOT IN (
-              SELECT muted_target_id FROM muted_chats 
-              WHERE user_id = ? AND chat_type = 'group'
-          )
-          AND gm.created_at > IFNULL(
-              (SELECT cleared_at FROM chat_state 
-               WHERE user_id = ? AND target_id = gm.group_id AND chat_type = 'group'),
-              '1970-01-01 00:00:00'
-          )
-    ");
-    $group_stmt->bind_param("iiii", $current_user_id, $current_user_id, $current_user_id, $current_user_id);
-    $group_stmt->execute();
-    $group_stmt->bind_result($group_unread_count);
-    $group_stmt->fetch();
-    $group_stmt->close();
-
-    $chat_unread_count += $group_unread_count;
 }
 ?>
 <!DOCTYPE html>
@@ -60,61 +14,7 @@ if (isset($conn) && $current_user_id > 0) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/cus.css?v=<?php echo time(); ?>">
-<<<<<<< HEAD
 </head>
-=======
-    <style>
-        .nav-links a {
-            position: relative;
-            display: inline-block;
-            padding: 8px 4px;
-            color: #374151;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 0;
-            height: 2px;
-            background: #111827;
-            transition: width 0.25s ease;
-        }
-
-        .nav-links a:hover {
-            color: #111827;
-        }
-
-        .nav-links a:hover::after,
-        .nav-links a.active::after {
-            width: 100%;
-        }
-
-        .nav-links a.active {
-            color: #111827;
-            font-weight: 600;
-        }
-
-        .nav-chat-link {
-            position: relative;
-        }
-
-        .nav-chat-link.has-unread,
-        .nav-chat-link.has-unread span {
-            color: #ef4444 !important;
-            font-weight: 700;
-        }
-
-        .nav-chat-link.has-unread::after {
-            background: #ef4444;
-            width: 100%;
-        }
-    </style>
->>>>>>> 4d955ceccadf8ad947a3fbc672a6be8dc4365529
 
 <body>
 
@@ -125,10 +25,9 @@ if (isset($conn) && $current_user_id > 0) {
                 CarDealer</a>
 
             <ul class="nav-links">
-<<<<<<< HEAD
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php">Home</a></li>
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/cars.php">Cars</a></li>
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/view_status.php">Booking Status</a></li>
+                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/booking.php">Booking</a></li>
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/chat.php">Chat</a></li>
             </ul>
 
@@ -139,25 +38,6 @@ if (isset($conn) && $current_user_id > 0) {
                     && isset($_SESSION["role"])             /* 修复：改为 role */
                     && $_SESSION["role"] === "Customer"     /* 修复：改为 role */
                 ): ?>
-=======
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php"
-                        class="<?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">Home</a></li>
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/cars.php"
-                        class="<?= basename($_SERVER['PHP_SELF']) == 'cars.php' ? 'active' : '' ?>">Cars</a></li>
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/booking.php"
-                        class="<?= basename($_SERVER['PHP_SELF']) == 'booking.php' ? 'active' : '' ?>">Status</a></li>
-                <li>
-                    <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/chat.php" class="nav-chat-link 
-               <?= basename($_SERVER['PHP_SELF']) == 'chat.php' ? 'active' : '' ?>
-               <?= $chat_unread_count > 0 ? 'has-unread' : '' ?>">
-                        <span>Chat</span>
-                    </a>
-                </li>
-            </ul>
-
-            <div class="nav-actions">
-                <?php if (isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true): ?>
->>>>>>> 4d955ceccadf8ad947a3fbc672a6be8dc4365529
 
                     <div class="user-menu">
                         <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/wishlist.php"
