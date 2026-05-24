@@ -2,6 +2,12 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// 🌟 关键就在这里：引入数据库连接！
+// 注意：请根据你当前文件的实际位置，修改 database.php 的路径。
+// 如果你的 cars.php 和 Includes 文件夹在同一层，可能是 "../Config/database.php" 或者 "Config/database.php"
+require_once "../Config/database.php"; 
+
 include 'Includes/header.php';
 ?>
 
