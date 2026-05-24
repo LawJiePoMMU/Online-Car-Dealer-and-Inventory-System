@@ -25,6 +25,32 @@ if (isset($conn) && $current_user_id > 0) {
     $chat_stmt->bind_result($chat_unread_count);
     $chat_stmt->fetch();
     $chat_stmt->close();
+
+    $group_unread_count = 0;
+    $group_stmt = $conn->prepare("
+        SELECT COUNT(*)
+        FROM group_messages gm
+        JOIN chat_group_members cgm ON gm.group_id = cgm.group_id
+        WHERE cgm.user_id = ?
+          AND gm.sender_id != ?
+          AND (gm.is_read = 0 OR gm.is_read IS NULL)
+          AND gm.group_id NOT IN (
+              SELECT muted_target_id FROM muted_chats 
+              WHERE user_id = ? AND chat_type = 'group'
+          )
+          AND gm.created_at > IFNULL(
+              (SELECT cleared_at FROM chat_state 
+               WHERE user_id = ? AND target_id = gm.group_id AND chat_type = 'group'),
+              '1970-01-01 00:00:00'
+          )
+    ");
+    $group_stmt->bind_param("iiii", $current_user_id, $current_user_id, $current_user_id, $current_user_id);
+    $group_stmt->execute();
+    $group_stmt->bind_result($group_unread_count);
+    $group_stmt->fetch();
+    $group_stmt->close();
+
+    $chat_unread_count += $group_unread_count;
 }
 
 $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapsed'] === 'true';
@@ -191,10 +217,10 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
         white-space: nowrap;
     }
 
-    #mySidebar.collapsed .sidebar-menu a span {
-        opacity: 0;
-        width: 0;
-    }
+#mySidebar.collapsed .sidebar-menu a > span {
+    opacity: 0;
+    width: 0;
+}
 
     #mySidebar.collapsed .sidebar-menu a {
         justify-content: center;
@@ -320,6 +346,29 @@ $is_collapsed = isset($_COOKIE['sidebarCollapsed']) && $_COOKIE['sidebarCollapse
         margin: 0 8px;
         width: calc(100% - 16px);
     }
+
+#mySidebar.collapsed .sb-nav-link {
+    gap: 0;
+}
+
+#mySidebar.collapsed .sb-label {
+    display: none;
+}
+
+#mySidebar.collapsed .sb-icon-wrap .sb-red-dot {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    width: 10px !important;
+    height: 10px !important;
+    position: absolute !important;
+    top: -2px !important;
+    right: -2px !important;
+    background-color: #ef4444 !important;
+    border-radius: 50% !important;
+    border: 2px solid #111827 !important;
+    z-index: 999 !important;
+}
 </style>
 
 <aside class="sidebar <?= $is_collapsed ? 'collapsed' : '' ?>" id="mySidebar">

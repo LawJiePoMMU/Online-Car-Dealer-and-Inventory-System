@@ -10,8 +10,7 @@ require '../Config/database.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: Auth/login.php");
-exit();
-    
+    exit();
 }
 
 $user_id = intval($_SESSION['user_id']);

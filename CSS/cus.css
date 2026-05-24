@@ -1139,3 +1139,22 @@ body:has(.auth-wrapper) .navbar {
     .search-sort-row { flex-direction: column; align-items: stretch; }
     .checkbox-list { flex-direction: row; flex-wrap: wrap; }
 }
+
+/* Container for icon + badge */
+.nav-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* The red dot style */
+.nav-red-dot {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    background-color: #ef4444;
+    border-radius: 50%;
+    border: 2px solid #ffffff; /* Matches background color behind header */
+}

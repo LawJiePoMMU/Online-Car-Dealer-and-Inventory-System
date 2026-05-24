@@ -9,8 +9,9 @@ require '../Config/database.php';
 // ======================================================
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: Auth/login.php");
-exit();
+    header("Location:Auth/login.php");
+
+    exit();
 }
 
 $user_id = $_SESSION['user_id'];
