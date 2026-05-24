@@ -8,13 +8,21 @@ require '../Config/database.php';
 // SECURITY CHECK
 // ======================================================
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location:Auth/login.php");
+if (
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
 
+    header("Location:Auth/login.php");
     exit();
+
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
 
 // ======================================================
 // VALIDATE VEHICLE ID
@@ -37,6 +45,7 @@ if ($car_id <= 0) {
 $car_sql = "
 SELECT
     c.*,
+    cs.car_status_price,
 
     (
         SELECT car_image_url
@@ -46,6 +55,10 @@ SELECT
     ) AS car_image
 
 FROM cars c
+
+LEFT JOIN car_status cs
+ON cs.car_id = c.car_id
+
 WHERE c.car_id = ?
 LIMIT 1
 ";
@@ -237,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'car_model'   => $car['car_model'],
             'car_year'    => $car['car_year'],
             'car_origin'  => $car['car_origin'],
-            'car_price'   => $car['car_price'],
+            'car_price'   => $car['car_status_price'],
             'car_variant' => $car_variant,
             'car_image'   => $car['car_image'] ?? ''
         ];
@@ -528,7 +541,7 @@ body{
                 </p>
 
                 <p>
-                    RM <?php echo number_format($car['car_price'], 2); ?>
+                    RM <?php echo number_format($car['car_status_price'], 2); ?>
                 </p>
 
             </div>

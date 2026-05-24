@@ -2,16 +2,27 @@
 session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
-require 'database.php';
+require '../Config/database.php';
 
 // ======================================================
 // SECURITY CHECK
 // ======================================================
 
-if (!isset($_SESSION['user_id'])) {
+if (
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
+
     header("Location: login.php");
     exit();
+
 }
+
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
 
 if (
     !isset($_SESSION['reservation_id']) ||
@@ -26,7 +37,7 @@ if ($reservation_id <= 0) {
     die("Invalid reservation reference.");
 }
 
-$user_id = $_SESSION['user_id'];
+
 
 // ======================================================
 // FETCH RESERVATION

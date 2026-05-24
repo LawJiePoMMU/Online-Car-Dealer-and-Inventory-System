@@ -8,14 +8,21 @@ require '../Config/database.php';
 // SESSION SECURITY
 // ======================================================
 
-if (!isset($_SESSION['user_id'])) {
+if (
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
 
     header("Location: Auth/login.php");
     exit();
 
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
 
 // ======================================================
 // VALIDATE BOOKING ID

@@ -8,12 +8,21 @@ require '../Config/database.php';
 // SECURITY CHECK
 // ======================================================
 
-if (!isset($_SESSION['user_id'])) {
+if (
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
+
     header("Location: Auth/login.php");
     exit();
+
 }
 
-$user_id = intval($_SESSION['user_id']);
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
 
 // ======================================================
 // FETCH USER
@@ -69,9 +78,17 @@ if ($car_id <= 0) {
 // ======================================================
 
 $car_sql = "
-SELECT *
-FROM cars
-WHERE car_id = ?
+SELECT
+    c.*,
+
+    cs.car_status_price
+
+FROM cars c
+
+LEFT JOIN car_status cs
+ON cs.car_id = c.car_id
+
+WHERE c.car_id = ?
 LIMIT 1
 ";
 
@@ -179,7 +196,7 @@ if (($car['car_origin'] ?? '') === 'Used Car') {
 // ======================================================
 
 $car_price =
-    floatval($car['car_price'] ?? 0);
+    floatval($car['car_status_price'] ?? 0);
 
 $insurance_amount = 3000.00;
 $booking_fee      = 500.00;
@@ -611,7 +628,68 @@ if (
         // ==============================================
         // REDIRECT TO PAYMENT
         // ==============================================
+// ==============================================
+// CREATE BOOKING RECORD
+// ==============================================
 
+$insert_booking_sql = "
+INSERT INTO bookings (
+
+    user_id,
+    car_id,
+    booking_status
+
+)
+VALUES (
+
+    ?,
+    ?,
+    'Pending Payment'
+
+)
+";
+
+$insert_booking_stmt =
+mysqli_prepare(
+    $conn,
+    $insert_booking_sql
+);
+
+if (!$insert_booking_stmt) {
+
+    die(
+        'Booking Prepare Failed: '
+        . mysqli_error($conn)
+    );
+
+}
+
+mysqli_stmt_bind_param(
+    $insert_booking_stmt,
+    "ii",
+    $user_id,
+    $car_id
+);
+
+$booking_execute =
+mysqli_stmt_execute(
+    $insert_booking_stmt
+);
+
+if (!$booking_execute) {
+
+    die(
+        'Booking Insert Failed: '
+        . mysqli_error($conn)
+    );
+
+}
+
+$_SESSION['booking_id'] =
+mysqli_insert_id($conn);
+
+$_SESSION['pay_source'] =
+'booking';
         header("Location: payment.php");
         exit();
     }
