@@ -1,9 +1,12 @@
 <?php
+// 1. 设置 Customer 专属的 Session 名称（必须放在 session_start 之前！）
+session_name("CustomerSession");
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 已经登录的话，跳回主页 (退两层到根目录)
+// 2. 已经登录的话，跳回主页 (退两层到根目录)
 if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true && isset($_SESSION["role"]) && strcasecmp($_SESSION["role"], "Customer") === 0){
     header("location: ../index.php");
     exit;
@@ -40,7 +43,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                             $_SESSION["loggedin"] = true;
                             $_SESSION["id"] = $db_id; 
                             $_SESSION["email"] = $db_email;
-                            $_SESSION["role"] = $db_role; // 这里存的是 "role"
+                            $_SESSION["role"] = $db_role; // 这里存的是 "Customer"
 
                             header("location: ../index.php");
                             exit;
