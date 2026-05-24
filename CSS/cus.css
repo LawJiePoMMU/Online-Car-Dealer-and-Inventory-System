@@ -1001,17 +1001,26 @@ body:has(.auth-wrapper) .navbar {
     gap: 20px;
 }
 
-/* --- 全新紧凑型卡片 --- */
 .pro-car-card {
-    background: #fff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    border: 1px solid #e2e8f0;
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none !important;
     display: flex;
     flex-direction: column;
+    height: 100%; /* 确保卡片填满 Grid 格子 */
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 12px;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.card-content {
+    flex-grow: 1; /* 让内容区域自动填充剩余空间 */
+    display: flex;
+    flex-direction: column;
+}
+
+.card-footer {
+    margin-top: auto; /* 这一行会让 Footer 永远被推到底部，实现高度对齐 */
 }
 
 .pro-car-card:hover {
@@ -1021,17 +1030,17 @@ body:has(.auth-wrapper) .navbar {
 
 /* 🔥 必须加 relative，里面的标签才能在内部定位 */
 .card-img-container {
-    position: relative; 
     width: 100%;
-    height: 160px; 
+    height: 200px; /* 或者你想要的高度 */
+    overflow: hidden;
+    position: relative;
+    border-radius: 16px;
 }
 
 .card-img-container img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    background: #f8fafc;
-    display: block;
+    object-fit: cover; /* 这一行最重要，它会强制图片填满且不拉伸 */
 }
 
 /* 🔥 NEW / USED 标签 (左下角) */
@@ -1086,14 +1095,6 @@ body:has(.auth-wrapper) .navbar {
     stroke-width: 2.5; /* 顺便把线条加粗一点点，让红心更明显更好看 */
 }
 
-/* 内容区紧凑化缩减 Padding */
-.card-content {
-    padding: 12px 15px; 
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
 .card-title {
     font-size: 15px; 
     font-weight: 800;
@@ -1129,18 +1130,6 @@ body:has(.auth-wrapper) .navbar {
 .spec-dot {
     color: #94a3b8;
     font-size: 12px;
-}
-
-.card-footer {
-    margin-top: auto;
-    border-top: none; /* 去掉横线 */
-    padding-top: 0; 
-    font-size: 13px;
-    color: #334155 !important;
-    display: flex;
-    align-items: center;
-    text-transform: capitalize;
-    font-weight: 600;
 }
 
 /* 响应式：屏幕太小时，Sidebar 变窄 */

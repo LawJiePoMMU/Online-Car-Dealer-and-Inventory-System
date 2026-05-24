@@ -13,8 +13,8 @@ if (session_status() === PHP_SESSION_NONE) {
     <title>Car Dealer</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/cus.css?v=<?php echo time(); ?>">
+</head>
 
 <body>
 
@@ -27,8 +27,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <ul class="nav-links">
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php">Home</a></li>
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/cars.php">Cars</a></li>
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/booking.php">Booking</a>
-                </li>
+                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/view_status.php">Booking Status</a></li>
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/chat.php">Chat</a></li>
             </ul>
 
@@ -36,8 +35,8 @@ if (session_status() === PHP_SESSION_NONE) {
                 <?php if (
                     isset($_SESSION["loggedin"])
                     && $_SESSION["loggedin"] === true
-                    && isset($_SESSION["user_role"])
-                    && $_SESSION["user_role"] === "Customer"
+                    && isset($_SESSION["role"])             /* 修复：改为 role */
+                    && $_SESSION["role"] === "Customer"     /* 修复：改为 role */
                 ): ?>
 
                     <div class="user-menu">
