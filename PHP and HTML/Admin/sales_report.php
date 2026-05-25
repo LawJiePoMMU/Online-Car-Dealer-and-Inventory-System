@@ -6,51 +6,75 @@ $year = isset($_GET['year']) ? (int) $_GET['year'] : date('Y');
 $month_condition = ($month === 'all') ? "" : "AND MONTH(b.created_at) = '" . (int) $month . "'";
 $kpi_query = mysqli_query($conn, "
 SELECT
-    COUNT(DISTINCT b.booking_id) as total_bookings,
-    COALESCE(SUM(dp.dp_amount),0) as total_downpayments,
-    COALESCE(SUM(mi.monthly_amount),0) as total_installments,
+    COUNT(b.booking_id) as total_bookings,
+    COALESCE(SUM(dp_totals.total_dp), 0) as total_downpayments,
+    COALESCE(SUM(mi_totals.total_mi), 0) as total_installments,
     (
-        COALESCE(SUM(dp.dp_amount),0)
-        +
-        COALESCE(SUM(mi.monthly_amount),0)
+        COALESCE(SUM(b.booking_fee), 0) +
+        COALESCE(SUM(dp_totals.total_dp), 0) +
+        COALESCE(SUM(mi_totals.total_mi), 0)
     ) as total_revenue
 FROM bookings b
-LEFT JOIN down_payments dp ON b.booking_id = dp.booking_id
-LEFT JOIN monthly_installments mi ON b.booking_id = mi.booking_id
+LEFT JOIN (
+    SELECT booking_id, SUM(dp_amount) as total_dp 
+    FROM down_payments 
+    GROUP BY booking_id
+) dp_totals ON b.booking_id = dp_totals.booking_id
+LEFT JOIN (
+    SELECT booking_id, SUM(monthly_amount) as total_mi 
+    FROM monthly_installments 
+    GROUP BY booking_id
+) mi_totals ON b.booking_id = mi_totals.booking_id
 WHERE YEAR(b.created_at) = '$year'
 $month_condition
 ");
 $kpi = mysqli_fetch_assoc($kpi_query);
 if ($month === 'all') {
     $trend_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    $trend_values = array_fill(0, 12, 0); 
+    $trend_values = array_fill(0, 12, 0);
     $trend_query = mysqli_query($conn, "
-        SELECT MONTH(created_at) as label_num, COALESCE(SUM(booking_fee),0) as revenue
-        FROM bookings
-        WHERE YEAR(created_at) = '$year'
-        GROUP BY MONTH(created_at)
+        SELECT 
+            MONTH(b.created_at) as label_num, 
+            (
+                COALESCE(SUM(b.booking_fee), 0) +
+                COALESCE(SUM(dp_totals.total_dp), 0) +
+                COALESCE(SUM(mi_totals.total_mi), 0)
+            ) as revenue
+        FROM bookings b
+        LEFT JOIN (SELECT booking_id, SUM(dp_amount) as total_dp FROM down_payments GROUP BY booking_id) dp_totals ON b.booking_id = dp_totals.booking_id
+        LEFT JOIN (SELECT booking_id, SUM(monthly_amount) as total_mi FROM monthly_installments GROUP BY booking_id) mi_totals ON b.booking_id = mi_totals.booking_id
+        WHERE YEAR(b.created_at) = '$year'
+        GROUP BY MONTH(b.created_at)
     ");
     while ($r = mysqli_fetch_assoc($trend_query)) {
-        $month_index = $r['label_num'] - 1; 
+        $month_index = $r['label_num'] - 1;
         $trend_values[$month_index] = $r['revenue'];
     }
 
 } else {
-    $days_in_month = cal_days_in_month(CAL_GREGORIAN, (int)$month, (int)$year);
+    $days_in_month = cal_days_in_month(CAL_GREGORIAN, (int) $month, (int) $year);
     $trend_labels = [];
-    $trend_values = array_fill(0, $days_in_month, 0); 
+    $trend_values = array_fill(0, $days_in_month, 0);
     for ($i = 1; $i <= $days_in_month; $i++) {
         $trend_labels[] = 'Day ' . $i;
     }
 
     $trend_query = mysqli_query($conn, "
-        SELECT DAY(created_at) as label_num, COALESCE(SUM(booking_fee),0) as revenue
-        FROM bookings
-        WHERE YEAR(created_at) = '$year' AND MONTH(created_at) = '$month'
-        GROUP BY DAY(created_at)
+        SELECT 
+            DAY(b.created_at) as label_num, 
+            (
+                COALESCE(SUM(b.booking_fee), 0) +
+                COALESCE(SUM(dp_totals.total_dp), 0) +
+                COALESCE(SUM(mi_totals.total_mi), 0)
+            ) as revenue
+        FROM bookings b
+        LEFT JOIN (SELECT booking_id, SUM(dp_amount) as total_dp FROM down_payments GROUP BY booking_id) dp_totals ON b.booking_id = dp_totals.booking_id
+        LEFT JOIN (SELECT booking_id, SUM(monthly_amount) as total_mi FROM monthly_installments GROUP BY booking_id) mi_totals ON b.booking_id = mi_totals.booking_id
+        WHERE YEAR(b.created_at) = '$year' AND MONTH(b.created_at) = '$month'
+        GROUP BY DAY(b.created_at)
     ");
     while ($r = mysqli_fetch_assoc($trend_query)) {
-        $day_index = $r['label_num'] - 1; 
+        $day_index = $r['label_num'] - 1;
         $trend_values[$day_index] = $r['revenue'];
     }
 }
@@ -375,6 +399,7 @@ LIMIT 5
         }
     </style>
 </head>
+
 <body>
 
     <?php include 'sidebar.php'; ?>

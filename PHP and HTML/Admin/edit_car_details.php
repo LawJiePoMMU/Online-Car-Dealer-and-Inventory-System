@@ -995,7 +995,7 @@ if (isset($_POST['save_all_details'])) {
                         </div>
                         <div class="form-group">
                             <label>Year</label>
-                            <input type="number" name="year" min="1985" max="2100" placeholder="1985" step="1"
+                            <input type="number" min="1985" max="2100" placeholder="1985" step="1"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="car_year"
                                 class="form-control" value="<?= htmlspecialchars($car['car_year']) ?>">
                         </div>

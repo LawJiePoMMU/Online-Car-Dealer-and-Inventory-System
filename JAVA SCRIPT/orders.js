@@ -45,53 +45,106 @@ function openModal(row, tab, sub_tab) {
     document.getElementById('detCarColor').textContent = row.car_color || '-';
     document.getElementById('detCarOrigin').textContent = row.car_origin || '-';
     document.getElementById('detCarYear').textContent = row.car_year || '-';
-    const carPrice = parseFloat(row.car_price || 0);
+
+    // 1. 安全解析價格 (修復價格消失 Bug)
+    let rawPrice = String(row.car_price || '0').replace(/[^0-9.]/g, '');
+    const carPrice = parseFloat(rawPrice) || 0;
     const bookFee = parseFloat(row.booking_fee || 0);
     const dpAmt = parseFloat(row.dp_amount || 0);
+    const insFee = parseFloat(row.insurance_fee || 0);
+    const plateFee = parseFloat(row.plate_registration_fee || 0);
+    const extraFees = insFee + plateFee;
+
+    // 2. 鎖定歷史利率 (修復新設定竄改舊訂單 Bug)
     const years = parseInt(row.installment_years || 9);
-    const loanRate = window.GLOBAL_LOAN_RATE || 3;
+    const loanRate = parseFloat(row.interest_rate) || window.GLOBAL_LOAN_RATE || 3;
 
-    document.getElementById('detPrice').textContent = 'RM ' + fmt(carPrice);
-    document.getElementById('detBookingFee').textContent = '- RM ' + fmt(bookFee);
-    document.getElementById('detYears').textContent = years;
-
-    let balance = carPrice - bookFee;
+    // 3. 動態渲染 Finance Box (修復 UI 顯示邏輯)
+    const financeBox = document.querySelector('.finance-box');
+    let financeHTML = '';
 
     if (isBooking || (isHistory && sub_tab === 'booking')) {
-        document.getElementById('rowDP').style.display = 'none';
-        document.getElementById('rowMonthly').style.display = 'none';
-        document.getElementById('lblBalanceText').textContent = 'Remaining Balance (尾款)';
-        document.getElementById('detBalance').textContent = 'RM ' + fmt(balance);
-        document.getElementById('detBalance').style.color = '#ef4444'; 
-    } 
-    else if (isDP || (isHistory && sub_tab === 'down_payment')) {
-        document.getElementById('rowDP').style.display = 'flex';
-        document.getElementById('rowMonthly').style.display = 'none';
-        document.getElementById('detDP').textContent = '- RM ' + fmt(dpAmt);
-        balance -= dpAmt;
-        document.getElementById('lblBalanceText').textContent = 'Remaining Balance (尾款)';
-        document.getElementById('detBalance').textContent = 'RM ' + fmt(balance);
-        document.getElementById('detBalance').style.color = '#ef4444'; 
-    } 
-    else {
-        document.getElementById('rowDP').style.display = 'flex';
-        document.getElementById('rowMonthly').style.display = 'flex';
-        document.getElementById('detDP').textContent = '- RM ' + fmt(dpAmt);
-        balance -= dpAmt;
-        document.getElementById('lblBalanceText').textContent = 'Total Loan Amount (總貸款額)';
-        document.getElementById('detBalance').textContent = 'RM ' + fmt(balance);
-        document.getElementById('detBalance').style.color = '#2563eb'; 
+        let balance = carPrice - bookFee;
+        financeHTML = `
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Car Price</span>
+                <span style="font-weight:700;color:#111827;font-size:15px;">RM ${fmt(carPrice)}</span>
+            </div>
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Booking Fee <span class="paid-badge" style="margin-left:8px;">PAID</span></span>
+                <span style="font-weight:600;color:#10b981;font-size:14px;">- RM ${fmt(bookFee)}</span>
+            </div>
+            <div class="finance-row total">
+                <span style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance (尾款)</span>
+                <span style="font-size:18px;font-weight:800;color:#ef4444;">RM ${fmt(balance)}</span>
+            </div>
+        `;
+    } else if (isDP || (isHistory && sub_tab === 'down_payment')) {
+        let totalPaid = dpAmt + extraFees;
+        let paidBadge = row.paid_at ? '<span class="paid-badge" style="margin-left:8px;">PAID</span>' : '<span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:8px;">UNPAID</span>';
 
+        financeHTML = `
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Down Payment</span>
+                <span style="font-weight:700;color:#111827;font-size:15px;">RM ${fmt(dpAmt)}</span>
+            </div>
+        `;
+        if (insFee > 0) {
+            financeHTML += `
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Insurance Fee</span>
+                <span style="font-weight:600;color:#6b7280;font-size:14px;">+ RM ${fmt(insFee)}</span>
+            </div>`;
+        }
+        if (plateFee > 0) {
+            financeHTML += `
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Plate Registration</span>
+                <span style="font-weight:600;color:#6b7280;font-size:14px;">+ RM ${fmt(plateFee)}</span>
+            </div>`;
+        }
+
+        financeHTML += `
+            <div class="finance-row total">
+                <span style="font-size:13px;font-weight:700;color:#111827;display:flex;align-items:center;">Total Paid ${paidBadge}</span>
+                <span style="font-size:18px;font-weight:800;color:#10b981;">RM ${fmt(totalPaid)}</span>
+            </div>
+        `;
+    } else {
+        let balance = carPrice - bookFee - dpAmt;
         const loan = Math.max(0, balance);
         const rateDec = loanRate / 100;
         const months = years * 12;
         const totalWithInt = loan * (1 + rateDec * years);
         const monthly = months > 0 ? (totalWithInt / months) : 0;
-        document.getElementById('detMonthly').textContent = 'RM ' + fmt(monthly);
-    }
 
+        financeHTML = `
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Car Price</span>
+                <span style="font-weight:700;color:#111827;font-size:15px;">RM ${fmt(carPrice)}</span>
+            </div>
+            <div class="finance-row">
+                <span style="color:#6b7280;font-weight:600;">Booking + DP Paid</span>
+                <span style="font-weight:600;color:#10b981;font-size:14px;">- RM ${fmt(bookFee + dpAmt)}</span>
+            </div>
+            <div class="finance-row total">
+                <span style="font-size:13px;font-weight:700;color:#111827;">Total Loan Amount</span>
+                <span style="font-size:18px;font-weight:800;color:#ef4444;">RM ${fmt(loan)}</span>
+            </div>
+            <div class="finance-row total" style="margin-top:10px; border-top:1px dashed #e5e7eb; padding-top:10px;">
+                <div>
+                    <span style="display:block;font-size:13px;font-weight:700;color:#2563eb;">Monthly Installment</span>
+                    <span style="font-size:11px;color:#9ca3af;">${years} Yrs @ ${loanRate}% P.A.</span>
+                </div>
+                <span style="font-size:22px;font-weight:800;color:#2563eb;">RM ${fmt(monthly)}</span>
+            </div>
+        `;
+    }
+    financeBox.innerHTML = financeHTML;
+
+    // 4. 僅在 Booking 階段顯示 4 大驗證文件
     const docsWrap = document.getElementById('docsWrap');
-    if (isBooking || isDP || (isHistory && (sub_tab === 'booking' || sub_tab === 'down_payment'))) {
+    if (isBooking || (isHistory && sub_tab === 'booking')) {
         docsWrap.style.display = 'block';
         window.currentCustomerDocs = {
             ic_url: row.ic_url || '',
@@ -114,20 +167,22 @@ function openModal(row, tab, sub_tab) {
                 txt.style.color = '#ef4444';
             }
         });
-        
         const docFrame = document.getElementById('frameCustomerDoc');
-        if(docFrame) { docFrame.src = ''; docFrame.style.display = 'none'; }
+        if (docFrame) { docFrame.src = ''; docFrame.style.display = 'none'; }
     } else {
         docsWrap.style.display = 'none';
     }
 
+    // 5. Down Payment UI 及 Approve 防呆機制
     const dpPanel = document.getElementById('dpPanel');
+    const btnApproveDP = document.getElementById('btnApproveDP');
+
     if (isDP || (isHistory && sub_tab === 'down_payment') || isMonthly || (isHistory && sub_tab === 'monthly_installment')) {
         dpPanel.style.display = 'block';
 
         window.currentCustomerDocs = window.currentCustomerDocs || {};
         window.currentCustomerDocs['insurance'] = row.insurance_pdf_url || '';
-        
+
         const btnIns = document.getElementById('btnViewInsurance');
         const txtIns = document.getElementById('statusTxt_insurance');
 
@@ -144,15 +199,34 @@ function openModal(row, tab, sub_tab) {
         let optText = '-';
         if (row.plate_option === 'new') optText = 'New Plate Registration';
         else if (row.plate_option === 'used') optText = 'Keep Used Car Plate';
-        else if (row.plate_option === 'custom') optText = 'Custom Plate Number';
         document.getElementById('detPlateOption').textContent = optText;
 
         const plateNumInput = document.getElementById('plateNumberInput');
         plateNumInput.value = row.plate_number || '';
         plateNumInput.readOnly = isReadonly;
         document.getElementById('btnSaveDPDetails').style.display = isReadonly ? 'none' : 'block';
+
+        // 防呆: 如果沒付錢，按鈕反灰且不能按
+        if (isDP) {
+            btnApproveDP.style.display = 'inline-block';
+            if (!row.paid_at) {
+                btnApproveDP.disabled = true;
+                btnApproveDP.style.background = '#9ca3af';
+                btnApproveDP.style.cursor = 'not-allowed';
+                btnApproveDP.textContent = 'Awaiting Payment...';
+            } else {
+                btnApproveDP.disabled = false;
+                btnApproveDP.style.background = '#10b981';
+                btnApproveDP.style.cursor = 'pointer';
+                btnApproveDP.textContent = 'Verify & Generate Loan';
+            }
+        } else {
+            btnApproveDP.style.display = 'none';
+        }
+
     } else {
         dpPanel.style.display = 'none';
+        btnApproveDP.style.display = 'none';
     }
 
     const reasonWrap = document.getElementById('reasonWrap');
@@ -172,12 +246,13 @@ function openModal(row, tab, sub_tab) {
     let statusLabel = row.booking_status || '-';
     if (isDP || (isHistory && sub_tab === 'down_payment')) statusLabel = row.dp_status || '-';
     if (isHistory && sub_tab === 'blacklist') statusLabel = 'Blacklisted';
+    
     document.getElementById('detStatus').textContent = statusLabel;
-    document.getElementById('detLoanTerm').textContent = years + ' Yrs @ ' + (window.GLOBAL_LOAN_RATE || 3) + '%';
+    document.getElementById('detLoanTerm').textContent = years + ' Yrs @ ' + loanRate + '%';
     document.getElementById('detCreatedAt').textContent = row.created_at ? new Date(row.created_at).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    
     document.getElementById('btnApproveBooking').style.display = isBooking ? 'inline-block' : 'none';
     document.getElementById('btnRejectBooking').style.display = isBooking ? 'inline-block' : 'none';
-    document.getElementById('btnApproveDP').style.display = isDP ? 'inline-block' : 'none';
     document.getElementById('btnRejectDP').style.display = isDP ? 'inline-block' : 'none';
 
     document.getElementById('splitModal').style.display = 'flex';
@@ -188,15 +263,15 @@ function closeModal() {
     currentRow = null;
 }
 
-window.viewCustomerDoc = function(key) {
+window.viewCustomerDoc = function (key) {
     const url = window.currentCustomerDocs[key];
     const frame = document.getElementById('frameCustomerDoc');
-    
+
     if (!url || url === 'NULL' || url === '#') {
         Toast.fire({ icon: 'info', title: 'Document not found.' });
         return;
     }
-    
+
     if (frame.src.includes(url) && frame.style.display === 'block') {
         frame.style.display = 'none';
     } else {
@@ -328,24 +403,24 @@ async function rejectBooking() {
 async function saveDPDetails() {
     if (!currentRow) return;
     const plateNum = document.getElementById('plateNumberInput').value.trim();
-    
-    const ok = await doAction({ 
-        action: 'save_dp_details', 
-        booking_id: currentRow.booking_id, 
-        plate_number: plateNum, 
+
+    const ok = await doAction({
+        action: 'save_dp_details',
+        booking_id: currentRow.booking_id,
+        plate_number: plateNum,
         plate_fee: 0
     }, true);
 
     if (ok) {
-        currentRow.plate_number = plateNum; 
+        currentRow.plate_number = plateNum;
     }
 }
 
 async function approveDP() {
     if (!currentRow) return;
-    if (!window.currentCustomerDocs['insurance'] || window.currentCustomerDocs['insurance'] === 'NULL') { 
-        Swal.fire({ icon: 'warning', title: 'Missing Cover Note', text: 'Cannot approve. Customer must upload the Insurance Cover Note.' }); 
-        return; 
+    if (!window.currentCustomerDocs['insurance'] || window.currentCustomerDocs['insurance'] === 'NULL') {
+        Swal.fire({ icon: 'warning', title: 'Missing Cover Note', text: 'Cannot approve. Customer must upload the Insurance Cover Note.' });
+        return;
     }
     const r = await Swal.fire({ title: 'Approve & Finalize?', text: 'Payment is verified. Generates monthly loan schedule.', icon: 'success', showCancelButton: true, confirmButtonText: 'Verify & Approve', confirmButtonColor: '#10b981' });
     if (r.isConfirmed) await doAction({ action: 'approve_dp', booking_id: currentRow.booking_id });
@@ -353,7 +428,7 @@ async function approveDP() {
 
 async function rejectDP() {
     if (!currentRow) return;
-    const { value: reason, isConfirmed } = await Swal.fire({ title: 'Reject DP?', text:'Transaction will be cancelled and sent to History.', input: 'textarea', inputPlaceholder: 'Reason...', inputValidator: v => !v && 'Reason is required', showCancelButton: true, confirmButtonText: 'Reject DP', confirmButtonColor: '#ef4444' });
+    const { value: reason, isConfirmed } = await Swal.fire({ title: 'Reject DP?', text: 'Transaction will be cancelled and sent to History.', input: 'textarea', inputPlaceholder: 'Reason...', inputValidator: v => !v && 'Reason is required', showCancelButton: true, confirmButtonText: 'Reject DP', confirmButtonColor: '#ef4444' });
     if (isConfirmed) await doAction({ action: 'reject_dp', booking_id: currentRow.booking_id, reason });
 }
 

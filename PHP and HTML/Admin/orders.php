@@ -165,7 +165,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $car_id = $b['car_id'];
                 $fee = (float) $b['booking_fee'];
 
-                // 移除保險文件
                 $dp_data = mysqli_fetch_assoc(mysqli_query($conn, "SELECT insurance_pdf_url FROM down_payments WHERE booking_id=$booking_id"));
                 if ($dp_data && !empty($dp_data['insurance_pdf_url']) && file_exists($dp_data['insurance_pdf_url'])) {
                     unlink($dp_data['insurance_pdf_url']);
@@ -220,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 mysqli_begin_transaction($conn);
                 mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW(), paid_at=NOW(), dp_receipt_number='$rcpt' WHERE booking_id=$booking_id");
-                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, receipt_number, payment_date) VALUES ('Down Payment', $booking_id, $dp_amt, 'Paid', '$rcpt', NOW())");
+                mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW() WHERE booking_id=$booking_id");
 
                 mysqli_query($conn, "DELETE FROM monthly_installments WHERE booking_id=$booking_id");
                 for ($i = 1; $i <= $months; $i++) {
@@ -314,7 +313,7 @@ $baseSelect = "
     cs.car_status_price AS car_price,
     (SELECT car_image_url FROM car_image WHERE car_id=c.car_id LIMIT 1) AS car_image,
     (SELECT color_name FROM car_inventory WHERE car_id=c.car_id ORDER BY inventory_id ASC LIMIT 1) AS car_color,
-    dp.id AS dp_id, dp.dp_amount, dp.dp_status, dp.dp_approved_at, dp.dp_created_at, dp.dp_reason, dp.insurance_pdf_url, dp.plate_number, dp.plate_option
+    dp.id AS dp_id, dp.dp_amount, dp.dp_status, dp.dp_approved_at, dp.dp_created_at, dp.dp_reason, dp.insurance_pdf_url, dp.plate_number, dp.plate_option, dp.insurance_fee, dp.plate_registration_fee, dp.paid_at
 ";
 
 if ($tab === 'booking') {
