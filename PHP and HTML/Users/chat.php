@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include '../Config/database.php';
 mysqli_query($conn, "ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read TINYINT(1) DEFAULT 0");
