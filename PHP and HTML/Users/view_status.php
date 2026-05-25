@@ -4,20 +4,9 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 require '../Config/database.php';
 
-<<<<<<< HEAD
 // ======================================================
 // SESSION CHECK
 // ======================================================
-=======
-// =====================================================
-// 1. SECURITY CHECK
-// =====================================================
-
-if (
-    !isset($_SESSION['user_id']) &&
-    !isset($_SESSION['id'])
-) {
->>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 if (
     !isset($_SESSION['loggedin']) ||
@@ -29,7 +18,6 @@ if (
     exit();
 }
 
-<<<<<<< HEAD
 $user_id = (int) $_SESSION['id'];
 $active_tab = $_GET['tab'] ?? 'bookings';
 if (!in_array($active_tab, ['bookings', 'reservations'])) {
@@ -39,16 +27,6 @@ if (!in_array($active_tab, ['bookings', 'reservations'])) {
 // ======================================================
 // FETCH BOOKINGS (with everything needed)
 // ======================================================
-=======
-$user_id = intval(
-    $_SESSION['user_id']
-    ?? $_SESSION['id']
-    ?? 0
-);
-// =====================================================
-// 2. FETCH BOOKINGS + LATEST PAYMENT
-// =====================================================
->>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 $bookings_sql = "
 SELECT

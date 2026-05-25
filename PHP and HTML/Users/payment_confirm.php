@@ -4,20 +4,9 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 require '../Config/database.php';
 
-<<<<<<< HEAD
 // ======================================================
 // SESSION CHECK
 // ======================================================
-=======
-// =====================================================
-// 1. SECURITY CHECK
-// =====================================================
-
-if (
-    !isset($_SESSION['user_id']) &&
-    !isset($_SESSION['id'])
-) {
->>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 if (
     !isset($_SESSION['loggedin']) ||
@@ -68,20 +57,9 @@ if ($payment_id <= 0) {
     );
 }
 
-<<<<<<< HEAD
 // ======================================================
 // FETCH PAYMENT + BOOKING (verify ownership via booking)
 // ======================================================
-=======
-$booking_id =
-intval($_SESSION['pay_booking_id']);
-
-$user_id = intval(
-    $_SESSION['user_id']
-    ?? $_SESSION['id']
-    ?? 0
-);
->>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 $sql = "
 SELECT
