@@ -10,16 +10,33 @@ require '../Config/database.php';
 // ======================================================
 
 if (
+<<<<<<< HEAD
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
     !isset($_SESSION['id']) ||
     strcasecmp($_SESSION['role'] ?? '', 'Customer') !== 0
 ) {
     header("Location: Auth/login.php");
+=======
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
+
+    header("Location:Auth/login.php");
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
     exit();
+
 }
 
+<<<<<<< HEAD
 $user_id = (int) $_SESSION['id'];
+=======
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 // ======================================================
 // VALIDATE CAR ID
@@ -42,6 +59,7 @@ if ($car_id <= 0) {
 $car_sql = "
 SELECT
     c.*,
+<<<<<<< HEAD
     cs.car_status_price AS car_price,
     cs.car_status_status,
     ucd.car_plate,
@@ -49,6 +67,22 @@ SELECT
 FROM cars c
 LEFT JOIN car_status cs ON cs.car_id = c.car_id
 LEFT JOIN used_car_details ucd ON ucd.car_id = c.car_id
+=======
+    cs.car_status_price,
+
+    (
+        SELECT car_image_url
+        FROM car_image
+        WHERE car_id = c.car_id
+        LIMIT 1
+    ) AS car_image
+
+FROM cars c
+
+LEFT JOIN car_status cs
+ON cs.car_id = c.car_id
+
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 WHERE c.car_id = ?
 LIMIT 1
 ";
@@ -252,12 +286,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'user_phone' => $res_phone,
             'user_ic' => $res_ic,
 
+<<<<<<< HEAD
             // vehicle
             'car_brand' => $car['car_brand'],
             'car_model' => $car['car_model'],
             'car_year' => $car['car_year'],
             'car_origin' => $car['car_origin'],
             'car_price' => $car_price,
+=======
+            // Vehicle
+            'car_brand'   => $car['car_brand'],
+            'car_model'   => $car['car_model'],
+            'car_year'    => $car['car_year'],
+            'car_origin'  => $car['car_origin'],
+            'car_price'   => $car['car_status_price'],
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
             'car_variant' => $car_variant,
             'car_color' => $car_color,
             'car_plate' => $car['car_plate'] ?? '',
@@ -635,10 +678,60 @@ include 'Includes/header.php';
 <div class="reservation-page">
     <div class="reservation-wrapper">
 
+<<<<<<< HEAD
         <div class="page-heading">
             <h1>Vehicle Test Drive Reservation</h1>
             <p>Submit your reservation request and schedule your preferred test drive session.</p>
         </div>
+=======
+<body>
+
+<div class="form-container">
+
+    <div class="form-header">
+
+        <h2>
+            Vehicle Test Drive Reservation
+        </h2>
+
+        <p>
+            Submit your reservation request
+            and schedule your preferred test drive session.
+        </p>
+
+        <div class="vehicle-preview">
+
+            <img
+                src="<?php echo !empty($car['car_image']) 
+                ? htmlspecialchars($car['car_image']) 
+                : 'https://via.placeholder.com/400x250?text=Vehicle+Image'; ?>"
+                class="vehicle-image"
+                alt="Vehicle Image"
+            >
+
+            <div class="vehicle-info">
+
+                <h3>
+                    <?php
+                    echo htmlspecialchars(
+                        $car['car_brand'] . ' ' .
+                        $car['car_model']
+                    );
+                    ?>
+                </h3>
+
+                <p>
+                    <?php
+                    echo htmlspecialchars(
+                        $car['car_origin']
+                    );
+                    ?>
+                </p>
+
+                <p>
+                    RM <?php echo number_format($car['car_status_price'], 2); ?>
+                </p>
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
         <?php if (!empty($errors)): ?>
             <div class="error-box">

@@ -1,4 +1,5 @@
 <?php
+session_name("AdminSession"); // 👈 仅仅在这里加了这一行
 session_start();
 if (isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true && isset($_SESSION["user_role"]) && ($_SESSION["user_role"] === "Admin" || $_SESSION["user_role"] === "Super Admin")) {
     header("location: ../../Admin/dashboard.php");

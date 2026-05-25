@@ -2,7 +2,10 @@
 session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
+<<<<<<< HEAD
 // NOTE: this file lives in PHP AND HTML/Users/, so database is at ../Config/
+=======
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 require '../Config/database.php';
 
 // ======================================================
@@ -10,20 +13,43 @@ require '../Config/database.php';
 // ======================================================
 
 if (
+<<<<<<< HEAD
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
     !isset($_SESSION['id']) ||
     strcasecmp($_SESSION['role'] ?? '', 'Customer') !== 0
 ) {
     header("Location: Auth/login.php");
+=======
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
+
+    header("Location: login.php");
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
     exit();
+
 }
 
+<<<<<<< HEAD
 $reservation_id = 0;
 if (isset($_GET['id']) && intval($_GET['id']) > 0) {
     $reservation_id = intval($_GET['id']);
 } elseif (!empty($_SESSION['reservation_id'])) {
     $reservation_id = intval($_SESSION['reservation_id']);
+=======
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
+
+if (
+    !isset($_SESSION['reservation_id']) ||
+    empty($_SESSION['reservation_id'])
+) {
+    die("Reservation session expired.");
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 }
 
 $user_id = (int) $_SESSION['id'];
@@ -48,6 +74,11 @@ if ($reservation_id <= 0) {
     exit;
 }
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 // ======================================================
 // FETCH RESERVATION (including licence URL)
 // ======================================================

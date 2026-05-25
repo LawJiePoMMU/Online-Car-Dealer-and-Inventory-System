@@ -1,7 +1,9 @@
 <?php
-// 启动 Session
-session_start();
-
+// 在 session_start() 之前设置名字
+session_name("CustomerSession");
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 // 清空所有 Session 数据
 $_SESSION = [];
 

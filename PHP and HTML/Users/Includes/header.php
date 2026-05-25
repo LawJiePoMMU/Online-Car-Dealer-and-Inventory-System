@@ -1,5 +1,12 @@
 <?php
+// 1. 如果发现运行着其他名字的 Session，强制关闭
+if (session_status() === PHP_SESSION_ACTIVE && session_name() !== "CustomerSession") {
+    session_write_close();
+}
+
+// 2. 准备启动全新的 Session (带名字！)
 if (session_status() === PHP_SESSION_NONE) {
+    session_name("CustomerSession");
     session_start();
 }
 

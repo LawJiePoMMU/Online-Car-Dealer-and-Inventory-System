@@ -9,18 +9,33 @@ require '../Config/database.php';
 // ======================================================
 
 if (
+<<<<<<< HEAD
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
     !isset($_SESSION['id']) ||
     strcasecmp($_SESSION['role'] ?? '', 'Customer') !== 0
 ) {
+=======
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
+
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
     header("Location: Auth/login.php");
     exit();
 }
 
+<<<<<<< HEAD
 $user_id    = (int) $_SESSION['id'];
 $booking_id = intval($_GET['id'] ?? $_POST['booking_id'] ?? 0);
 $pay_inst_id = intval($_GET['pay'] ?? $_POST['installment_id'] ?? 0);
+=======
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 // ======================================================
 // FRIENDLY ERROR PAGE

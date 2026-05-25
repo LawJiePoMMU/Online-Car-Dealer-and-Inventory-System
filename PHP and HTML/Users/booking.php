@@ -9,16 +9,32 @@ require '../Config/database.php';
 // ======================================================
 
 if (
+<<<<<<< HEAD
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
     !isset($_SESSION['id']) ||
     strcasecmp($_SESSION['role'] ?? '', 'Customer') !== 0
 ) {
+=======
+    !isset($_SESSION['user_id']) &&
+    !isset($_SESSION['id'])
+) {
+
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
     header("Location: Auth/login.php");
     exit();
+
 }
 
+<<<<<<< HEAD
 $user_id = (int) $_SESSION['id'];
+=======
+$user_id = intval(
+    $_SESSION['user_id']
+    ?? $_SESSION['id']
+    ?? 0
+);
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 // ======================================================
 // VALIDATE BOOKING CAR ID
@@ -38,6 +54,7 @@ if ($car_id <= 0) {
 $car_sql = "
 SELECT
     c.*,
+<<<<<<< HEAD
     cs.car_status_price AS car_price,
     cs.car_status_stock_quantity AS stock,
     ucd.car_plate,
@@ -45,6 +62,16 @@ SELECT
 FROM cars c
 LEFT JOIN car_status cs ON cs.car_id = c.car_id
 LEFT JOIN used_car_details ucd ON ucd.car_id = c.car_id
+=======
+
+    cs.car_status_price
+
+FROM cars c
+
+LEFT JOIN car_status cs
+ON cs.car_id = c.car_id
+
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 WHERE c.car_id = ?
 LIMIT 1
 ";
@@ -95,6 +122,7 @@ $default_color   = $colors[0]   ?? '';
 // FETCH USER (including address fields for billing)
 // ======================================================
 
+<<<<<<< HEAD
 $user_sql = "
 SELECT
     user_name, user_email, user_phone, user_ic,
@@ -106,6 +134,10 @@ FROM users
 WHERE user_id = ?
 LIMIT 1
 ";
+=======
+$car_price =
+    floatval($car['car_status_price'] ?? 0);
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
 
 $user_stmt = mysqli_prepare($conn, $user_sql);
 mysqli_stmt_bind_param($user_stmt, "i", $user_id);
@@ -420,11 +452,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             header("Location: payment.php?id=" . $new_booking_id);
             exit();
 
+<<<<<<< HEAD
         } catch (Exception $e) {
             mysqli_rollback($conn);
             $rollback_files();
             die($e->getMessage());
         }
+=======
+        // ==============================================
+        // DOCUMENT STORAGE
+        // ==============================================
+
+        $_SESSION['ic_document'] =
+            $_SESSION['tmp_ic_document'];
+
+        $_SESSION['license_document'] =
+            $_SESSION['tmp_license_document'];
+
+        $_SESSION['payslip_document'] =
+            $_SESSION['tmp_payslip_document'];
+
+        $_SESSION['bank_statement_document'] =
+            $_SESSION['tmp_bank_statement_document'];
+
+        // ==============================================
+        // CLEAN TEMP SESSION
+        // ==============================================
+
+        unset(
+            $_SESSION['tmp_ic_document'],
+            $_SESSION['tmp_license_document'],
+            $_SESSION['tmp_payslip_document'],
+            $_SESSION['tmp_bank_statement_document']
+        );
+
+        // ==============================================
+        // REDIRECT TO PAYMENT
+        // ==============================================
+// ==============================================
+// CREATE BOOKING RECORD
+// ==============================================
+
+$insert_booking_sql = "
+INSERT INTO bookings (
+
+    user_id,
+    car_id,
+    booking_status
+
+)
+VALUES (
+
+    ?,
+    ?,
+    'Pending Payment'
+
+)
+";
+
+$insert_booking_stmt =
+mysqli_prepare(
+    $conn,
+    $insert_booking_sql
+);
+
+if (!$insert_booking_stmt) {
+
+    die(
+        'Booking Prepare Failed: '
+        . mysqli_error($conn)
+    );
+
+}
+
+mysqli_stmt_bind_param(
+    $insert_booking_stmt,
+    "ii",
+    $user_id,
+    $car_id
+);
+
+$booking_execute =
+mysqli_stmt_execute(
+    $insert_booking_stmt
+);
+
+if (!$booking_execute) {
+
+    die(
+        'Booking Insert Failed: '
+        . mysqli_error($conn)
+    );
+
+}
+
+$_SESSION['booking_id'] =
+mysqli_insert_id($conn);
+
+$_SESSION['pay_source'] =
+'booking';
+        header("Location: payment.php");
+        exit();
+>>>>>>> 4d505bf2c2e91fca970c71d3c1dc125fff21378c
     }
 }
 
