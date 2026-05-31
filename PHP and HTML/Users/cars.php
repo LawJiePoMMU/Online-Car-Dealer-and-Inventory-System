@@ -3,9 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 🌟 关键就在这里：引入数据库连接！
-// 注意：请根据你当前文件的实际位置，修改 database.php 的路径。
-// 如果你的 cars.php 和 Includes 文件夹在同一层，可能是 "../Config/database.php" 或者 "Config/database.php"
 require_once "../Config/database.php"; 
 
 include 'Includes/header.php';
@@ -38,8 +35,6 @@ include 'Includes/header.php';
     border-radius: 12px;
     padding: 25px 20px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    
-    /* 🔥 核心：固定在屏幕左侧，并在内部独立滚动 */
     position: sticky;
     top: 90px; 
     height: calc(100vh - 120px); 
@@ -57,7 +52,6 @@ include 'Includes/header.php';
 .custom-tick:hover { color: #0f172a; }
 .custom-tick input[type="radio"] { display: none; }
 
-/* 🔥 这里恢复了方形 (border-radius: 6px) 和打钩的动画 */
 .custom-tick .box { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 6px; margin-right: 12px; transition: all 0.2s ease; background-color: #ffffff; }
 .custom-tick input[type="radio"]:checked + .box {
     background-color: #0f172a; border-color: #0f172a;
@@ -72,7 +66,7 @@ include 'Includes/header.php';
     min-width: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* 防跳动 */
+    min-height: 100vh; 
 }
 
 .top-action-bar {
@@ -86,7 +80,6 @@ include 'Includes/header.php';
 .sort-dropdown { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #475569; }
 .sort-dropdown select { padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; cursor: pointer; }
 
-/* 动态 Model Tabs */
 .category-tabs { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 15px; align-items: center; }
 .category-tab { padding: 8px 18px; background-color: transparent; border: 1px solid transparent; border-radius: 8px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.25s ease; user-select: none; }
 .category-tab:hover { background-color: #f1f5f9; color: #0f172a; transform: translateY(-2px); }
@@ -96,7 +89,7 @@ include 'Includes/header.php';
 #cars-container {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* 推到底部 */
+    flex-grow: 1; 
 }
 
 .inventory-grid {
@@ -119,13 +112,15 @@ include 'Includes/header.php';
 
 .card-content { padding: 12px 15px; display: flex; flex-direction: column; flex: 1; }
 .card-title { font-size: 15px; font-weight: 800; color: #0f172a !important; margin: 0 0 4px 0; text-transform: uppercase; line-height: 1.3; }
-.card-price { font-size: 17px; font-weight: 800; color: #dc2626 !important; margin: 0 0 10px 0; }
+
+.card-price { font-size: 17px; font-weight: 800; color: #0f172a !important; margin: 0 0 10px 0; }
+
 .card-specs { font-size: 13px; color: #334155 !important; font-weight: 600; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .spec-row { display: flex; align-items: center; gap: 6px; }
 .spec-dot { color: #94a3b8; font-size: 12px; }
 .card-footer { margin-top: auto; border-top: none; padding-top: 0; font-size: 13px; color: #334155 !important; display: flex; align-items: center; text-transform: capitalize; font-weight: 600; }
 
-/* ==================== 6. 分页按钮 (Pagination UI) ==================== */
+/* ==================== 6. 分页按钮 ==================== */
 .pagination-container {
     display: flex; justify-content: center; gap: 8px; margin-top: auto; padding-top: 30px; padding-bottom: 10px;
 }
@@ -135,7 +130,7 @@ include 'Includes/header.php';
 .page-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 .page-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; box-shadow: 0 4px 10px rgba(15,23,42,0.15); }
 
-/* ==================== 7. Drawer & Mobile ==================== */
+/* ==================== 7. Drawer ==================== */
 .side-drawer { position: fixed; top: 0; right: -100%; width: 100%; max-width: 520px; height: 100vh; background: #ffffff; box-shadow: -10px 0 40px rgba(15, 23, 42, 0.12); transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1); z-index: 9999; overflow: visible; border-left: 1px solid #e2e8f0; }
 .side-drawer.open { right: 0; }
 .drawer-content { padding: 28px; position: relative; height: 100vh; overflow-y: auto; box-sizing: border-box; background: linear-gradient(to bottom, #ffffff, #f8fafc); }
@@ -176,17 +171,6 @@ include 'Includes/header.php';
                     <label class="custom-tick"><input type="radio" name="conditionFilter" value="All" checked><div class="box"></div><span>All</span></label>
                     <label class="custom-tick"><input type="radio" name="conditionFilter" value="New Car"><div class="box"></div><span>New Car</span></label>
                     <label class="custom-tick"><input type="radio" name="conditionFilter" value="Used Car"><div class="box"></div><span>Used Car</span></label>
-                </div>
-            </div>
-
-            <div class="filter-group">
-                <div class="sidebar-title">TRANSMISSION</div>
-                <div class="filter-options">
-                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="All" checked><div class="box"></div><span>All</span></label>
-                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="Auto"><div class="box"></div><span>Auto</span></label>
-                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="Manual"><div class="box"></div><span>Manual</span></label>
-                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="CVT"><div class="box"></div><span>CVT</span></label>
-                    <label class="custom-tick"><input type="radio" name="transmissionFilter" value="DCT"><div class="box"></div><span>DCT</span></label>
                 </div>
             </div>
 
@@ -257,7 +241,13 @@ include 'Includes/header.php';
 </div>
 
 <script>
-    let currentModel = 'AllModels';
+    // ==========================================
+    // 1. CARS.PHP 列表过滤与加载功能 (支持从 Homepage 跳转过滤)
+    // ==========================================
+    // 🔥 核心改动：读取网址中的 ?model= 参数
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentModel = urlParams.get('model') || 'AllModels';
+    
     let currentPage = 1; 
     let searchTimeout = null; 
 
@@ -297,6 +287,10 @@ include 'Includes/header.php';
                     document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     currentModel = this.getAttribute('data-filter');
+                    
+                    // 点击后清除网址参数，保持干净
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
                     currentPage = 1; 
                     fetchFilteredCars();
                 });
@@ -313,11 +307,11 @@ include 'Includes/header.php';
 
         let bodyType = document.querySelector('input[name="bodyTypeFilter"]:checked').value;
         let condition = document.querySelector('input[name="conditionFilter"]:checked').value;
-        let transmission = document.querySelector('input[name="transmissionFilter"]:checked').value;
         let year = document.querySelector('input[name="yearFilter"]:checked').value;
         let price = document.querySelector('input[name="priceFilter"]:checked').value;
         let sortValue = document.getElementById('sortSelect').value;
         let keyword = document.getElementById('searchInput').value.trim();
+        let transmission = 'All';
 
         let postData = `model=${encodeURIComponent(currentModel)}&bodyType=${encodeURIComponent(bodyType)}&condition=${encodeURIComponent(condition)}&transmission=${encodeURIComponent(transmission)}&year=${encodeURIComponent(year)}&price=${encodeURIComponent(price)}&sort=${encodeURIComponent(sortValue)}&keyword=${encodeURIComponent(keyword)}&page=${currentPage}`;
 
@@ -328,15 +322,17 @@ include 'Includes/header.php';
         })
         .then(response => response.text())
         .then(html => { 
-            // 如果后端返回了包含卡片的网格，把它包在 inventory-grid 里
             if (html.includes('pro-car-card')) {
-                // 利用正则把后端吐出来的 pagination 剥离出来放到底部
                 let gridHtml = '<div class="inventory-grid">' + html.split('<div class="pagination-container">')[0] + '</div>';
                 let pageHtml = html.includes('<div class="pagination-container">') ? '<div class="pagination-container">' + html.split('<div class="pagination-container">')[1] : '';
                 container.innerHTML = gridHtml + pageHtml;
             } else {
-                // 显示 No vehicles found
-                container.innerHTML = html;
+                container.innerHTML = `
+                <div style="text-align:center; padding: 60px 20px;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🔍</div>
+                    <h3 style="color: #1f2937;">No vehicles available</h3>
+                    <p style="color: #6b7280;">Currently no cars match your filter settings.</p>
+                </div>`;
             }
         })
         .catch(error => console.error('Error:', error));
@@ -379,6 +375,7 @@ include 'Includes/header.php';
     function resetFilters() {
         currentModel = 'AllModels';
         currentPage = 1;
+        window.history.replaceState({}, document.title, window.location.pathname);
         document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
         document.querySelectorAll('input[value="All"]').forEach(r => r.checked = true);
         document.getElementById('searchInput').value = '';
@@ -386,30 +383,242 @@ include 'Includes/header.php';
         fetchModelTabs(); 
     }
 
-    function addToWishlist(event, btnElement, carId) {
-        event.preventDefault(); event.stopPropagation();
-        fetch('toggle_wishlist.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `car_id=${carId}` })
+    // ==========================================
+    // 🔥 统一外层和侧边栏的同步心愿单点击
+    // ==========================================
+    window.addToWishlist = function(event, btnElement, carId) {
+        event.preventDefault(); 
+        event.stopPropagation();
+        
+        fetch('toggle_wishlist.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `car_id=${carId}`
+        })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'added') btnElement.classList.add('liked');
-            else if (data.status === 'removed') btnElement.classList.remove('liked');
-            else if (data.status === 'not_logged_in') window.location.href = 'Auth/login.php';
-            else alert(data.message);
-        }).catch(err => console.error(err));
-    }
+            if (data.status === 'not_logged_in') {
+                window.location.href = 'Auth/login.php';
+                return;
+            }
+            
+            // 抓取页面上这辆车所有的爱心按钮 (主列表的卡片爱心 + 侧边栏内部的爱心)
+            let mainListBtn = document.querySelector(`a[onclick*="openCarDetails(${carId})"] .btn-wishlist`);
+            let sidebarBtn = document.querySelector('.clean-wishlist-btn');
+
+            if (data.status === 'added') {
+                btnElement.classList.add('liked'); 
+                if (mainListBtn) mainListBtn.classList.add('liked'); 
+                if (sidebarBtn) sidebarBtn.classList.add('liked');   
+            } else if (data.status === 'removed') {
+                btnElement.classList.remove('liked'); 
+                if (mainListBtn) mainListBtn.classList.remove('liked'); 
+                if (sidebarBtn) sidebarBtn.classList.remove('liked');   
+            }
+        })
+        .catch(error => console.error('Error toggling wishlist:', error));
+    };
+
+    window.toggleSidebarWishlist = window.addToWishlist;
+
+
+    // ==========================================
+    // 2. 侧边栏 (Sidebar) 打开与 JS 初始化逻辑
+    // ==========================================
     function openCarDetails(carId) {
         const drawer = document.getElementById('car-details-sidebar');
         const content = document.getElementById('drawer-content');
         const overlay = document.getElementById('drawerOverlay');
-        drawer.style.maxWidth = '520px'; drawer.classList.add('open'); overlay.classList.add('show');
+        
+        drawer.style.maxWidth = '520px'; 
+        drawer.classList.add('open'); 
+        overlay.classList.add('show');
         content.innerHTML = `<div style="text-align: center; padding: 100px; color:#64748b;">Loading details... 🚗💨</div>`;
-        fetch('fetch_car_details_sidebar.php?id=' + carId).then(response => response.text()).then(html => content.innerHTML = html).catch(err => console.error(err));
+        
+        fetch('fetch_car_details_sidebar.php?id=' + carId)
+            .then(response => response.text())
+            .then(html => {
+                content.innerHTML = html;
+                initSidebarFeatures();
+            })
+            .catch(err => console.error(err));
     }
-    function closeCarDetails() { document.getElementById('car-details-sidebar').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('show'); }
+
+    function closeCarDetails() { 
+        document.getElementById('car-details-sidebar').classList.remove('open'); 
+        document.getElementById('drawerOverlay').classList.remove('show'); 
+    }
+
     function toggleMainSidebarSize() {
-        const sidebar = document.getElementById('car-details-sidebar'); const iconContainer = document.getElementById('expand-icon');
-        if (sidebar.style.maxWidth === '100%') { sidebar.style.maxWidth = '520px'; if(iconContainer) iconContainer.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'; } 
-        else { sidebar.style.maxWidth = '100%'; if(iconContainer) iconContainer.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>'; }
+        const sidebar = document.getElementById('car-details-sidebar'); 
+        const iconContainer = document.getElementById('expand-icon');
+        if (sidebar.style.maxWidth === '100%') { 
+            sidebar.style.maxWidth = '520px'; 
+            if(iconContainer) iconContainer.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'; 
+        } else { 
+            sidebar.style.maxWidth = '100%'; 
+            if(iconContainer) iconContainer.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>'; 
+        }
+    }
+
+    // ==========================================
+    // 3. 侧边栏内部交互功能
+    // ==========================================
+    window.imagesArray = [];
+    window.CAR_PRICE = 0;
+    window.currentImgIndex = 0;
+
+    function initSidebarFeatures() {
+        try {
+            const dataEl = document.getElementById('gallery-data');
+            const rawData = dataEl ? dataEl.getAttribute('data-images') : '[]';
+            window.imagesArray = JSON.parse(rawData);
+        } catch (e) { console.error("Gallery parse error:", e); }
+        
+        window.CAR_PRICE = parseFloat(document.getElementById('car-price-data')?.value) || 0;
+        window.currentImgIndex = 0;
+
+        const role = document.getElementById('current-user-role')?.value || 'Customer';
+        const warningText = document.getElementById('dp-warning-text');
+        if (role === 'Admin' || role === 'Super Admin') {
+            if(warningText) {
+                warningText.innerText = "*Admin Access: Custom down payment allowed.";
+                warningText.style.color = "#3b82f6";
+            }
+        }
+
+        if(window.CAR_PRICE > 0) {
+            calcFromPct();
+        } else {
+            const amtEl = document.getElementById('dp-amt');
+            const resEl = document.getElementById('monthly-result');
+            if(amtEl) amtEl.value = 0;
+            if(resEl) resEl.innerText = 'RM 0';
+        }
+    }
+
+    function showImg(index) {
+        if(window.imagesArray.length === 0) return;
+        if(index < 0) index = window.imagesArray.length - 1;
+        if(index >= window.imagesArray.length) index = 0;
+        
+        window.currentImgIndex = index;
+        const mainImg = document.getElementById('main-gallery-img');
+        if(mainImg) mainImg.src = window.imagesArray[window.currentImgIndex];
+        
+        const thumbs = document.querySelectorAll('.thumb-img');
+        thumbs.forEach((t, i) => {
+            if (i === window.currentImgIndex) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+    }
+    
+    function prevImg() { showImg(window.currentImgIndex - 1); }
+    function nextImg() { showImg(window.currentImgIndex + 1); }
+
+    function toggleMoreSpecs() {
+        const box = document.getElementById('more-specs-box');
+        const btn = document.getElementById('toggleSpecsBtn');
+        if (!box || !btn) return;
+        
+        if (box.style.display === 'none' || box.style.display === '') {
+            box.style.display = 'block';
+            btn.innerHTML = 'View Less';
+        } else {
+            box.style.display = 'none';
+            btn.innerHTML = 'View Full Specifications';
+        }
+    }
+
+    function getMinPct() {
+        const role = document.getElementById('current-user-role')?.value || 'Customer';
+        return (role === 'Admin' || role === 'Super Admin') ? 0 : 10;
+    }
+
+    function enforceMinPct() {
+        const pctEl = document.getElementById('dp-pct');
+        if(!pctEl) return;
+        let minPct = getMinPct();
+        if (parseFloat(pctEl.value) < minPct || pctEl.value === '') {
+            pctEl.value = minPct;
+            calcFromPct(); 
+        }
+    }
+
+    function enforceMinAmt() {
+        const amtEl = document.getElementById('dp-amt');
+        if(!amtEl) return;
+        let minPct = getMinPct();
+        let minAmt = window.CAR_PRICE * (minPct / 100);
+        if (parseFloat(amtEl.value) < minAmt || amtEl.value === '') {
+            amtEl.value = Math.round(minAmt);
+            calcFromAmt(); 
+        }
+    }
+
+    function calcFromPct() {
+        if (window.CAR_PRICE <= 0) return; 
+        const pctEl = document.getElementById('dp-pct');
+        const amtEl = document.getElementById('dp-amt');
+        if(!pctEl || !amtEl) return;
+        
+        let pct = parseFloat(pctEl.value) || 0;
+        let amt = window.CAR_PRICE * (pct / 100);
+        amtEl.value = Math.round(amt);
+        calculateMonthlyLoan();
+    }
+
+    function calcFromAmt() {
+        if (window.CAR_PRICE <= 0) return;
+        const pctEl = document.getElementById('dp-pct');
+        const amtEl = document.getElementById('dp-amt');
+        if(!pctEl || !amtEl) return;
+        
+        let amt = parseFloat(amtEl.value) || 0;
+        let pct = (amt / window.CAR_PRICE) * 100;
+        pctEl.value = pct.toFixed(1);
+        calculateMonthlyLoan();
+    }
+
+    function updateTenure() {
+        const slider = document.getElementById('tenure-slider');
+        const valLabel = document.getElementById('tenure-val');
+        if(!slider || !valLabel) return;
+        
+        let years = slider.value;
+        valLabel.innerText = years + (years == 1 ? ' Year' : ' Years');
+        calculateMonthlyLoan();
+    }
+
+    function calculateMonthlyLoan() {
+        const resultEl = document.getElementById('monthly-result');
+        if(!resultEl) return;
+        
+        if (window.CAR_PRICE <= 0) {
+            resultEl.innerText = 'N/A';
+            return;
+        }
+
+        let dpAmt = parseFloat(document.getElementById('dp-amt')?.value) || 0;
+        let rate = parseFloat(document.getElementById('int-rate')?.value) || 0;
+        let years = parseInt(document.getElementById('tenure-slider')?.value) || 9;
+
+        let loanAmount = window.CAR_PRICE - dpAmt;
+        if (loanAmount < 0) loanAmount = 0;
+
+        let totalInterest = loanAmount * (rate / 100) * years;
+        let totalPayable = loanAmount + totalInterest;
+        let monthly = years > 0 ? totalPayable / (years * 12) : 0;
+
+        resultEl.innerText = 'RM ' + Math.round(monthly).toLocaleString();
+    }
+
+    function resetCalc() {
+        if(document.getElementById('dp-pct')) document.getElementById('dp-pct').value = "10";
+        if(document.getElementById('tenure-slider')) document.getElementById('tenure-slider').value = 9;
+        if(document.getElementById('int-rate')) document.getElementById('int-rate').value = 3.0;
+        updateTenure();
+        calcFromPct();
     }
 </script>
 

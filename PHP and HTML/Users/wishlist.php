@@ -42,6 +42,17 @@ try {
 }
 ?>
 
+<style>
+    /* ==================== 侧边栏专属 CSS ==================== */
+    .side-drawer { position: fixed; top: 0; right: -100%; width: 100%; max-width: 520px; height: 100vh; background: #ffffff; box-shadow: -10px 0 40px rgba(15, 23, 42, 0.12); transition: right 0.4s cubic-bezier(0.22, 1, 0.36, 1); z-index: 9999; overflow: visible; border-left: 1px solid #e5e7eb; }
+    .side-drawer.open { right: 0; }
+    .drawer-content { padding: 0; position: relative; height: 100vh; overflow-y: auto; box-sizing: border-box; background: #ffffff; }
+    .drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(5px); z-index: 9998; opacity: 0; visibility: hidden; transition: 0.3s ease; }
+    .drawer-overlay.show { opacity: 1; visibility: visible; }
+    .toggle-drawer-edge-btn { position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e5e7eb; background: #ffffff; color: #4b5563; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.25s; z-index: 10005; }
+    .toggle-drawer-edge-btn:hover { transform: scale(1.08); color: #111827; background: #f9fafb; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+</style>
+
 <div class="inventory-page">
     <div class="inventory-wrapper">
         <main class="inventory-main">
@@ -62,7 +73,7 @@ try {
                         ?>
                         
                         <div class="pro-car-card" id="car-card-<?php echo $id; ?>">
-                            <a href="car_details.php?id=<?php echo $id; ?>" style="text-decoration: none;">
+                            <a href="javascript:void(0);" onclick="openCarDetails(<?php echo $id; ?>)" style="text-decoration: none; display: block; height: 100%;">
                                 <div class="card-img-container">
                                     <img src="<?php echo $img; ?>" alt="<?php echo $title; ?>">
                                     <span class="badge-condition"><?php echo $condition; ?></span>
@@ -106,9 +117,23 @@ try {
     </div>
 </div>
 
+<div id="drawerOverlay" class="drawer-overlay" onclick="closeCarDetails()"></div>
+<div id="car-details-sidebar" class="side-drawer">
+    <button class="toggle-drawer-edge-btn" onclick="toggleMainSidebarSize()" title="Toggle Fullscreen">
+        <svg id="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+        </svg>
+    </button>
+    <div class="drawer-content" id="drawer-content"></div>
+</div>
+
 <script>
+    // ----------------------------------------------------
+    // 1. 保留原本外面主列表移除心愿单的功能
+    // ----------------------------------------------------
     function removeFromWishlist(event, btnElement, carId) {
-        event.preventDefault();
+        event.preventDefault(); 
+        event.stopPropagation(); 
         
         fetch('toggle_wishlist.php', {
             method: 'POST',
@@ -119,25 +144,260 @@ try {
         .then(data => {
             if (data.status === 'removed') {
                 const card = document.getElementById(`car-card-${carId}`);
-                card.style.opacity = '0';
-                card.style.transform = 'scale(0.9)';
-                setTimeout(() => {
-                    card.remove();
-                    
-                    let remainingCars = document.querySelectorAll('.pro-car-card').length;
-                    let countTextElement = document.getElementById('wishlist-count-text');
-                    
-                    if(countTextElement) {
-                        countTextElement.innerText = "You have " + remainingCars + " saved vehicles.";
-                    }
-
-                    if(remainingCars === 0) {
-                        location.reload();
-                    }
-                }, 300); 
+                if(card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        let remainingCars = document.querySelectorAll('.pro-car-card').length;
+                        let countTextElement = document.getElementById('wishlist-count-text');
+                        if(countTextElement) {
+                            countTextElement.innerText = "You have " + remainingCars + " saved vehicles.";
+                        }
+                        if(remainingCars === 0) {
+                            location.reload();
+                        }
+                    }, 300); 
+                }
             }
         })
         .catch(error => console.error('Error:', error));
+    }
+
+    // ----------------------------------------------------
+    // 🌟 2. 新增：侧边栏专用的爱心同步功能 (放在这里就不会被阻挡了！)
+    // ----------------------------------------------------
+    window.toggleSidebarWishlist = function(event, btnElement, carId) {
+        event.preventDefault();
+        
+        fetch('toggle_wishlist.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `car_id=${carId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'not_logged_in') {
+                window.location.href = 'Auth/login.php';
+                return;
+            }
+            
+            if (data.status === 'added') {
+                btnElement.classList.add('liked');
+            } else if (data.status === 'removed') {
+                btnElement.classList.remove('liked');
+                
+                // 因为这里是 Wishlist 页面，如果在侧边栏取消了收藏，外面的卡片也要跟着消失！
+                const card = document.getElementById(`car-card-${carId}`);
+                if (card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        let remainingCars = document.querySelectorAll('.pro-car-card').length;
+                        let countTextElement = document.getElementById('wishlist-count-text');
+                        if(countTextElement) countTextElement.innerText = "You have " + remainingCars + " saved vehicles.";
+                        if(remainingCars === 0) location.reload();
+                    }, 300);
+                }
+            }
+        })
+        .catch(error => console.error('Error toggling wishlist:', error));
+    };
+
+    // ----------------------------------------------------
+    // 3. 侧边栏与计算器的完整功能
+    // ----------------------------------------------------
+    function openCarDetails(carId) {
+        const drawer = document.getElementById('car-details-sidebar');
+        const content = document.getElementById('drawer-content');
+        const overlay = document.getElementById('drawerOverlay');
+        
+        drawer.style.maxWidth = '520px'; 
+        drawer.classList.add('open'); 
+        overlay.classList.add('show');
+        content.innerHTML = `<div style="text-align: center; padding: 100px; color:#64748b;">Loading details... 🚗💨</div>`;
+        
+        fetch('fetch_car_details_sidebar.php?id=' + carId)
+            .then(response => response.text())
+            .then(html => {
+                content.innerHTML = html;
+                initSidebarFeatures(); 
+            })
+            .catch(err => {
+                console.error(err);
+                content.innerHTML = `<div style="text-align: center; padding: 100px; color:red;">Failed to load data.</div>`;
+            });
+    }
+
+    function closeCarDetails() { 
+        document.getElementById('car-details-sidebar').classList.remove('open'); 
+        document.getElementById('drawerOverlay').classList.remove('show'); 
+    }
+
+    function toggleMainSidebarSize() {
+        const sidebar = document.getElementById('car-details-sidebar'); 
+        const iconContainer = document.getElementById('expand-icon');
+        if (sidebar.style.maxWidth === '100%') { 
+            sidebar.style.maxWidth = '520px'; 
+            if(iconContainer) iconContainer.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'; 
+        } else { 
+            sidebar.style.maxWidth = '100%'; 
+            if(iconContainer) iconContainer.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>'; 
+        }
+    }
+
+    window.imagesArray = [];
+    window.CAR_PRICE = 0;
+    window.currentImgIndex = 0;
+
+    function initSidebarFeatures() {
+        try {
+            const dataEl = document.getElementById('gallery-data');
+            const rawData = dataEl ? dataEl.getAttribute('data-images') : '[]';
+            window.imagesArray = JSON.parse(rawData);
+        } catch (e) { console.error("Gallery parse error:", e); }
+        
+        window.CAR_PRICE = parseFloat(document.getElementById('car-price-data')?.value) || 0;
+        window.currentImgIndex = 0;
+
+        const role = document.getElementById('current-user-role')?.value || 'Customer';
+        const warningText = document.getElementById('dp-warning-text');
+        if (role === 'Admin' || role === 'Super Admin') {
+            if(warningText) {
+                warningText.innerText = "*Admin Access: Custom down payment allowed.";
+                warningText.style.color = "#3b82f6";
+            }
+        }
+
+        if(window.CAR_PRICE > 0) {
+            calcFromPct();
+        } else {
+            const amtEl = document.getElementById('dp-amt');
+            const resEl = document.getElementById('monthly-result');
+            if(amtEl) amtEl.value = 0;
+            if(resEl) resEl.innerText = 'RM 0';
+        }
+    }
+
+    function showImg(index) {
+        if(window.imagesArray.length === 0) return;
+        if(index < 0) index = window.imagesArray.length - 1;
+        if(index >= window.imagesArray.length) index = 0;
+        
+        window.currentImgIndex = index;
+        const mainImg = document.getElementById('main-gallery-img');
+        if(mainImg) mainImg.src = window.imagesArray[window.currentImgIndex];
+        
+        const thumbs = document.querySelectorAll('.thumb-img');
+        thumbs.forEach((t, i) => {
+            if (i === window.currentImgIndex) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+    }
+    
+    function prevImg() { showImg(window.currentImgIndex - 1); }
+    function nextImg() { showImg(window.currentImgIndex + 1); }
+
+    function toggleMoreSpecs() {
+        const box = document.getElementById('more-specs-box');
+        const btn = document.getElementById('toggleSpecsBtn');
+        if (!box || !btn) return;
+        
+        if (box.style.display === 'none' || box.style.display === '') {
+            box.style.display = 'block';
+            btn.innerHTML = 'View Less';
+        } else {
+            box.style.display = 'none';
+            btn.innerHTML = 'View Full Specifications';
+        }
+    }
+
+    function getMinPct() {
+        const role = document.getElementById('current-user-role')?.value || 'Customer';
+        return (role === 'Admin' || role === 'Super Admin') ? 0 : 10;
+    }
+
+    function enforceMinPct() {
+        const pctEl = document.getElementById('dp-pct');
+        if(!pctEl) return;
+        let minPct = getMinPct();
+        if (parseFloat(pctEl.value) < minPct || pctEl.value === '') {
+            pctEl.value = minPct;
+            calcFromPct(); 
+        }
+    }
+
+    function enforceMinAmt() {
+        const amtEl = document.getElementById('dp-amt');
+        if(!amtEl) return;
+        let minPct = getMinPct();
+        let minAmt = window.CAR_PRICE * (minPct / 100);
+        if (parseFloat(amtEl.value) < minAmt || amtEl.value === '') {
+            amtEl.value = Math.round(minAmt);
+            calcFromAmt(); 
+        }
+    }
+
+    function calcFromPct() {
+        if (window.CAR_PRICE <= 0) return; 
+        const pctEl = document.getElementById('dp-pct');
+        const amtEl = document.getElementById('dp-amt');
+        if(!pctEl || !amtEl) return;
+        let pct = parseFloat(pctEl.value) || 0;
+        let amt = window.CAR_PRICE * (pct / 100);
+        amtEl.value = Math.round(amt);
+        calculateMonthlyLoan();
+    }
+
+    function calcFromAmt() {
+        if (window.CAR_PRICE <= 0) return;
+        const pctEl = document.getElementById('dp-pct');
+        const amtEl = document.getElementById('dp-amt');
+        if(!pctEl || !amtEl) return;
+        let amt = parseFloat(amtEl.value) || 0;
+        let pct = (amt / window.CAR_PRICE) * 100;
+        pctEl.value = pct.toFixed(1); 
+        calculateMonthlyLoan();
+    }
+
+    function updateTenure() {
+        const slider = document.getElementById('tenure-slider');
+        const valLabel = document.getElementById('tenure-val');
+        if(!slider || !valLabel) return;
+        let years = slider.value;
+        valLabel.innerText = years + (years == 1 ? ' Year' : ' Years');
+        calculateMonthlyLoan();
+    }
+
+    function calculateMonthlyLoan() {
+        const resultEl = document.getElementById('monthly-result');
+        if(!resultEl) return;
+        if (window.CAR_PRICE <= 0) {
+            resultEl.innerText = 'N/A';
+            return;
+        }
+
+        let dpAmt = parseFloat(document.getElementById('dp-amt')?.value) || 0;
+        let rate = parseFloat(document.getElementById('int-rate')?.value) || 0;
+        let years = parseInt(document.getElementById('tenure-slider')?.value) || 9;
+
+        let loanAmount = window.CAR_PRICE - dpAmt;
+        if (loanAmount < 0) loanAmount = 0;
+
+        let totalInterest = loanAmount * (rate / 100) * years;
+        let totalPayable = loanAmount + totalInterest;
+        let monthly = years > 0 ? totalPayable / (years * 12) : 0;
+
+        resultEl.innerText = 'RM ' + Math.round(monthly).toLocaleString();
+    }
+
+    function resetCalc() {
+        if(document.getElementById('dp-pct')) document.getElementById('dp-pct').value = "10";
+        if(document.getElementById('tenure-slider')) document.getElementById('tenure-slider').value = 9;
+        if(document.getElementById('int-rate')) document.getElementById('int-rate').value = 3.0;
+        updateTenure();
+        calcFromPct();
     }
 </script>
 

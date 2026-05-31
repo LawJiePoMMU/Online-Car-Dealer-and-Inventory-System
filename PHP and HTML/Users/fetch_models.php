@@ -12,13 +12,14 @@ try {
 
 $bodyType = isset($_POST['bodyType']) ? trim($_POST['bodyType']) : 'All';
 
-// 核心修复：使用了 JOIN 确保 car_types 关联正确
 $sql = "SELECT DISTINCT c.car_model, c.car_brand 
         FROM cars c
         LEFT JOIN car_types t ON c.car_type_id = t.car_type_id
-        LEFT JOIN car_status s ON c.car_id = s.car_id
+        JOIN car_status s ON c.car_id = s.car_id  /* 👈 重点：把 LEFT 删掉，直接用 JOIN */
         WHERE s.car_status_status = 'Active' 
-        AND c.car_model IS NOT NULL AND c.car_model != ''";
+        AND s.car_status_stock_quantity > 0 
+        AND c.car_model IS NOT NULL 
+        AND c.car_model != ''";
 
 $params = [];
 if ($bodyType !== 'All') {

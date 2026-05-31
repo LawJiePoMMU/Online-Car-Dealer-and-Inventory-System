@@ -26,13 +26,16 @@ $user_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
 $limit = 20; // 限制每页显示 20 辆车
 $offset = ($page - 1) * $limit;
 
-// SQL 基础逻辑 (关联了车型、状态、地点)
+// ==========================================
+// 🌟 核心修改区：在这里加入了库存必须大于 0 的判断
+// ==========================================
 $baseSql = "FROM cars c
             LEFT JOIN car_types t ON c.car_type_id = t.car_type_id
             LEFT JOIN car_status s ON c.car_id = s.car_id
             LEFT JOIN locations l ON c.location_id = l.location_id
             WHERE s.car_status_status = 'Active' 
             AND s.car_status_price > 0 
+            AND s.car_status_stock_quantity > 0 
             AND c.car_model != ''";
 
 $params = [];
