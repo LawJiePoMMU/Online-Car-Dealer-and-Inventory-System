@@ -1,10 +1,8 @@
 <?php
-// 1. 如果发现运行着其他名字的 Session，强制关闭
 if (session_status() === PHP_SESSION_ACTIVE && session_name() !== "CustomerSession") {
     session_write_close();
 }
 
-// 2. 准备启动全新的 Session (带名字！)
 if (session_status() === PHP_SESSION_NONE) {
     session_name("CustomerSession");
     session_start();
@@ -13,7 +11,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $current_user_id = $_SESSION['id'] ?? $_SESSION['user_id'] ?? 0;
 $unread_count = 0;
 $chat_unread_count = 0;
-
+$status_alert_count = 0;
 if (isset($conn) && $current_user_id > 0) {
     $chat_stmt = $conn->prepare("
         SELECT COUNT(*) 
@@ -55,6 +53,25 @@ if (isset($conn) && $current_user_id > 0) {
     $group_stmt->close();
 
     $chat_unread_count += $group_unread_count;
+    $status_stmt = $conn->prepare("
+        SELECT COUNT(DISTINCT b.booking_id)
+        FROM bookings b
+        LEFT JOIN down_payments dp ON dp.booking_id = b.booking_id
+        WHERE b.user_id = ?
+          AND (
+                (b.booking_status = 'Pending' AND b.booking_paid_at IS NULL)
+             OR (b.booking_status = 'Approved'
+                 AND (dp.dp_status IS NULL OR dp.dp_status = 'Pending')
+                 AND (dp.insurance_pdf_url IS NULL OR dp.insurance_pdf_url = ''))
+             OR EXISTS (SELECT 1 FROM monthly_installments mi
+                        WHERE mi.booking_id = b.booking_id AND mi.payment_status = 'Overdue')
+          )
+    ");
+    $status_stmt->bind_param("i", $current_user_id);
+    $status_stmt->execute();
+    $status_stmt->bind_result($status_alert_count);
+    $status_stmt->fetch();
+    $status_stmt->close();
 }
 ?>
 <!DOCTYPE html>
@@ -113,12 +130,15 @@ if (isset($conn) && $current_user_id > 0) {
         .unread-dot {
             position: absolute;
             top: 6px;
-            right: -6px; /* 根据你的间距可微调这个数值 */
+            right: -6px;
+            /* 根据你的间距可微调这个数值 */
             width: 8px;
             height: 8px;
-            background-color: #ef4444; /* 红色 */
+            background-color: #ef4444;
+            /* 红色 */
             border-radius: 50%;
-            box-shadow: 0 0 0 2px #ffffff; /* 给红点加个白边，防粘连更好看 */
+            box-shadow: 0 0 0 2px #ffffff;
+            /* 给红点加个白边，防粘连更好看 */
         }
     </style>
 </head>
@@ -128,18 +148,30 @@ if (isset($conn) && $current_user_id > 0) {
     <header class="navbar">
         <div class="nav-container">
 
-            <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php" class="nav-logo">🚗
-                CarDealer</a>
+            <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php" class="nav-logo"
+                style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
+                <img src="/Online-Car-Dealer-and-Inventory-System/Images/Uploads/company_logo.png" alt="LCWcar"
+                    style="height:38px;width:auto;display:block;">
+                <span>LCWcar</span>
+            </a>
 
             <ul class="nav-links">
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php"
                         class="<?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">Home</a></li>
                 <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/cars.php"
                         class="<?= basename($_SERVER['PHP_SELF']) == 'cars.php' ? 'active' : '' ?>">Cars</a></li>
-                <li><a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/view_status.php"
-                        class="<?= basename($_SERVER['PHP_SELF']) == 'view_status.php' ? 'active' : '' ?>">Status</a></li>
                 <li>
-                    <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/chat.php" class="nav-chat-link <?= basename($_SERVER['PHP_SELF']) == 'chat.php' ? 'active' : '' ?>">
+                    <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/view_status.php"
+                        class="nav-chat-link <?= basename($_SERVER['PHP_SELF']) == 'view_status.php' ? 'active' : '' ?>">
+                        Status
+                        <?php if ($status_alert_count > 0): ?>
+                            <span class="unread-dot"></span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+                <li>
+                    <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/chat.php"
+                        class="nav-chat-link <?= basename($_SERVER['PHP_SELF']) == 'chat.php' ? 'active' : '' ?>">
                         Chat
                         <?php if ($chat_unread_count > 0): ?>
                             <span class="unread-dot"></span>
@@ -150,7 +182,7 @@ if (isset($conn) && $current_user_id > 0) {
 
             <div class="nav-actions">
                 <?php if (
-                    isset($_SESSION["loggedin"]) 
+                    isset($_SESSION["loggedin"])
                     && $_SESSION["loggedin"] === true
                     && isset($_SESSION["role"])
                     && $_SESSION["role"] === "Customer"

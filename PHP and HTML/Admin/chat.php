@@ -1,4 +1,5 @@
 <?php
+session_name("AdminSession");
 session_start();
 include '../Config/database.php';
 
@@ -6,7 +7,6 @@ if (!isset($_SESSION['user_id'])) {
     $_SESSION['user_id'] = 1;
 }
 $my_id = $_SESSION['user_id'];
-
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `chat_groups` (`id` int(11) NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `created_by` int(11) NOT NULL, `created_at` datetime NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `chat_group_members` (`group_id` int(11) NOT NULL, `user_id` int(11) NOT NULL, PRIMARY KEY (`group_id`, `user_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `group_messages` (`id` int(11) NOT NULL AUTO_INCREMENT, `group_id` int(11) NOT NULL, `sender_id` int(11) NOT NULL, `message` text, `file_path` varchar(255), `created_at` datetime NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");

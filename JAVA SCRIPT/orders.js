@@ -46,7 +46,6 @@ function openModal(row, tab, sub_tab) {
     document.getElementById('detCarOrigin').textContent = row.car_origin || '-';
     document.getElementById('detCarYear').textContent = row.car_year || '-';
 
-    // 1. 安全解析價格 (修復價格消失 Bug)
     let rawPrice = String(row.car_price || '0').replace(/[^0-9.]/g, '');
     const carPrice = parseFloat(rawPrice) || 0;
     const bookFee = parseFloat(row.booking_fee || 0);
@@ -54,12 +53,8 @@ function openModal(row, tab, sub_tab) {
     const insFee = parseFloat(row.insurance_fee || 0);
     const plateFee = parseFloat(row.plate_registration_fee || 0);
     const extraFees = insFee + plateFee;
-
-    // 2. 鎖定歷史利率 (修復新設定竄改舊訂單 Bug)
     const years = parseInt(row.installment_years || 9);
     const loanRate = parseFloat(row.interest_rate) || window.GLOBAL_LOAN_RATE || 3;
-
-    // 3. 動態渲染 Finance Box (修復 UI 顯示邏輯)
     const financeBox = document.querySelector('.finance-box');
     let financeHTML = '';
 
@@ -75,20 +70,28 @@ function openModal(row, tab, sub_tab) {
                 <span style="font-weight:600;color:#10b981;font-size:14px;">- RM ${fmt(bookFee)}</span>
             </div>
             <div class="finance-row total">
-                <span style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance (尾款)</span>
+                <span style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance</span>
                 <span style="font-size:18px;font-weight:800;color:#ef4444;">RM ${fmt(balance)}</span>
             </div>
         `;
-    } else if (isDP || (isHistory && sub_tab === 'down_payment')) {
+} else if (isDP || (isHistory && sub_tab === 'down_payment')) {
         let totalPaid = dpAmt + extraFees;
+        let afterBooking = carPrice - bookFee;  
+        // Down payment percentage: prefer the locked snapshot value, else derive from car price
+        let dpPct = row.locked_dp_pct ? parseFloat(row.locked_dp_pct) : (carPrice > 0 ? Math.round(dpAmt / carPrice * 100) : 0);
         let paidBadge = row.paid_at ? '<span class="paid-badge" style="margin-left:8px;">PAID</span>' : '<span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:8px;">UNPAID</span>';
 
         financeHTML = `
+            <div class="finance-row" style="border-bottom:1px dashed #e5e7eb;padding-bottom:10px;margin-bottom:6px;">
+                <span style="color:#111827;font-weight:700;">Car Price (after Booking Fee)</span>
+                <span style="font-weight:800;color:#111827;font-size:15px;">RM ${fmt(afterBooking)}</span>
+            </div>
             <div class="finance-row">
-                <span style="color:#6b7280;font-weight:600;">Down Payment</span>
-                <span style="font-weight:700;color:#111827;font-size:15px;">RM ${fmt(dpAmt)}</span>
+                <span style="color:#6b7280;font-weight:600;">Down Payment <span style="color:#9ca3af;font-weight:700;font-size:12px;">(${dpPct}%)</span></span>
+                <span style="font-weight:600;color:#10b981;font-size:14px;">- RM ${fmt(dpAmt)}</span>
             </div>
         `;
+
         if (insFee > 0) {
             financeHTML += `
             <div class="finance-row">
@@ -108,6 +111,13 @@ function openModal(row, tab, sub_tab) {
             <div class="finance-row total">
                 <span style="font-size:13px;font-weight:700;color:#111827;display:flex;align-items:center;">Total Paid ${paidBadge}</span>
                 <span style="font-size:18px;font-weight:800;color:#10b981;">RM ${fmt(totalPaid)}</span>
+            </div>
+        `;
+        let remainingBalance = afterBooking - dpAmt;   
+        financeHTML += `
+            <div class="finance-row total" style="margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:10px;">
+                <span style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance</span>
+                <span style="font-size:18px;font-weight:800;color:#ef4444;">RM ${fmt(remainingBalance)}</span>
             </div>
         `;
     } else {
@@ -142,7 +152,6 @@ function openModal(row, tab, sub_tab) {
     }
     financeBox.innerHTML = financeHTML;
 
-    // 4. 僅在 Booking 階段顯示 4 大驗證文件
     const docsWrap = document.getElementById('docsWrap');
     if (isBooking || (isHistory && sub_tab === 'booking')) {
         docsWrap.style.display = 'block';
@@ -173,7 +182,6 @@ function openModal(row, tab, sub_tab) {
         docsWrap.style.display = 'none';
     }
 
-    // 5. Down Payment UI 及 Approve 防呆機制
     const dpPanel = document.getElementById('dpPanel');
     const btnApproveDP = document.getElementById('btnApproveDP');
 
@@ -197,16 +205,26 @@ function openModal(row, tab, sub_tab) {
         }
 
         let optText = '-';
-        if (row.plate_option === 'new') optText = 'New Plate Registration';
+        if (row.plate_option === 'new') optText = 'New Plate (Registered by Dealer)';
         else if (row.plate_option === 'used') optText = 'Keep Used Car Plate';
         document.getElementById('detPlateOption').textContent = optText;
 
         const plateNumInput = document.getElementById('plateNumberInput');
-        plateNumInput.value = row.plate_number || '';
-        plateNumInput.readOnly = isReadonly;
-        document.getElementById('btnSaveDPDetails').style.display = isReadonly ? 'none' : 'block';
+        const btnSaveDP = document.getElementById('btnSaveDPDetails');
 
-        // 防呆: 如果沒付錢，按鈕反灰且不能按
+        if (row.plate_option === 'used') {
+            const usedPlate = row.used_car_plate || row.plate_number || '';
+            plateNumInput.value = usedPlate;
+            plateNumInput.readOnly = true;
+            plateNumInput.style.background = '#f3f4f6';
+            btnSaveDP.style.display = isReadonly ? 'none' : 'block';
+        } else {
+            plateNumInput.value = row.plate_number || '';
+            plateNumInput.readOnly = isReadonly;
+            plateNumInput.style.background = isReadonly ? '#f3f4f6' : '#fff';
+            btnSaveDP.style.display = isReadonly ? 'none' : 'block';
+        }
+
         if (isDP) {
             btnApproveDP.style.display = 'inline-block';
             if (!row.paid_at) {
@@ -265,25 +283,59 @@ function closeModal() {
 
 window.viewCustomerDoc = function (key) {
     const url = window.currentCustomerDocs[key];
-    const frame = document.getElementById('frameCustomerDoc');
 
     if (!url || url === 'NULL' || url === '#') {
         Toast.fire({ icon: 'info', title: 'Document not found.' });
         return;
     }
 
-    if (frame.src.includes(url) && frame.style.display === 'block') {
-        frame.style.display = 'none';
-    } else {
-        frame.src = url;
-        frame.style.display = 'block';
+    let overlay = document.getElementById('docViewerOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'docViewerOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.75);z-index:200000;display:none;align-items:center;justify-content:center;padding:30px;';
+        overlay.innerHTML =
+            '<div style="background:#fff;border-radius:14px;width:100%;max-width:900px;height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,0.35);">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e5e7eb;">' +
+                    '<span id="docViewerTitle" style="font-weight:700;color:#111827;font-size:15px;"><i class="fas fa-file-pdf" style="color:#ef4444;margin-right:8px;"></i>Document Preview</span>' +
+                    '<div style="display:flex;gap:10px;align-items:center;">' +
+                        '<a id="docViewerOpen" href="#" target="_blank" class="btn-export" style="padding:5px 12px;font-size:12px;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Open in new tab</a>' +
+                        '<button id="docViewerClose" type="button" style="background:#f3f4f6;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;color:#374151;">&times;</button>' +
+                    '</div>' +
+                '</div>' +
+                '<iframe id="docViewerFrame" src="" style="flex:1;width:100%;border:none;"></iframe>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        const closeIt = () => {
+            overlay.style.display = 'none';
+            document.getElementById('docViewerFrame').src = '';
+        };
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeIt(); });
+        overlay.querySelector('#docViewerClose').addEventListener('click', closeIt);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && overlay.style.display === 'flex') closeIt();
+        });
     }
+
+    const labels = {
+        ic_url: 'IC Document',
+        driving_license_url: 'Driving Licence',
+        payslip_url: '3 Months Payslip',
+        bank_statement_url: 'Bank Statement',
+        insurance: 'Insurance Cover Note'
+    };
+    document.getElementById('docViewerTitle').innerHTML =
+        '<i class="fas fa-file-pdf" style="color:#ef4444;margin-right:8px;"></i>' + (labels[key] || 'Document Preview');
+    document.getElementById('docViewerFrame').src = url;
+    document.getElementById('docViewerOpen').href = url;
+    overlay.style.display = 'flex';
 };
 
 async function openScheduleModal(row) {
     currentRow = row;
     document.getElementById('schedTitle').textContent = 'Amortization Schedule — ' + (row.user_name || '?');
-    document.getElementById('schedBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#9ca3af;">Loading...</td></tr>';
+    document.getElementById('schedBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#9ca3af;">Loading...</td></tr>';
     document.getElementById('schedSummary').innerHTML = '';
     document.getElementById('scheduleModal').style.display = 'flex';
 
@@ -300,7 +352,7 @@ async function openScheduleModal(row) {
 
 function renderSchedule(rows) {
     if (!rows || rows.length === 0) {
-        document.getElementById('schedBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#9ca3af;">No installments.</td></tr>';
+        document.getElementById('schedBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#9ca3af;">No installments.</td></tr>';
         return;
     }
 
@@ -336,7 +388,6 @@ function renderSchedule(rows) {
         const paid_at = r.paid_at ? new Date(r.paid_at).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
         const overdueLabel = (r.payment_status === 'Overdue' && r.overdue_days > 0) ? ` <span style="color:#dc2626;font-size:11px;">(${r.overdue_days}d late)</span>` : '';
         const blackflag = (r.overdue_days >= 21) ? ' <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;">BLACKLIST</span>' : '';
-        const actionBtn = (r.payment_status === 'Paid') ? '<span style="color:#9ca3af;font-size:12px;">—</span>' : `<button class="btn-add-blue" style="padding:4px 10px;font-size:12px;border:none;background:#10b981;color:#fff;" onclick="markInstallmentPaid(${r.installment_id})"><i class="fas fa-check"></i> Mark Paid</button>`;
         return `
             <tr>
                 <td style="font-weight:700;color:#6b7280;">${r.installment_number}</td>
@@ -344,7 +395,6 @@ function renderSchedule(rows) {
                 <td style="font-weight:700;color:#111827;">RM ${fmt(r.monthly_amount)}</td>
                 <td><span class="badge-pill ${statusClass}">${r.payment_status}</span>${overdueLabel}${blackflag}</td>
                 <td style="color:#6b7280;">${paid_at}</td>
-                <td>${actionBtn}</td>
             </tr>
         `;
     }).join('');
@@ -356,10 +406,7 @@ function closeScheduleModal() {
 }
 
 async function markInstallmentPaid(installmentId) {
-    const r = await Swal.fire({ title: 'Mark as Paid?', text: 'Payment receipt will be generated.', icon: 'question', showCancelButton: true, confirmButtonText: 'Yes', confirmButtonColor: '#10b981' });
-    if (!r.isConfirmed) return;
-    const ok = await doAction({ action: 'mark_installment_paid', installment_id: installmentId }, true);
-    if (ok && currentRow) await openScheduleModal(currentRow);
+    Swal.fire({ icon: 'info', title: 'Not Allowed', text: 'Monthly installments are paid by the customer, not the admin.' });
 }
 
 async function doAction(payload, skipReload = false) {

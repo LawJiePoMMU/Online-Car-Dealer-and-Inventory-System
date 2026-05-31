@@ -1,4 +1,5 @@
 <?php
+session_name("AdminSession");
 session_start();
 include '../Config/database.php';
 include '../Config/functions.php';
@@ -28,10 +29,14 @@ if (isset($_GET['highlight']) && !isset($_GET['p_new']) && !isset($_GET['p_used'
             ");
             $page_param = 'p_used';
         }
-        $pos = 0; $found = 0;
+        $pos = 0;
+        $found = 0;
         while ($r = mysqli_fetch_assoc($order_q)) {
             $pos++;
-            if ($r['car_id'] == $hl_id) { $found = $pos; break; }
+            if ($r['car_id'] == $hl_id) {
+                $found = $pos;
+                break;
+            }
         }
         if ($found > 0) {
             $target_page = (int) ceil($found / 10);
@@ -173,17 +178,17 @@ if (isset($_GET['ajax'], $_GET['action'], $_GET['car_id']) && $_GET['action'] ==
     }
     exit();
 }
-$active_tab = (isset($_GET['tab']) && in_array($_GET['tab'], ['new', 'used'])) 
-              ? $_GET['tab'] 
-              : 'new';
+$active_tab = (isset($_GET['tab']) && in_array($_GET['tab'], ['new', 'used', 'history']))
+    ? $_GET['tab']
+    : 'new';
 $allowed_status = ['all', 'Active', 'Inactive'];
-$status_filter = (isset($_GET['status']) && in_array($_GET['status'], $allowed_status)) 
-                 ? $_GET['status'] 
-                 : 'all';
+$status_filter = (isset($_GET['status']) && in_array($_GET['status'], $allowed_status))
+    ? $_GET['status']
+    : 'all';
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 $count_new = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM cars WHERE car_origin = 'New Car'"))['c'];
-$count_used = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM cars WHERE car_origin = 'Used Car'"))['c'];
-
+$count_used = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold'"))['c'];
+$count_sold = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE stat.car_status_status = 'Sold'"))['c'];
 $search_condition = "";
 if (!empty($search)) {
     $search_condition = " AND (c.car_brand LIKE '%$search%' OR c.car_model LIKE '%$search%' OR ud.car_plate LIKE '%$search%') ";
@@ -192,25 +197,30 @@ if ($status_filter !== 'all') {
     $search_condition .= " AND stat.car_status_status = '$status_filter' ";
 }
 
-$origin_for_active = $active_tab === 'used' ? 'Used Car' : 'New Car';
-$count_filtered = (int) mysqli_fetch_assoc(mysqli_query($conn, "
-    SELECT COUNT(DISTINCT c.car_id) as c 
-    FROM cars c 
-    LEFT JOIN car_status stat ON c.car_id = stat.car_id 
-    LEFT JOIN used_car_details ud ON c.car_id = ud.car_id 
-    WHERE c.car_origin = '$origin_for_active' $search_condition"))['c'];
+$base_search = "";
+if (!empty($search)) {
+    $base_search = " AND (c.car_brand LIKE '%$search%' OR c.car_model LIKE '%$search%' OR ud.car_plate LIKE '%$search%') ";
+}
 
 $limit = 10;
 $p_new = max(1, (int) ($_GET['p_new'] ?? 1));
 $p_used = max(1, (int) ($_GET['p_used'] ?? 1));
+$p_hist = max(1, (int) ($_GET['p_hist'] ?? 1));
 $offset_new = ($p_new - 1) * $limit;
 $offset_used = ($p_used - 1) * $limit;
-$pages_new = $active_tab === 'new' ? max(1, (int) ceil($count_filtered / $limit)) : 1;
-$pages_used = $active_tab === 'used' ? max(1, (int) ceil($count_filtered / $limit)) : 1;
+$offset_hist = ($p_hist - 1) * $limit;
 
-$result_new = $result_used = null;
+$pages_new = $pages_used = $pages_hist = 1;
+$result_new = $result_used = $result_history = null;
+
 try {
     if ($active_tab === 'new') {
+        $cf = (int) mysqli_fetch_assoc(mysqli_query($conn, "
+            SELECT COUNT(DISTINCT c.car_id) as c FROM cars c
+            LEFT JOIN car_status stat ON c.car_id = stat.car_id
+            LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
+            WHERE c.car_origin = 'New Car' $search_condition"))['c'];
+        $pages_new = max(1, (int) ceil($cf / $limit));
         $result_new = mysqli_query($conn, "
             SELECT c.*, stat.car_status_price, stat.car_status_status, 
                    loc.location_state, loc.location_city, ct.car_type_name,
@@ -228,7 +238,13 @@ try {
             ORDER BY (CASE WHEN IFNULL((SELECT SUM(quantity) FROM car_inventory WHERE car_id = c.car_id), 0) <= $low_stock_limit THEN 0 ELSE 1 END) ASC, c.car_brand ASC, c.car_model ASC, c.car_id DESC
             LIMIT $limit OFFSET $offset_new
         ");
-    } else {
+    } elseif ($active_tab === 'used') {
+        $cf = (int) mysqli_fetch_assoc(mysqli_query($conn, "
+            SELECT COUNT(DISTINCT c.car_id) as c FROM cars c
+            LEFT JOIN car_status stat ON c.car_id = stat.car_id
+            LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
+            WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold' $search_condition"))['c'];
+        $pages_used = max(1, (int) ceil($cf / $limit));
         $result_used = mysqli_query($conn, "
             SELECT c.*, stat.car_status_price, stat.car_status_status, 
                    loc.location_state, loc.location_city, ct.car_type_name, ud.car_plate,
@@ -241,10 +257,33 @@ try {
             LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
             LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
             LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
-            WHERE c.car_origin = 'Used Car' $search_condition 
+            WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold' $search_condition 
             GROUP BY c.car_id 
             ORDER BY FIELD(stat.car_status_status, 'Active', 'Inactive') ASC, c.car_brand ASC, c.car_model ASC, c.car_id DESC
             LIMIT $limit OFFSET $offset_used
+        ");
+    } else { // history = Sold cars
+        $cf = (int) mysqli_fetch_assoc(mysqli_query($conn, "
+            SELECT COUNT(DISTINCT c.car_id) as c FROM cars c
+            LEFT JOIN car_status stat ON c.car_id = stat.car_id
+            LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
+            WHERE stat.car_status_status = 'Sold' $base_search"))['c'];
+        $pages_hist = max(1, (int) ceil($cf / $limit));
+        $result_history = mysqli_query($conn, "
+            SELECT c.*, stat.car_status_price, stat.car_status_status, stat.car_status_updated_at,
+                   loc.location_state, loc.location_city, ct.car_type_name, ud.car_plate,
+                   GROUP_CONCAT(DISTINCT inv.variant SEPARATOR ', ') as all_variants,
+                   GROUP_CONCAT(DISTINCT CONCAT_WS('::', inv.color_name, inv.color_hex, inv.quantity) SEPARATOR '||') as color_data
+            FROM cars c
+            LEFT JOIN car_status stat ON c.car_id = stat.car_id 
+            LEFT JOIN locations loc ON c.location_id = loc.location_id
+            LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
+            LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
+            LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
+            WHERE stat.car_status_status = 'Sold' $base_search 
+            GROUP BY c.car_id 
+            ORDER BY stat.car_status_updated_at DESC, c.car_id DESC
+            LIMIT $limit OFFSET $offset_hist
         ");
     }
 } catch (Exception $e) {
@@ -286,6 +325,10 @@ function getCarImgUrl($conn, $car_id)
                 (<?= $count_new ?>)</a>
             <a href="?tab=used" class="tab-item <?= $active_tab === 'used' ? 'active' : '' ?>">Used Cars
                 (<?= $count_used ?>)</a>
+            <a href="?tab=history" class="tab-item <?= $active_tab === 'history' ? 'active' : '' ?>">History
+                (
+                <?= $count_sold ?>)
+            </a>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -297,23 +340,27 @@ function getCarImgUrl($conn, $car_id)
                     <input type="text" name="search" class="form-control" placeholder="Search Brand, Model or Plate..."
                         style="padding-left:38px;width:280px;font-size:13px;" value="<?= htmlspecialchars($search) ?>">
                 </div>
-                <select name="status" class="form-control" style="width:150px;font-size:13px;"
-                    onchange="this.form.submit()">
-                    <option value="all">All Status</option>
-                    <option value="Active" <?= $status_filter === 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Inactive" <?= $status_filter === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
-                </select>
+                <?php if ($active_tab !== 'history'): ?>
+                    <select name="status" class="form-control" style="width:150px;font-size:13px;"
+                        onchange="this.form.submit()">
+                        <option value="all">All Status</option>
+                        <option value="Active" <?= $status_filter === 'Active' ? 'selected' : '' ?>>Active</option>
+                        <option value="Inactive" <?= $status_filter === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
+                    </select>
+                <?php endif; ?>
             </form>
-            <div style="display:flex;gap:12px;">
-                <button type="button" class="btn-export" id="copyBtn" onclick="toggleCopyMode()"><i
-                        class="fas fa-copy"></i> Copy Selected</button>
-                <button type="button" class="btn-export" id="cancelCopyBtn" onclick="cancelCopyMode()"
-                    style="display:none;background-color:#64748b;color:white;border-color:#64748b;"><i
-                        class="fas fa-times"></i> Cancel</button>
-                <a href="edit_car_details.php?origin=<?= htmlspecialchars($active_tab) ?>" class="btn-add-blue"
-                    style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;"><i
-                        class="fas fa-plus"></i> Add Car</a>
-            </div>
+            <?php if ($active_tab !== 'history'): ?>
+                <div style="display:flex;gap:12px;">
+                    <button type="button" class="btn-export" id="copyBtn" onclick="toggleCopyMode()"><i
+                            class="fas fa-copy"></i> Copy Selected</button>
+                    <button type="button" class="btn-export" id="cancelCopyBtn" onclick="cancelCopyMode()"
+                        style="display:none;background-color:#64748b;color:white;border-color:#64748b;"><i
+                            class="fas fa-times"></i> Cancel</button>
+                    <a href="edit_car_details.php?origin=<?= htmlspecialchars($active_tab) ?>" class="btn-add-blue"
+                        style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;"><i
+                            class="fas fa-plus"></i> Add Car</a>
+                </div>
+            <?php endif; ?>
         </div>
 
         <?php if ($active_tab === 'new'): ?>
@@ -474,7 +521,7 @@ function getCarImgUrl($conn, $car_id)
                                     $stock = (int) $row['total_stock'];
                                     $is_incomplete = empty($row['car_brand']) || empty($row['car_model']) || empty($row['car_year']) || empty($row['car_status_price']) || empty($row['car_plate']) || empty($row['location_city']);
                                     $price = !empty($row['car_status_price']) ? "RM " . number_format($row['car_status_price']) : "TBA";
-                                    $status = (!empty($row['car_status_status']) && in_array($row['car_status_status'], ['Active', 'Inactive'])) ? $row['car_status_status'] : 'Active';
+                                    $status = (!empty($row['car_status_status']) && in_array($row['car_status_status'], ['Active', 'Inactive', 'Sold'])) ? $row['car_status_status'] : 'Active';
                                     $dot_class = ($status == 'Active') ? 'dot-active' : 'dot-inactive';
                                     $text_class = ($status == 'Active') ? 'text-active' : 'text-inactive';
                                     $plate = !empty($row['car_plate']) ? htmlspecialchars($row['car_plate']) : '-';
@@ -493,9 +540,10 @@ function getCarImgUrl($conn, $car_id)
                                             if (count($parts) === 3) {
                                                 $c_name = htmlspecialchars($parts[0]);
                                                 $c_hex = htmlspecialchars($parts[1]);
-                                                $c_qty = (int) $parts[2];
+                                                $c_qty = ($row['car_status_status'] === 'Sold') ? 0 : (int) $parts[2];
+                                                $dot_opacity = ($row['car_status_status'] === 'Sold') ? '0.35' : '1';
                                                 $color_html .= "<div style='position:relative;display:inline-block;margin-right:12px;margin-top:4px;' title='{$c_name} (Qty: {$c_qty})'>
-                                                    <div style='background-color:{$c_hex};width:18px;height:18px;border-radius:50%;border:1px solid #d1d5db;box-shadow:0 1px 2px rgba(0,0,0,0.1);cursor:pointer;'></div>
+                                                    <div style='background-color:{$c_hex};width:18px;height:18px;border-radius:50%;border:1px solid #d1d5db;box-shadow:0 1px 2px rgba(0,0,0,0.1);cursor:pointer;opacity:{$dot_opacity};'></div>
                                                     <span style='position:absolute;top:-8px;right:-8px;background:#6b7280;color:white;font-size:9px;font-weight:bold;width:14px;height:14px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid white;'>{$c_qty}</span>
                                                 </div>";
                                             }
@@ -503,10 +551,10 @@ function getCarImgUrl($conn, $car_id)
                                     } else {
                                         $color_html = "<span style='background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px dashed #d1d5db;'>No Colors</span>";
                                     }
-
-                                    $badge_bg = ($stock > 0) ? "#dcfce7" : "#fee2e2";
-                                    $badge_text = ($stock > 0) ? "#166534" : "#991b1b";
-                                    $display_qty = ($stock > 0) ? "Available" : "SOLD";
+                                    $is_sold = ($row['car_status_status'] === 'Sold');
+                                    $badge_bg = $is_sold ? "#fee2e2" : "#dcfce7";
+                                    $badge_text = $is_sold ? "#991b1b" : "#166534";
+                                    $display_qty = $is_sold ? "SOLD" : "Available";
 
                                     echo "<tr class='data-row print-used-car'>";
                                     echo "<td class='print-hide' style='padding-left:16px;'><input type='checkbox' class='row-checkbox' style='cursor:pointer; display:none;'></td>";
@@ -515,7 +563,7 @@ function getCarImgUrl($conn, $car_id)
                                         <div style='display:flex;align-items:center;gap:12px;'>
                                             <div class='print-hide' style='position:relative;width:60px;height:40px;border-radius:6px;overflow:hidden;background:#f3f4f6;flex-shrink:0;border:1px solid #e5e7eb;'>
                                                 <img src='{$img_url}' style='width:100%;height:100%;object-fit:cover;'>";
-                                    if ($stock == 0) {
+                                    if ($is_sold) {
                                         echo "<div style='position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:bold;'>SOLD</div>";
                                     }
                                     echo "          </div>
@@ -573,6 +621,107 @@ function getCarImgUrl($conn, $car_id)
                                 <?php endfor; ?>
                                 <a href="<?= $base_q ?>&p_used=<?= min($pages_used, $p_used + 1) ?>"
                                     class="page-btn <?= ($p_used == $pages_used) ? 'disabled' : '' ?>">Next <i
+                                        class="fas fa-angle-right"></i></a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+        <?php if ($active_tab === 'history'): ?>
+            <div id="section_history" class="table-section">
+                <div class="column-header"><i class="fas fa-history" style="color:#16a34a;"></i> Sold Cars (History)</div>
+                <div class="table-card" style="padding:0;border:none;">
+                    <table class="admin-table" id="table_history" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th style="width:9%;text-align:left;padding-left:16px;">CAR ID</th>
+                                <th style="width:24%;text-align:left;">CAR DETAILS</th>
+                                <th style="width:10%;text-align:left;">TYPE</th>
+                                <th style="width:15%;text-align:left;">LOCATION</th>
+                                <th style="width:11%;text-align:left;">PLATE NO.</th>
+                                <th style="width:8%;text-align:left;">YEAR</th>
+                                <th style="width:11%;text-align:left;">PRICE</th>
+                                <th style="width:12%;text-align:left;">SOLD ON</th>
+                                <th style="width:8%;text-align:center;" class="print-hide">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            if ($result_history && mysqli_num_rows($result_history) > 0) {
+                                while ($row = mysqli_fetch_assoc($result_history)) {
+                                    $price = !empty($row['car_status_price']) ? "RM " . number_format($row['car_status_price']) : "TBA";
+                                    $plate = !empty($row['car_plate']) ? htmlspecialchars($row['car_plate']) : '-';
+                                    $img_url = getCarImgUrl($conn, $row['car_id']);
+                                    $type = !empty($row['car_type_name']) ? htmlspecialchars($row['car_type_name']) : '-';
+                                    $location = !empty($row['location_city']) ? htmlspecialchars($row['location_city'] . ', ' . $row['location_state']) : '-';
+                                    $variants_text = !empty($row['all_variants']) ? htmlspecialchars($row['all_variants']) : 'No Variants';
+                                    $sold_on = !empty($row['car_status_updated_at']) ? date('d M Y', strtotime($row['car_status_updated_at'])) : '-';
+
+                                    $color_html = "";
+                                    if (!empty($row['color_data'])) {
+                                        foreach (explode('||', $row['color_data']) as $c_item) {
+                                            $parts = explode('::', $c_item);
+                                            if (count($parts) === 3) {
+                                                $c_name = htmlspecialchars($parts[0]);
+                                                $c_hex = htmlspecialchars($parts[1]);
+                                                $color_html .= "<div style='position:relative;display:inline-block;margin-right:12px;margin-top:4px;' title='{$c_name}'>
+                                                    <div style='background-color:{$c_hex};width:18px;height:18px;border-radius:50%;border:1px solid #d1d5db;opacity:0.5;'></div>
+                                                </div>";
+                                            }
+                                        }
+                                    }
+
+                                    echo "<tr class='data-row'>";
+                                    echo "<td style='text-align:left;padding-left:16px;color:#6b7280;'>CAR" . str_pad($row['car_id'], 3, '0', STR_PAD_LEFT) . "</td>";
+                                    echo "<td style='text-align:left;'>
+                                        <div style='display:flex;align-items:center;gap:12px;'>
+                                            <div class='print-hide' style='position:relative;width:60px;height:40px;border-radius:6px;overflow:hidden;background:#f3f4f6;flex-shrink:0;border:1px solid #e5e7eb;'>
+                                                <img src='{$img_url}' style='width:100%;height:100%;object-fit:cover;'>
+                                                <div style='position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:bold;'>SOLD</div>
+                                            </div>
+                                            <div style='display:flex;flex-direction:column;'>
+                                                <strong style='color:#111827;font-size:13px;margin-bottom:2px;'>" . htmlspecialchars($row['car_brand']) . "</strong>
+                                                <span style='color:#6b7280;font-weight:normal;font-size:12px;'>" . htmlspecialchars($row['car_model']) . "</span>
+                                                <div style='display:flex;flex-direction:column;gap:4px;margin-top:6px;'>
+                                                    <div style='display:flex;flex-wrap:wrap;'><span style='background:#f3f4f6;color:#4b5563;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;'><i class='fas fa-car-side' style='margin-right:3px;'></i> {$variants_text}</span></div>
+                                                    <div style='display:flex;align-items:center;flex-wrap:wrap;'>{$color_html}</div>
+                                                </div>
+                                            </div>
+                                        </div></td>";
+                                    echo "<td style='text-align:left;'>{$type}</td>";
+                                    echo "<td style='text-align:left;'>{$location}</td>";
+                                    echo "<td style='text-align:left;font-weight:500;'>{$plate}</td>";
+                                    echo "<td style='text-align:left;'>" . htmlspecialchars($row['car_year']) . "</td>";
+                                    echo "<td style='text-align:left;font-weight:600;'>{$price}</td>";
+                                    echo "<td style='text-align:left;color:#6b7280;'>{$sold_on}</td>";
+                                    echo "<td class='print-hide' style='text-align:center;'>
+                                        <a href='javascript:void(0);' onclick='quickView({$row['car_id']})' style='color:#9ca3af;' title='Quick View'><i class='fas fa-eye'></i></a>
+                                    </td></tr>";
+                                }
+                            } else {
+                                echo "<tr><td colspan='9' style='text-align:center;padding:48px 0;color:#6b7280;font-size:14px;'>No sold cars yet.</td></tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                    <div class="pagination-container print-hide"
+                        style="padding:20px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5e7eb;">
+                        <div class="page-info" style="color:#6b7280;font-size:13px;">
+                            Showing Page <?= $p_hist ?> of <?= $pages_hist ?>
+                        </div>
+                        <?php if ($pages_hist > 1):
+                            $base_q = "?tab=history&search=" . urlencode($search); ?>
+                            <div class="page-controls" style="display:flex;gap:8px;">
+                                <a href="<?= $base_q ?>&p_hist=<?= max(1, $p_hist - 1) ?>"
+                                    class="page-btn <?= ($p_hist == 1) ? 'disabled' : '' ?>"><i class="fas fa-angle-left"></i>
+                                    Prev</a>
+                                <?php for ($i = 1; $i <= $pages_hist; $i++): ?>
+                                    <a href="<?= $base_q ?>&p_hist=<?= $i ?>"
+                                        class="page-btn <?= ($p_hist == $i) ? 'active' : '' ?>"><?= $i ?></a>
+                                <?php endfor; ?>
+                                <a href="<?= $base_q ?>&p_hist=<?= min($pages_hist, $p_hist + 1) ?>"
+                                    class="page-btn <?= ($p_hist == $pages_hist) ? 'disabled' : '' ?>">Next <i
                                         class="fas fa-angle-right"></i></a>
                             </div>
                         <?php endif; ?>

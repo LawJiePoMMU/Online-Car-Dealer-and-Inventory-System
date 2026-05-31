@@ -1,4 +1,5 @@
 <?php
+session_name("AdminSession");
 session_start();
 include '../Config/database.php';
 $month = isset($_GET['month']) ? $_GET['month'] : date('m');
@@ -18,11 +19,13 @@ FROM bookings b
 LEFT JOIN (
     SELECT booking_id, SUM(dp_amount) as total_dp 
     FROM down_payments 
+    WHERE paid_at IS NOT NULL
     GROUP BY booking_id
 ) dp_totals ON b.booking_id = dp_totals.booking_id
 LEFT JOIN (
     SELECT booking_id, SUM(monthly_amount) as total_mi 
     FROM monthly_installments 
+    WHERE payment_status = 'Paid'
     GROUP BY booking_id
 ) mi_totals ON b.booking_id = mi_totals.booking_id
 WHERE YEAR(b.created_at) = '$year'
@@ -41,8 +44,8 @@ if ($month === 'all') {
                 COALESCE(SUM(mi_totals.total_mi), 0)
             ) as revenue
         FROM bookings b
-        LEFT JOIN (SELECT booking_id, SUM(dp_amount) as total_dp FROM down_payments GROUP BY booking_id) dp_totals ON b.booking_id = dp_totals.booking_id
-        LEFT JOIN (SELECT booking_id, SUM(monthly_amount) as total_mi FROM monthly_installments GROUP BY booking_id) mi_totals ON b.booking_id = mi_totals.booking_id
+        LEFT JOIN (SELECT booking_id, SUM(dp_amount) as total_dp FROM down_payments WHERE paid_at IS NOT NULL GROUP BY booking_id) dp_totals ON b.booking_id = dp_totals.booking_id
+        LEFT JOIN (SELECT booking_id, SUM(monthly_amount) as total_mi FROM monthly_installments WHERE payment_status = 'Paid' GROUP BY booking_id) mi_totals ON b.booking_id = mi_totals.booking_id
         WHERE YEAR(b.created_at) = '$year'
         GROUP BY MONTH(b.created_at)
     ");
@@ -68,8 +71,8 @@ if ($month === 'all') {
                 COALESCE(SUM(mi_totals.total_mi), 0)
             ) as revenue
         FROM bookings b
-        LEFT JOIN (SELECT booking_id, SUM(dp_amount) as total_dp FROM down_payments GROUP BY booking_id) dp_totals ON b.booking_id = dp_totals.booking_id
-        LEFT JOIN (SELECT booking_id, SUM(monthly_amount) as total_mi FROM monthly_installments GROUP BY booking_id) mi_totals ON b.booking_id = mi_totals.booking_id
+        LEFT JOIN (SELECT booking_id, SUM(dp_amount) as total_dp FROM down_payments WHERE paid_at IS NOT NULL GROUP BY booking_id) dp_totals ON b.booking_id = dp_totals.booking_id
+        LEFT JOIN (SELECT booking_id, SUM(monthly_amount) as total_mi FROM monthly_installments WHERE payment_status = 'Paid' GROUP BY booking_id) mi_totals ON b.booking_id = mi_totals.booking_id
         WHERE YEAR(b.created_at) = '$year' AND MONTH(b.created_at) = '$month'
         GROUP BY DAY(b.created_at)
     ");

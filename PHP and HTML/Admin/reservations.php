@@ -1,4 +1,5 @@
 <?php
+session_name("AdminSession");
 session_start();
 include '../Config/database.php';
 include '../Config/functions.php';
@@ -132,22 +133,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 if (isset($_GET['highlight']) && !isset($_GET['page']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
-    $hl_id = (int) $_GET['highlight'];
-    $find_q = mysqli_query($conn, "
+  $hl_id = (int) $_GET['highlight'];
+  $find_q = mysqli_query($conn, "
         SELECT reservation_id FROM reservations 
         WHERE reservation_status='Pending Viewing' 
         ORDER BY reservation_id ASC
     ");
-    $pos = 0; $found = 0;
-    while ($r = mysqli_fetch_assoc($find_q)) {
-        $pos++;
-        if ($r['reservation_id'] == $hl_id) { $found = $pos; break; }
+  $pos = 0;
+  $found = 0;
+  while ($r = mysqli_fetch_assoc($find_q)) {
+    $pos++;
+    if ($r['reservation_id'] == $hl_id) {
+      $found = $pos;
+      break;
     }
-    if ($found > 0) {
-        $target_page = (int) ceil($found / 10);
-        header("Location: reservations.php?tab=reservations&page=$target_page&highlight=$hl_id");
-        exit();
-    }
+  }
+  if ($found > 0) {
+    $target_page = (int) ceil($found / 10);
+    header("Location: reservations.php?tab=reservations&page=$target_page&highlight=$hl_id");
+    exit();
+  }
 }
 
 $tab = $_GET['tab'] ?? 'reservations';
@@ -194,7 +199,8 @@ if ($tab === 'reservations') {
                ucd.car_plate,
                (SELECT car_image_url FROM car_image WHERE car_id=c.car_id LIMIT 1) AS car_image,
                (SELECT variant FROM car_inventory WHERE car_id=c.car_id LIMIT 1) AS car_variant,
-               (SELECT color_name   FROM car_inventory WHERE car_id=c.car_id LIMIT 1) AS car_color
+               (SELECT color_name   FROM car_inventory WHERE car_id=c.car_id LIMIT 1) AS car_color,
+               (SELECT COUNT(*) FROM bookings bk WHERE bk.car_id=c.car_id AND bk.booking_status IN ('Pending','Approved')) AS active_booking_count
         FROM reservations r
         LEFT JOIN users u ON r.user_id=u.user_id
         LEFT JOIN cars  c ON r.car_id=c.car_id
@@ -221,7 +227,8 @@ if ($tab === 'reservations') {
                ucd.car_plate,
                (SELECT car_image_url FROM car_image WHERE car_id=c.car_id LIMIT 1) AS car_image,
                (SELECT variant FROM car_inventory WHERE car_id=c.car_id LIMIT 1) AS car_variant,
-               (SELECT color_name   FROM car_inventory WHERE car_id=c.car_id LIMIT 1) AS car_color
+               (SELECT color_name   FROM car_inventory WHERE car_id=c.car_id LIMIT 1) AS car_color,
+               (SELECT COUNT(*) FROM bookings bk WHERE bk.car_id=c.car_id AND bk.booking_status IN ('Pending','Approved')) AS active_booking_count
         FROM test_drives t
         LEFT JOIN reservations r ON t.reservation_id=r.reservation_id
         LEFT JOIN users u ON r.user_id=u.user_id
@@ -765,9 +772,12 @@ $total_pages = max(1, (int) ceil($total_rows / $limit));
                 }
               }
               $status_slug = strtolower(str_replace(' ', '-', $status_label));
+              $is_taken = (strcasecmp($row['car_origin'] ?? '', 'Used Car') === 0)
+                && ((int) ($row['active_booking_count'] ?? 0) > 0)
+                && in_array($tab, ['reservations', 'test_drives']);
               $row_json = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
               ?>
-              <tr class="data-row" onclick='openModal(<?= $row_json ?>, "<?= $tab ?>", "<?= $sub_tab ?>")'>
+              <tr class="data-row" onclick='openModal(<?= $row_json ?>, "<?= $tab ?>", "<?= $sub_tab ?>")' <?= $is_taken ? 'style="background:#fff7f7;box-shadow:inset 3px 0 0 #ef4444;"' : '' ?>>
                 <td style="text-align:left;padding-left:24px;color:#6b7280;font-weight:500;"><?= $order_id ?></td>
                 <td>
                   <div style="font-weight:500;color:#111827;font-size:14px;">
@@ -782,6 +792,12 @@ $total_pages = max(1, (int) ceil($total_rows / $limit));
                   <div style="font-size:12px;color:#6b7280;">
                     <?= htmlspecialchars($display_year . ' | ' . $display_origin) ?>
                   </div>
+                  <?php if ($is_taken): ?>
+                    <div
+                      style="margin-top:5px;display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">
+                      <i class="fas fa-exclamation-triangle"></i> Already booked — please cancel
+                    </div>
+                  <?php endif; ?>
                 </td>
                 <td style="text-align:left;color:#4b5563;font-weight:500;"><?= $date_display ?></td>
                 <td style="text-align:left;">

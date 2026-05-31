@@ -236,16 +236,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
             $payment_id = mysqli_insert_id($conn);
             mysqli_stmt_close($ins_stmt);
 
-            if ($payment_type === 'Booking Fee') {
-                $upd = mysqli_prepare(
-                    $conn,
-                    "UPDATE bookings
-                     SET booking_paid_at = NOW(), receipt_number = ?
-                     WHERE booking_id = ?"
-                );
+if ($payment_type === 'Booking Fee') {
+                $upd = mysqli_prepare($conn, "UPDATE bookings SET booking_paid_at = NOW(), receipt_number = ? WHERE booking_id = ?");
                 mysqli_stmt_bind_param($upd, "si", $receipt_num, $booking_id);
                 mysqli_stmt_execute($upd);
                 mysqli_stmt_close($upd);
+            } 
+            elseif ($payment_type === 'Down Payment') {
+                $upd = mysqli_prepare($conn, "UPDATE bookings SET booking_status = 'Approved' WHERE booking_id = ?");
+                mysqli_stmt_bind_param($upd, "i", $booking_id);
+                mysqli_stmt_execute($upd);
+                mysqli_stmt_close($upd);
+            }
+            elseif ($payment_type === 'Monthly Installment') {
+                $upd = mysqli_prepare($conn, "UPDATE loan_schedules SET status = 'Paid' WHERE booking_id = ? AND status = 'Pending' LIMIT 1");
+                mysqli_stmt_bind_param($upd, "i", $booking_id);
+                mysqli_stmt_execute($upd);
+                 mysqli_stmt_close($upd);
             }
 
             mysqli_commit($conn);
@@ -262,7 +269,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
 
         } catch (Exception $e) {
             mysqli_rollback($conn);
-            $errors[] = "Payment processing failed. Please try again.";
+            $errors[] = "System Error: " . $e->getMessage();
         }
     }
 }
@@ -515,7 +522,7 @@ include 'Includes/header.php';
             <div class="pay-card summary-card">
                 <h3><i class="fas fa-receipt"></i> Order Summary</h3>
                 <div class="summary-row">
-                    <span>Vehicle Price</span>
+                    <span>Car Price</span>
                     <strong>RM <?= number_format($car_price, 2) ?></strong>
                 </div>
                 <div class="summary-row">
@@ -573,9 +580,9 @@ include 'Includes/header.php';
             </div>
 
             <form method="POST" autocomplete="off" id="payForm">
-
+                <input type="hidden" name="confirm_payment" value="1">
                 <div class="form-section">
-                    <h3><i class="fas fa-credit-card"></i> Card Details</h3>
+                    <h3><i class="fas fa-credit-card"></i> Card Details</h3> 
 
                     <div class="form-row single">
                         <div class="form-group">

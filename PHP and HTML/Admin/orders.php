@@ -1,4 +1,5 @@
 <?php
+session_name("AdminSession");
 session_start();
 include '../Config/database.php';
 include '../Config/functions.php';
@@ -22,22 +23,32 @@ $expired_dp_query = mysqli_query($conn, "SELECT booking_id FROM down_payments WH
 while ($edp = mysqli_fetch_assoc($expired_dp_query)) {
     $bid = $edp['booking_id'];
 
-    $b_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM bookings WHERE booking_id = $bid"));
+    $b_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT b.car_id, b.snapshot_data, c.car_origin FROM bookings b LEFT JOIN cars c ON b.car_id=c.car_id WHERE b.booking_id = $bid"));
     if ($b_info) {
         $cid = $b_info['car_id'];
+        $is_used = (strcasecmp($b_info['car_origin'] ?? '', 'Used Car') === 0);
 
         mysqli_query($conn, "UPDATE down_payments SET dp_status = 'Cancelled', dp_reason = 'System Auto-Cancelled: 7 Days Unpaid' WHERE booking_id = $bid");
         mysqli_query($conn, "UPDATE bookings SET booking_status = 'Rejected', rejection_reason = 'System Auto-Rejected: DP 7 Days Unpaid', refunded_at = NOW() WHERE booking_id = $bid");
 
-        mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = car_status_stock_quantity + 1 WHERE car_id = $cid");
-        mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $cid AND car_status_stock_quantity > 0");
+        if ($is_used) {
+            mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $cid");
+        } else {
+            $snap_c = json_decode($b_info['snapshot_data'] ?? '{}', true);
+            $rcolor = mysqli_real_escape_string($conn, $snap_c['car_color'] ?? '');
+            if ($rcolor !== '') {
+                mysqli_query($conn, "UPDATE car_inventory SET quantity = quantity + 1 WHERE car_id = $cid AND color_name = '$rcolor' LIMIT 1");
+            }
+            mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = (SELECT IFNULL(SUM(quantity),0) FROM car_inventory WHERE car_id = $cid) WHERE car_id = $cid");
+            mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $cid AND car_status_stock_quantity > 0");
+        }
     }
 }
 
 if (isset($_GET['highlight']) && !isset($_GET['page']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $hl_id = (int) $_GET['highlight'];
     $tab_param = $_GET['tab'] ?? 'booking';
-    
+
     $find_q = null;
     if ($tab_param === 'booking') {
         $find_q = mysqli_query($conn, "
@@ -53,12 +64,16 @@ if (isset($_GET['highlight']) && !isset($_GET['page']) && $_SERVER['REQUEST_METH
             ORDER BY dp.dp_created_at ASC
         ");
     }
-    
+
     if ($find_q) {
-        $pos = 0; $found = 0;
+        $pos = 0;
+        $found = 0;
         while ($r = mysqli_fetch_assoc($find_q)) {
             $pos++;
-            if ($r['booking_id'] == $hl_id) { $found = $pos; break; }
+            if ($r['booking_id'] == $hl_id) {
+                $found = $pos;
+                break;
+            }
         }
         if ($found > 0) {
             $target_page = (int) ceil($found / 10);
@@ -100,7 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
 
                 $price = (float) ($snap['car_price'] ?? 0);
-                $dp_amt = round($price * ($dp_percent / 100), 2);
+                $locked_dp_pct = (float) ($snap['locked_dp_pct'] ?? $dp_percent);
+                $dp_amt = round($price * ($locked_dp_pct / 100), 2);
 
                 mysqli_begin_transaction($conn);
                 mysqli_query($conn, "UPDATE bookings SET booking_status='Approved' WHERE booking_id=$booking_id");
@@ -119,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     break;
                 }
 
-                $res_query = mysqli_query($conn, "SELECT user_id, car_id, booking_fee, booking_status FROM bookings WHERE booking_id=$booking_id");
+                $res_query = mysqli_query($conn, "SELECT b.user_id, b.car_id, b.booking_fee, b.booking_status, b.snapshot_data, c.car_origin FROM bookings b LEFT JOIN cars c ON b.car_id=c.car_id WHERE b.booking_id=$booking_id");
                 $b = mysqli_fetch_assoc($res_query);
                 if (!$b || $b['booking_status'] !== 'Pending') {
                     echo json_encode(['success' => false, 'message' => 'Booking is not pending.']);
@@ -129,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $d_query = mysqli_query($conn, "SELECT * FROM loan_installment_documents WHERE booking_id = $booking_id");
                 $docs = mysqli_fetch_assoc($d_query);
                 $car_id = $b['car_id'];
-                $fee = (float) $b['booking_fee'];
+                $is_used = (strcasecmp($b['car_origin'] ?? '', 'Used Car') === 0);
                 if ($docs) {
                     $files_to_delete = [$docs['ic_url'], $docs['driving_license_url'], $docs['payslip_url'], $docs['bank_statement_url']];
                     foreach ($files_to_delete as $file) {
@@ -141,11 +157,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 mysqli_begin_transaction($conn);
                 mysqli_query($conn, "UPDATE bookings SET booking_status='Rejected', rejection_reason='$reason', refunded_at=NOW() WHERE booking_id=$booking_id");
-                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, remarks, payment_date) VALUES ('Booking Fee', $booking_id, $fee, 'Refunded', '$reason', NOW())");
-                mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = car_status_stock_quantity + 1 WHERE car_id = $car_id");
-                mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id AND car_status_stock_quantity > 0");
+                if ($is_used) {
+                    mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id");
+                } else {
+                    $snap_c = json_decode($b['snapshot_data'] ?? '{}', true);
+                    $rcolor = mysqli_real_escape_string($conn, $snap_c['car_color'] ?? '');
+                    $rvariant = mysqli_real_escape_string($conn, $snap_c['car_variant'] ?? '');
+                    if ($rcolor !== '') {
+                        mysqli_query($conn, "UPDATE car_inventory SET quantity = quantity + 1 WHERE car_id = $car_id AND IFNULL(variant,'') = '$rvariant' AND color_name = '$rcolor' LIMIT 1");
+                    }
+                    mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = (SELECT IFNULL(SUM(quantity),0) FROM car_inventory WHERE car_id = $car_id) WHERE car_id = $car_id");
+                    mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id AND car_status_stock_quantity > 0");
+                }
                 mysqli_commit($conn);
-                echo json_encode(['success' => true, 'message' => 'Refund processed and stock restored. User data kept intact for history.']);
+                echo json_encode(['success' => true, 'message' => 'Booking rejected. Stock/availability restored. Booking fee is non-refundable.']);
                 break;
 
             case 'reject_dp':
@@ -161,9 +186,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     break;
                 }
 
-                $b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id, booking_fee FROM bookings WHERE booking_id=$booking_id"));
+                $b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT b.car_id, b.booking_fee, b.snapshot_data, c.car_origin FROM bookings b LEFT JOIN cars c ON b.car_id=c.car_id WHERE b.booking_id=$booking_id"));
                 $car_id = $b['car_id'];
                 $fee = (float) $b['booking_fee'];
+                $is_used = (strcasecmp($b['car_origin'] ?? '', 'Used Car') === 0);
 
                 $dp_data = mysqli_fetch_assoc(mysqli_query($conn, "SELECT insurance_pdf_url FROM down_payments WHERE booking_id=$booking_id"));
                 if ($dp_data && !empty($dp_data['insurance_pdf_url']) && file_exists($dp_data['insurance_pdf_url'])) {
@@ -174,14 +200,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 mysqli_query($conn, "UPDATE down_payments SET dp_status='Cancelled', dp_reason='$reason', insurance_pdf_url=NULL WHERE booking_id=$booking_id");
                 mysqli_query($conn, "UPDATE bookings SET booking_status='Refunded', rejection_reason='[DP Rejected] $reason', refunded_at=NOW() WHERE booking_id=$booking_id");
                 mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, remarks, payment_date) VALUES ('Booking Fee Refund', $booking_id, $fee, 'Refunded', '$reason', NOW())");
-                mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = car_status_stock_quantity + 1 WHERE car_id = $car_id");
-                mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id AND car_status_stock_quantity > 0");
+                if ($is_used) {
+                    mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id");
+                } else {
+                    $snap_c = json_decode($b['snapshot_data'] ?? '{}', true);
+                    $rcolor = mysqli_real_escape_string($conn, $snap_c['car_color'] ?? '');
+                    $rvariant = mysqli_real_escape_string($conn, $snap_c['car_variant'] ?? '');
+                    if ($rcolor !== '') {
+                        mysqli_query($conn, "UPDATE car_inventory SET quantity = quantity + 1 WHERE car_id = $car_id AND IFNULL(variant,'') = '$rvariant' AND color_name = '$rcolor' LIMIT 1");
+                    }
+                    mysqli_query($conn, "UPDATE car_status SET car_status_stock_quantity = (SELECT IFNULL(SUM(quantity),0) FROM car_inventory WHERE car_id = $car_id) WHERE car_id = $car_id");
+                    mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Active' WHERE car_id = $car_id AND car_status_stock_quantity > 0");
+                }
                 mysqli_commit($conn);
-                echo json_encode(['success' => true, 'message' => 'Down Payment rejected, booking refunded, and stock restored.']);
+                echo json_encode(['success' => true, 'message' => 'Down Payment rejected, booking refunded, and stock/availability restored.']);
                 break;
 
             case 'save_dp_details':
                 $number = mysqli_real_escape_string($conn, trim($_POST['plate_number'] ?? ''));
+                $dpinfo = mysqli_fetch_assoc(mysqli_query($conn, "SELECT dp.plate_option, b.car_id FROM down_payments dp LEFT JOIN bookings b ON dp.booking_id=b.booking_id WHERE dp.booking_id=$booking_id"));
+                if ($dpinfo && $dpinfo['plate_option'] === 'used') {
+                    $cid = (int) $dpinfo['car_id'];
+                    $ucd = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_plate FROM used_car_details WHERE car_id=$cid LIMIT 1"));
+                    if ($ucd && !empty($ucd['car_plate'])) {
+                        $number = mysqli_real_escape_string($conn, $ucd['car_plate']);
+                    }
+                }
                 mysqli_query($conn, "UPDATE down_payments SET plate_number='$number' WHERE booking_id=$booking_id");
                 echo json_encode(['success' => true, 'message' => 'Plate details saved successfully.']);
                 break;
@@ -218,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $rcpt = 'DP-' . date('Ymd') . '-' . str_pad($booking_id, 4, '0', STR_PAD_LEFT);
 
                 mysqli_begin_transaction($conn);
-                mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW(), paid_at=NOW(), dp_receipt_number='$rcpt' WHERE booking_id=$booking_id");
+                // Single clean update — do NOT overwrite the customer's real paid_at / dp_receipt_number
                 mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW() WHERE booking_id=$booking_id");
 
                 mysqli_query($conn, "DELETE FROM monthly_installments WHERE booking_id=$booking_id");
@@ -226,30 +270,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $due = date('Y-m-d', strtotime("+$i month"));
                     mysqli_query($conn, "INSERT INTO monthly_installments (booking_id, installment_number, monthly_amount, due_date, interest_rate, installment_status, payment_status, created_at) VALUES ($booking_id, $i, $monthly, '$due', $rate, 'Active', 'Pending', NOW())");
                 }
+
+                // Used car becomes SOLD once down payment is verified.
+                // New car keeps its (already decremented) stock; no status change here.
+                $car_id_sold = (int) $b['car_id'];
+                $corigin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_origin FROM cars WHERE car_id=$car_id_sold"));
+                if ($corigin && strcasecmp($corigin['car_origin'] ?? '', 'Used Car') === 0) {
+                    mysqli_query($conn, "UPDATE car_status SET car_status_status = 'Sold' WHERE car_id = $car_id_sold");
+                }
                 mysqli_commit($conn);
                 echo json_encode(['success' => true, 'message' => "DP approved. $months installment(s) generated."]);
                 break;
 
             case 'mark_installment_paid':
-                $inst_id = intval($_POST['installment_id'] ?? 0);
-                if (!$inst_id) {
-                    echo json_encode(['success' => false, 'message' => 'Invalid installment.']);
-                    break;
-                }
-                $inst = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM monthly_installments WHERE installment_id=$inst_id"));
-                if (!$inst || $inst['payment_status'] === 'Paid') {
-                    echo json_encode(['success' => false, 'message' => 'Not found or already paid.']);
-                    break;
-                }
-
-                $amt = (float) $inst['monthly_amount'];
-                $bk = (int) $inst['booking_id'];
-                $rcpt = 'INS-' . date('Ymd') . '-' . str_pad($inst_id, 6, '0', STR_PAD_LEFT);
-                mysqli_begin_transaction($conn);
-                mysqli_query($conn, "UPDATE monthly_installments SET payment_status='Paid', paid_at=NOW(), overdue_days=0 WHERE installment_id=$inst_id");
-                mysqli_query($conn, "INSERT INTO payments (payment_type, reference_id, payment_amount, payment_status, receipt_number, payment_date) VALUES ('Monthly Installment', $bk, $amt, 'Paid', '$rcpt', NOW())");
-                mysqli_commit($conn);
-                echo json_encode(['success' => true, 'message' => 'Installment marked paid.']);
+                // Disabled: monthly installments are paid by the customer themselves
+                // through their own payment page. Admin can only view the schedule.
+                echo json_encode(['success' => false, 'message' => 'Installments are paid by the customer. Admin cannot mark them as paid.']);
                 break;
 
             case 'get_schedule':
@@ -313,6 +349,7 @@ $baseSelect = "
     cs.car_status_price AS car_price,
     (SELECT car_image_url FROM car_image WHERE car_id=c.car_id LIMIT 1) AS car_image,
     (SELECT color_name FROM car_inventory WHERE car_id=c.car_id ORDER BY inventory_id ASC LIMIT 1) AS car_color,
+    (SELECT car_plate FROM used_car_details WHERE car_id=c.car_id LIMIT 1) AS used_car_plate,
     dp.id AS dp_id, dp.dp_amount, dp.dp_status, dp.dp_approved_at, dp.dp_created_at, dp.dp_reason, dp.insurance_pdf_url, dp.plate_number, dp.plate_option, dp.insurance_fee, dp.plate_registration_fee, dp.paid_at
 ";
 
@@ -388,6 +425,49 @@ function apply_snapshot($row)
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/admin.css">
     <link rel="stylesheet" href="/Online-Car-Dealer-and-Inventory-System/CSS/orders.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        .folder-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            gap: 20px !important;
+            padding: 4px 2px 8px !important;
+        }
+
+        .folder-card {
+            background: #ffffff !important;
+            border: 1px solid #eef2f7 !important;
+            border-radius: 16px !important;
+            padding: 20px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 6px 20px rgba(0, 0, 0, 0.05) !important;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+
+        .folder-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10) !important;
+            border-color: #dbe3ec !important;
+        }
+
+        .folder-card .progress-bar {
+            height: 8px !important;
+            background: #eef2f7 !important;
+            border-radius: 999px !important;
+            overflow: hidden !important;
+            margin: 12px 0 4px !important;
+        }
+
+        .folder-card .progress-fill {
+            height: 100% !important;
+            background: linear-gradient(90deg, #1e293b 0%, #16a34a 100%) !important;
+            border-radius: 999px !important;
+            transition: width .5s ease !important;
+        }
+
+        .folder-card .progress-fill.overdue {
+            background: linear-gradient(90deg, #f59e0b 0%, #dc2626 100%) !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -708,9 +788,9 @@ function apply_snapshot($row)
                         </div>
                     </div>
 
-                    <div id="dpPanel" class="info-card" style="display:none; border-left:4px solid #6366f1;">
-                        <h3 style="font-size:14px;margin-bottom:15px;color:#4338ca;"><i class="fas fa-car-side"></i>
-                            Verification & Plate Registration</h3>
+                    <div id="dpPanel" class="info-card" style="display:none;">
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-car-side"></i>
+                            Verification and Car Plate Registration</h3>
 
                         <div class="detail-item"
                             style="margin-bottom:20px; border-bottom:1px solid #e5e7eb; padding-bottom:20px;">
@@ -747,7 +827,7 @@ function apply_snapshot($row)
 
                 <div class="modal-column">
                     <div class="info-card">
-                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-car"></i> Vehicle
+                        <h3 style="font-size:14px;margin-bottom:15px;color:#111827;"><i class="fas fa-car"></i> Car
                             & Finance</h3>
                         <div style="display:flex;gap:15px;margin-bottom:20px;">
                             <img id="detCarImage" src="" alt="Car"
@@ -792,7 +872,7 @@ function apply_snapshot($row)
                             </div>
                             <div class="finance-row total" id="rowBalance">
                                 <span id="lblBalanceText"
-                                    style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance (尾款)</span>
+                                    style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance</span>
                                 <span id="detBalance" style="font-size:18px;font-weight:800;color:#ef4444;">RM
                                     0.00</span>
                             </div>
@@ -865,7 +945,6 @@ function apply_snapshot($row)
                             <th>Amount</th>
                             <th>Status</th>
                             <th>Paid At</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="schedBody"></tbody>

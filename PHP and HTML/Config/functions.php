@@ -13,7 +13,7 @@ function get_system_setting($conn, $setting_key) {
 
 function broadcast_notification_to_admins($conn, $message) {
     $status = 'unread';
-    $query = "SELECT user_id FROM users WHERE user_role = 'admin'"; 
+    $query = "SELECT user_id FROM users WHERE user_role IN ('Admin', 'Super Admin')";
     $result = $conn->query($query);
 
     if ($result && $result->num_rows > 0) {

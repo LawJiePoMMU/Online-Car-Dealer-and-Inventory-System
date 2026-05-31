@@ -3,6 +3,7 @@ session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
 require '../Config/database.php';
+require '../Config/functions.php';
 
 // ======================================================
 // SESSION CHECK  (align with Auth/login.php)
@@ -174,10 +175,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ) {
         $errors[] = "Test drive date/time cannot be in the past.";
     }
+    if (!empty($preferred_test_drive_at)) {
+        $td_ts = strtotime($preferred_test_drive_at);
+        if ($td_ts !== false) {
+            $minutes_of_day = (int) date('G', $td_ts) * 60 + (int) date('i', $td_ts);
+            if ($minutes_of_day < 540 || $minutes_of_day > 1020) { // 540 = 09:00, 1020 = 17:00
+                $errors[] = "Test drive time must be between 9:00 AM and 5:00 PM.";
+            }
+        }
+    }
 
-    // ------------------------------------------
-    // DRIVING LICENCE FILE VALIDATION
-    // ------------------------------------------
     $licence_ok = false;
     if (!isset($_FILES['driving_licence']) || $_FILES['driving_licence']['error'] === UPLOAD_ERR_NO_FILE) {
         $errors[] = "Please upload your driving licence (PDF).";
@@ -309,6 +316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $reservation_id = mysqli_insert_id($conn);
         mysqli_stmt_close($insert_stmt);
+        trigger_new_reservation_alert($conn, $reservation_id, $res_name);
 
         $_SESSION['reservation_id'] = $reservation_id;
         $_SESSION['ref_number'] = 'RES' . str_pad($reservation_id, 3, '0', STR_PAD_LEFT);
@@ -775,10 +783,11 @@ include 'Includes/header.php';
                     <div class="form-row single">
                         <div class="form-group">
                             <label>Preferred Date &amp; Time</label>
-                            <input type="datetime-local" name="preferred_test_drive_at" class="form-input"
-                                value="<?= htmlspecialchars($preferred_test_drive_at) ?>"
-                                min="<?= htmlspecialchars($min_datetime) ?>" required>
-                            <div class="locked-hint">Must be a future date/time. Our team will confirm availability.
+                            <input type="datetime-local" name="preferred_test_drive_at" id="preferred_test_drive_at"
+                                class="form-input" value="<?= htmlspecialchars($preferred_test_drive_at) ?>"
+                                min="<?= htmlspecialchars($min_datetime) ?>" step="900" required>
+                            <div class="locked-hint">Available 9:00 AM – 5:00 PM only. Must be a future date/time; our
+                                team will confirm availability.
                             </div>
                         </div>
                     </div>
@@ -830,6 +839,24 @@ include 'Includes/header.php';
             out.textContent = '';
         }
     });
+    (function () {
+        const tdInput = document.getElementById('preferred_test_drive_at');
+        if (!tdInput) return;
+        function checkBusinessHours() {
+            tdInput.setCustomValidity('');
+            if (!tdInput.value) return;
+            const t = tdInput.value.split('T')[1] || '';
+            const [hh, mm] = t.split(':').map(n => parseInt(n, 10));
+            if (isNaN(hh)) return;
+            const mins = hh * 60 + (mm || 0);
+            if (mins < 540 || mins > 1020) {
+                tdInput.setCustomValidity('Please choose a time between 9:00 AM and 5:00 PM.');
+                tdInput.reportValidity();
+            }
+        }
+        tdInput.addEventListener('change', checkBusinessHours);
+        tdInput.addEventListener('input', checkBusinessHours);
+    })();
 </script>
 
 <?php include 'Includes/footer.php'; ?>

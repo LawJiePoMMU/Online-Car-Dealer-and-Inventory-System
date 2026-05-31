@@ -1,5 +1,4 @@
 <?php
-// 1. 极其重要：必须加上名字，否则它找不到 Admin 的登录状态！
 session_name("AdminSession");
 session_start();
 
@@ -8,8 +7,6 @@ if (!isset($_SESSION["loggedin"])
     || !isset($_SESSION["user_role"])
     || (strcasecmp($_SESSION["user_role"], "Admin") !== 0 
         && strcasecmp($_SESSION["user_role"], "Super Admin") !== 0)) {
-    
-    // 2. 修改跳转路径：踢回正确的 Admin/Auth/login.php
     header("Location: /Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Admin/Auth/login.php");
     exit;
 }

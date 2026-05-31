@@ -1,12 +1,10 @@
 <?php
-// 1. 设置 Customer 专属的 Session 名称（必须放在 session_start 之前！）
 session_name("CustomerSession");
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 2. 已经登录的话，跳回主页 (退两层到根目录)
 if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true && isset($_SESSION["role"]) && strcasecmp($_SESSION["role"], "Customer") === 0){
     header("location: ../index.php");
     exit;
@@ -103,4 +101,4 @@ include '../Includes/header.php';
     </div>
 </div>
 
-<?php include '../../Includes/footer.php'; ?>
+<?php include '../Includes/footer.php'; ?>

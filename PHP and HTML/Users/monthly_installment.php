@@ -775,6 +775,7 @@ include 'Includes/header.php';
             </div>
 
             <form method="POST" autocomplete="off" id="payForm">
+                <input type="hidden" name="confirm_payment" value="1">
                 <input type="hidden" name="booking_id" value="<?= $booking_id ?>">
                 <input type="hidden" name="installment_id" value="<?= $pay_inst['installment_id'] ?>">
 
