@@ -301,3 +301,4 @@ include '../Includes/header.php';
         });
     }
 </script>
+<?php include '../Includes/footer.php'; ?>

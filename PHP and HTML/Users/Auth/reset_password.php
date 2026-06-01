@@ -75,4 +75,4 @@ include '../Includes/header.php';
     </div>
 </div>
 
-<?php include '../../Includes/footer.php'; ?>
+<?php include '../Includes/footer.php'; ?>

@@ -4,7 +4,7 @@ require_once "../Config/database.php";
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
+} catch (PDOException $e) {
     header('Content-Type: application/json');
     echo json_encode(["error" => "Database connection failed"]);
     exit;
@@ -18,6 +18,7 @@ $sql = "SELECT DISTINCT c.car_model, c.car_brand
         JOIN car_status s ON c.car_id = s.car_id  /* 👈 重点：把 LEFT 删掉，直接用 JOIN */
         WHERE s.car_status_status = 'Active' 
         AND s.car_status_stock_quantity > 0 
+        AND TRIM(c.car_origin) = 'New Car'
         AND c.car_model IS NOT NULL 
         AND c.car_model != ''";
 

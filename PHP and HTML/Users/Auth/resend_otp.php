@@ -47,6 +47,7 @@ try {
     
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
+    $mail->Timeout    = 60;
 
     // 发件人显示 LCWcar No-Reply，并加上黑洞防止回复
     $mail->setFrom('lcwcar.support@gmail.com', 'LCWcar Support');

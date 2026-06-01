@@ -40,6 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port       = 587;
+                $mail->Timeout    = 60;
 
                 // 发件人名字依然显示你的系统名，看起来帅一点
                 $mail->setFrom('lcwcar.support@gmail.com', 'LCWcar Support');
@@ -106,4 +107,4 @@ include '../Includes/header.php';
     </div>
 </div>
 
-<?php include '../../Includes/footer.php'; ?>
+<?php include '../Includes/footer.php'; ?>

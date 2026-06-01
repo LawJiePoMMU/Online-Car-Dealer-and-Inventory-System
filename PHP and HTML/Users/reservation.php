@@ -5,11 +5,6 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 require '../Config/database.php';
 require '../Config/functions.php';
 
-// ======================================================
-// SESSION CHECK  (align with Auth/login.php)
-// login.php sets: $_SESSION["loggedin"], $_SESSION["id"], $_SESSION["role"]
-// ======================================================
-
 if (
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
@@ -23,23 +18,16 @@ if (
 
 $user_id = (int) $_SESSION['id'];
 
-// ======================================================
-// VALIDATE CAR ID
-// ======================================================
 
 if (!isset($_GET['car_id']) || empty($_GET['car_id'])) {
-    die("System Error: No vehicle was specified.");
+    die("System Error: No car was specified.");
 }
 
 $car_id = intval($_GET['car_id']);
 
 if ($car_id <= 0) {
-    die("Invalid vehicle reference.");
+    die("Invalid car reference.");
 }
-
-// ======================================================
-// FETCH CAR + PRICE (price lives in car_status, NOT in cars)
-// ======================================================
 
 $car_sql = "
 SELECT
@@ -69,9 +57,6 @@ if (!$car) {
 $is_used_car = (strcasecmp($car['car_origin'] ?? '', 'Used Car') === 0);
 $car_price = isset($car['car_price']) ? floatval($car['car_price']) : 0;
 
-// ======================================================
-// FETCH VARIANTS & COLORS from car_inventory
-// ======================================================
 
 $variants = [];
 $colors = [];
@@ -101,10 +86,6 @@ $colors = array_values($colors);
 $default_variant = $variants[0] ?? '';
 $default_color = $colors[0] ?? '';
 
-// ======================================================
-// FETCH USER (include user_ic this time)
-// ======================================================
-
 $user_sql = "
 SELECT user_name, user_email, user_phone, user_ic
 FROM users
@@ -119,9 +100,6 @@ $user_result = mysqli_stmt_get_result($user_stmt);
 $user = mysqli_fetch_assoc($user_result);
 mysqli_stmt_close($user_stmt);
 
-// ======================================================
-// FORM STATE
-// ======================================================
 
 $errors = [];
 
@@ -132,28 +110,18 @@ $res_ic = $_POST['user_ic'] ?? ($user['user_ic'] ?? '');
 
 $preferred_test_drive_at = $_POST['preferred_test_drive_at'] ?? '';
 
-// Variant: used car = locked default; new car = customer selectable
 $car_variant = $is_used_car
     ? $default_variant
     : ($_POST['car_variant'] ?? $default_variant);
 
-// Color: used car = locked default; new car = customer selectable
 $car_color = $is_used_car
     ? $default_color
     : ($_POST['car_color'] ?? $default_color);
 
-// Min datetime = right now (browser-enforced)
-$min_datetime = date('Y-m-d\TH:i');
+$min_datetime = date('Y-m-d', strtotime('+2 days')) . 'T09:00';
 
-// ======================================================
-// PROCESS SUBMISSION
-// ======================================================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // ------------------------------------------
-    // BASIC VALIDATION
-    // ------------------------------------------
     if (empty(trim($res_name)))
         $errors[] = "Full Name is required.";
     if (empty(trim($res_email)))
@@ -176,6 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Test drive date/time cannot be in the past.";
     }
     if (!empty($preferred_test_drive_at)) {
+        $earliest_day = strtotime('+2 days', strtotime(date('Y-m-d')));
+        if (strtotime($preferred_test_drive_at) < $earliest_day) {
+            $errors[] = "Test drive must be booked at least 2 days in advance (earliest date: " . date('d M Y', $earliest_day) . ").";
+        }
+    }
+    if (!empty($preferred_test_drive_at)) {
         $td_ts = strtotime($preferred_test_drive_at);
         if ($td_ts !== false) {
             $minutes_of_day = (int) date('G', $td_ts) * 60 + (int) date('i', $td_ts);
@@ -183,6 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Test drive time must be between 9:00 AM and 5:00 PM.";
             }
         }
+    }
+    if ($is_used_car && empty($_POST['ack_used_car'])) {
+        $errors[] = "Please tick the box to acknowledge the used car cancellation policy.";
     }
 
     $licence_ok = false;
@@ -201,10 +178,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ------------------------------------------
-    // DUPLICATE RESERVATION CHECK
-    // (use 'Pending Viewing' to match admin enum)
-    // ------------------------------------------
     $dup_stmt = mysqli_prepare(
         $conn,
         "SELECT reservation_id
@@ -221,13 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     mysqli_stmt_close($dup_stmt);
 
-    // ------------------------------------------
-    // SAVE RESERVATION
-    // ------------------------------------------
     if (empty($errors) && $licence_ok) {
-
-        // Save licence file
-        // From PHP AND HTML/Users/  =>  root/uploads/documents/
         $target_dir = __DIR__ . '/../../uploads/documents/';
         if (!is_dir($target_dir)) {
             mkdir($target_dir, 0777, true);
@@ -249,18 +216,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die("Failed to save driving licence file.");
         }
 
-        // URL stored relative — matches admin convention so iframe can render
         $licence_url = '../../uploads/documents/' . $licence_filename;
 
-        // Snapshot Data (matches what admin's reservations.js reads)
         $snapshot_data = [
-            // customer
             'user_name' => $res_name,
             'user_email' => $res_email,
             'user_phone' => $res_phone,
             'user_ic' => $res_ic,
-
-            // vehicle
             'car_brand' => $car['car_brand'],
             'car_model' => $car['car_model'],
             'car_year' => $car['car_year'],
@@ -278,7 +240,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die("Snapshot encoding failed.");
         }
 
-        // INSERT — status MUST be 'Pending Viewing' to match admin enum + admin queries
         $insert_sql = "
         INSERT INTO reservations (
             user_id,
@@ -325,10 +286,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
-
-// ======================================================
-// RENDER
-// ======================================================
 
 include 'Includes/header.php';
 ?>
@@ -382,7 +339,6 @@ include 'Includes/header.php';
         padding: 28px;
     }
 
-    /* ---- Vehicle preview (left) ---- */
     .vehicle-preview img {
         width: 100%;
         height: 220px;
@@ -447,7 +403,6 @@ include 'Includes/header.php';
         color: #dc2626;
     }
 
-    /* ---- Form (right) ---- */
     .form-section {
         margin-bottom: 24px;
     }
@@ -536,7 +491,6 @@ include 'Includes/header.php';
         padding-right: 36px;
     }
 
-    /* File upload box */
     .file-upload {
         border: 2px dashed #cbd5e1;
         border-radius: 10px;
@@ -574,7 +528,7 @@ include 'Includes/header.php';
 
     .file-upload .file-name {
         font-weight: 600;
-        color: #1e293b;
+        color: #16a34a;
         margin-top: 6px;
         font-size: 13px;
     }
@@ -607,7 +561,6 @@ include 'Includes/header.php';
         box-shadow: 0 10px 15px -3px rgba(30, 41, 59, 0.25);
     }
 
-    /* Error box */
     .error-box {
         grid-column: 1 / -1;
         background: #fef2f2;
@@ -657,7 +610,6 @@ include 'Includes/header.php';
             </div>
         <?php endif; ?>
 
-        <!-- ============ LEFT : Vehicle Preview ============ -->
         <div class="res-card vehicle-preview">
             <img src="<?= !empty($car['car_image'])
                 ? htmlspecialchars($car['car_image'])
@@ -690,11 +642,9 @@ include 'Includes/header.php';
             </div>
         </div>
 
-        <!-- ============ RIGHT : Form ============ -->
         <div class="res-card">
             <form method="POST" enctype="multipart/form-data" autocomplete="off">
 
-                <!-- Customer Info -->
                 <div class="form-section">
                     <h3><i class="fas fa-user-circle"></i> Customer Information</h3>
 
@@ -725,12 +675,10 @@ include 'Includes/header.php';
                     </div>
                 </div>
 
-                <!-- Vehicle Configuration -->
                 <div class="form-section">
-                    <h3><i class="fas fa-car"></i> Vehicle Configuration</h3>
+                    <h3><i class="fas fa-car"></i> Car Configuration</h3>
 
                     <div class="form-row">
-                        <!-- Variant -->
                         <div class="form-group">
                             <label>Preferred Variant</label>
 
@@ -752,7 +700,6 @@ include 'Includes/header.php';
                             <?php endif; ?>
                         </div>
 
-                        <!-- Color -->
                         <div class="form-group">
                             <label>Preferred Color</label>
 
@@ -776,7 +723,6 @@ include 'Includes/header.php';
                     </div>
                 </div>
 
-                <!-- Test Drive Schedule -->
                 <div class="form-section">
                     <h3><i class="fas fa-calendar-alt"></i> Test Drive Schedule</h3>
 
@@ -785,15 +731,15 @@ include 'Includes/header.php';
                             <label>Preferred Date &amp; Time</label>
                             <input type="datetime-local" name="preferred_test_drive_at" id="preferred_test_drive_at"
                                 class="form-input" value="<?= htmlspecialchars($preferred_test_drive_at) ?>"
-                                min="<?= htmlspecialchars($min_datetime) ?>" step="900" required>
-                            <div class="locked-hint">Available 9:00 AM – 5:00 PM only. Must be a future date/time; our
-                                team will confirm availability.
+                                min="<?= htmlspecialchars($min_datetime) ?>" required>
+                            <div class="locked-hint">Available 9:00 AM – 5:00 PM only, and at least 2 days in advance
+                                (earliest: <?= date('d M Y', strtotime('+2 days')) ?>). Our team will confirm
+                                availability.
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Driving Licence Upload -->
                 <div class="form-section">
                     <h3><i class="fas fa-id-card"></i> Driving Licence</h3>
 
@@ -811,11 +757,23 @@ include 'Includes/header.php';
                         </div>
                     </div>
                 </div>
+                <?php if ($is_used_car): ?>
+                    <div class="form-section" style="margin-bottom:18px;">
+                        <label
+                            style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#475569;font-weight:500;cursor:pointer;line-height:1.6;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+                            <input type="checkbox" name="ack_used_car" value="1" required
+                                style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer;"
+                                <?= !empty($_POST['ack_used_car']) ? 'checked' : '' ?>>
+                            <span>I understand this is a used car with only one unit available. If another customer books
+                                this car first including while my test drive is being arranged my reservation may be
+                                cancelled automatically.</span>
+                        </label>
+                    </div>
+                <?php endif; ?>
 
                 <button type="submit" class="btn-submit">
                     <i class="fas fa-paper-plane"></i>&nbsp; Submit Reservation Request
                 </button>
-
             </form>
         </div>
 
@@ -823,7 +781,6 @@ include 'Includes/header.php';
 </div>
 
 <script>
-    // Show selected filename
     document.getElementById('driving_licence').addEventListener('change', function (e) {
         const f = e.target.files[0];
         const out = document.getElementById('fileName');
@@ -834,7 +791,7 @@ include 'Includes/header.php';
                 out.textContent = '';
                 return;
             }
-            out.textContent = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+            out.textContent = '✓ ' + f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
         } else {
             out.textContent = '';
         }
