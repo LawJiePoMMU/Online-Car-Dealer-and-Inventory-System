@@ -1,5 +1,4 @@
 <?php
-// 1. 确保 Session 开启并读取用户角色 (没登录默认当做 Customer)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -8,7 +7,6 @@ $user_id = $_SESSION['id'] ?? 0;
 
 require_once "../Config/database.php";
 
-// 2. Establish Database Connection
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -16,7 +14,6 @@ try {
     die("PDO Connection failed: " . $e->getMessage());
 }
 
-// 3. Get Car ID
 $car_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($car_id == 0) {
@@ -25,7 +22,6 @@ if ($car_id == 0) {
 }
 
 try {
-    // 4. Fetch Core Car Details
     $stmt = $pdo->prepare("
         SELECT c.*, s.car_status_price, s.car_status_stock_quantity, s.car_status_status
         FROM cars c 
@@ -40,7 +36,6 @@ try {
         exit;
     }
 
-    // 检查当前用户是否已经把这辆车加入了 Wishlist
     $is_wished = false;
     if ($user_id > 0) {
         $wish_stmt = $pdo->prepare("SELECT 1 FROM wishlist WHERE user_id = ? AND car_id = ? LIMIT 1");
@@ -48,7 +43,6 @@ try {
         $is_wished = (bool) $wish_stmt->fetchColumn();
     }
 
-    // Fetch Variant & Colors
     $stmt = $pdo->prepare("SELECT variant FROM car_inventory WHERE car_id = ? AND variant != '' LIMIT 1");
     $stmt->execute([$car_id]);
     $variantData = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -58,14 +52,12 @@ try {
     $stmt->execute([$car_id]);
     $colors = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 5. Fetch Images
     $stmt = $pdo->prepare("SELECT car_image_url FROM car_image WHERE car_id = ?");
     $stmt->execute([$car_id]);
     $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $mainImg = !empty($images) ? $images[0]['car_image_url'] : 'https://images.unsplash.com/photo-1550486014-9f88c39d8dc9?auto=format&fit=crop&w=800&q=80';
     $imageUrls = !empty($images) ? array_column($images, 'car_image_url') : [$mainImg];
 
-    // 6. Fetch ALL Specifications
     $stmt = $pdo->prepare("SELECT * FROM car_engine_specs WHERE car_id = ?");
     $stmt->execute([$car_id]);
     $engine = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -94,7 +86,6 @@ try {
     $stmt->execute([$car_id]);
     $features = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    // 7. EV Specs
     $ev = [];
     if (strcasecmp(trim($car['fuel_type'] ?? ''), 'Electric') === 0 || strcasecmp(trim($car['fuel_type'] ?? ''), 'EV') === 0) {
         $stmt = $pdo->prepare("SELECT * FROM car_ev_specs WHERE car_id = ?");
@@ -102,7 +93,6 @@ try {
         $ev = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 
-    // 8. Used Car Details
     $used_car = [];
     if (($car['car_origin'] ?? '') === 'Used Car') {
         $stmt = $pdo->prepare("SELECT * FROM used_car_details WHERE car_id = ?");
@@ -130,7 +120,6 @@ try {
 <input type="hidden" id="car-price-data" value="<?php echo $car_price; ?>">
 
 <style>
-    /* ================= 高级感 UI 核心重置 ================= */
     .detail-wrapper {
         width: 100%;
         max-width: 1100px;
@@ -237,7 +226,6 @@ try {
         border-radius: 4px;
     }
 
-    /* ================= 标题与你原本的极简心愿单按钮 ================= */
     .title-area {
         margin-bottom: 30px;
         display: flex;
@@ -266,7 +254,6 @@ try {
         display: block;
     }
 
-    /* 🔥 完美复刻外面的空心设计 */
     .clean-wishlist-btn {
         background: transparent;
         border: none;
@@ -296,7 +283,6 @@ try {
         color: #ef4444;
     }
 
-    /* 🔴 核心：点亮后，变成跟你原本设计一模一样的空心红边（不填满填充色） */
     .clean-wishlist-btn.liked {
         color: #ef4444;
     }
@@ -306,7 +292,6 @@ try {
         stroke-width: 2.5;
     }
 
-    /* ================= 规格网格 ================= */
     .section-title {
         color: #111827;
         font-size: 20px;
@@ -420,7 +405,6 @@ try {
         border-color: #111827;
     }
 
-    /* ================= Finance Calculator ================= */
     .fin-wrapper {
         display: flex;
         flex-wrap: wrap;
@@ -688,7 +672,6 @@ try {
         <?php endif; ?>
     </div>
 
-    <!-- 🔥 完美复刻外层样式的空心爱心 -->
     <div class="title-area">
         <div class="title-area-text">
             <h2><?php echo htmlspecialchars(($car['car_brand'] ?? 'TBA') . ' ' . ($car['car_model'] ?? '')); ?></h2>

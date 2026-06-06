@@ -513,7 +513,7 @@ if ($chat_type === 'group') {
     }
 
     .chat-tab-btn.active {
-        background: #1e3a8a;
+        background: #374151;
         color: #fff;
     }
 
@@ -542,7 +542,7 @@ if ($chat_type === 'group') {
 
     .contact-item.active {
         background: #e0e7ff;
-        border-left: 4px solid #1e3a8a;
+        border-left: 4px solid #374151;
     }
 
     .avatar-wrap {
@@ -632,7 +632,7 @@ if ($chat_type === 'group') {
     }
 
     .outgoing .message-bubble {
-        background: #1e3a8a;
+        background: #374151;
         color: #ffffff;
         border-top-right-radius: 0;
     }
@@ -665,7 +665,7 @@ if ($chat_type === 'group') {
     }
 
     .btn-send {
-        background: #1e3a8a;
+        background: #374151;
         color: white;
         width: 44px;
         height: 44px;
@@ -680,7 +680,7 @@ if ($chat_type === 'group') {
     }
 
     .btn-send:hover {
-        background: #1e40af;
+        background: #111827;
         transform: scale(1.05);
     }
 
@@ -801,7 +801,7 @@ if ($chat_type === 'group') {
                     <div class="search-bar-row">
                         <input type="text" id="searchContact" class="form-control" placeholder="Search contacts...">
                         <button class="btn-add-blue" onclick="openNewChatModal()"
-                            style="padding: 10px; border-radius: 8px; background: #1e3a8a; color: #fff; border: none; cursor: pointer;"
+                            style="padding: 10px; border-radius: 8px; background: #111827; color: #fff; border: none; cursor: pointer;"
                             title="New Chat"><i class="fas fa-plus"></i></button>
                     </div>
                     <div class="chat-tabs">
@@ -811,7 +811,7 @@ if ($chat_type === 'group') {
                         <?php if ($my_role == 'Admin'): ?>
                             <button class="chat-tab-btn" onclick="switchTab('group', this)">Groups</button>
                             <button class="chat-tab-btn"
-                                style="margin-left:auto; background:transparent; color:#1e3a8a; border: 1px solid #1e3a8a;"
+                                style="margin-left:auto; background:transparent; color:#374151; border: 1px solid #374151;"
                                 onclick="openCreateGroupModal()"><i class="fas fa-users" style="margin-right:4px;"></i>+
                                 Group</button>
                         <?php endif; ?>
@@ -949,7 +949,7 @@ if ($chat_type === 'group') {
                 <div id="groupMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
                 <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                     <button class="btn-add-blue"
-                        style="width: 100%; padding: 12px; background: #1e3a8a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
+                        style="width: 100%; padding: 12px; background: #111827; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
                         onclick="submitCreateGroup()">Create Group</button>
                 </div>
             </div>
@@ -974,7 +974,7 @@ if ($chat_type === 'group') {
                 <div id="addMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
                 <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                     <button class="btn-add-blue"
-                        style="width: 100%; padding: 12px; background: #1e3a8a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
+                        style="width: 100%; padding: 12px; background: #111827; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
                         onclick="submitAddMembers()">Add to Group</button>
                 </div>
             </div>
@@ -999,7 +999,7 @@ if ($chat_type === 'group') {
         <img id="lightboxImg" src=""
             style="max-width:90%; max-height:80%; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
         <a id="lightboxDownload" href="" download class="btn-add-blue"
-            style="margin-top:20px; padding: 10px 20px; background: #1e3a8a; color: white; border-radius: 8px; text-decoration:none;"><i
+            style="margin-top:20px; padding: 10px 20px; background: #111827; color: white; border-radius: 8px; text-decoration:none;"><i
                 class="fas fa-download" style="margin-right:6px;"></i> Download Image</a>
     </div>
     <?php include 'Includes/footer.php'; ?>

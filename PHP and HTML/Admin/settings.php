@@ -52,6 +52,11 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                 $email = mysqli_real_escape_string($conn, $_POST['user_email']);
                 $password = trim($_POST['new_password'] ?? '');
 
+                if (!empty($password) && !preg_match('/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/', $password)) {
+                    echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.']);
+                    exit;
+                }
+
                 if (!empty($password)) {
                     $hashed = password_hash($password, PASSWORD_DEFAULT);
                     $sql = "UPDATE users SET user_name='$name', user_email='$email', user_password='$hashed' WHERE user_id=$admin_id";

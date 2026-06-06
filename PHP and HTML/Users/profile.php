@@ -57,7 +57,7 @@ include 'Includes/header.php';
                 <ul class="profile-menu">
                     <li><a href="profile.php" class="active">👤 My Profile</a></li>
                     <li><a href="wishlist.php">❤️ My Wishlist</a></li>
-                    <li><a href="view_status.php">📅 My Bookings</a></li>
+                    <li><a href="view_status.php">📅 My Satus</a></li> 
                     <li><a href="Auth/logout.php" style="color: #dc2626;">🚪 Logout</a></li>
                 </ul>
             </aside>
