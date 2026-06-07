@@ -225,6 +225,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if ($ucd && !empty($ucd['car_plate'])) {
                         $number = mysqli_real_escape_string($conn, $ucd['car_plate']);
                     }
+                } else {
+                    if ($number === '') {
+                        echo json_encode(['success' => false, 'message' => 'Please enter a plate number.']);
+                        break;
+                    }
+                    $dupDp = mysqli_fetch_assoc(mysqli_query($conn, "SELECT booking_id FROM down_payments WHERE UPPER(REPLACE(plate_number,' ','')) = UPPER(REPLACE('$number',' ','')) AND booking_id <> $booking_id LIMIT 1"));
+                    $dupUsed = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_id FROM used_car_details WHERE UPPER(REPLACE(car_plate,' ','')) = UPPER(REPLACE('$number',' ','')) LIMIT 1"));
+                    if ($dupDp || $dupUsed) {
+                        echo json_encode(['success' => false, 'message' => 'This plate number is already in use. Please enter a different one.']);
+                        break;
+                    }
                 }
                 mysqli_query($conn, "UPDATE down_payments SET plate_number='$number' WHERE booking_id=$booking_id");
                 echo json_encode(['success' => true, 'message' => 'Plate details saved successfully.']);
@@ -262,7 +273,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $rcpt = 'DP-' . date('Ymd') . '-' . str_pad($booking_id, 4, '0', STR_PAD_LEFT);
 
                 mysqli_begin_transaction($conn);
-                // Single clean update — do NOT overwrite the customer's real paid_at / dp_receipt_number
                 mysqli_query($conn, "UPDATE down_payments SET dp_status='Approved', dp_approved_at=NOW() WHERE booking_id=$booking_id");
 
                 mysqli_query($conn, "DELETE FROM monthly_installments WHERE booking_id=$booking_id");
@@ -271,8 +281,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     mysqli_query($conn, "INSERT INTO monthly_installments (booking_id, installment_number, monthly_amount, due_date, interest_rate, installment_status, payment_status, created_at) VALUES ($booking_id, $i, $monthly, '$due', $rate, 'Active', 'Pending', NOW())");
                 }
 
-                // Used car becomes SOLD once down payment is verified.
-                // New car keeps its (already decremented) stock; no status change here.
                 $car_id_sold = (int) $b['car_id'];
                 $corigin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT car_origin FROM cars WHERE car_id=$car_id_sold"));
                 if ($corigin && strcasecmp($corigin['car_origin'] ?? '', 'Used Car') === 0) {
@@ -283,8 +291,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 break;
 
             case 'mark_installment_paid':
-                // Disabled: monthly installments are paid by the customer themselves
-                // through their own payment page. Admin can only view the schedule.
                 echo json_encode(['success' => false, 'message' => 'Installments are paid by the customer. Admin cannot mark them as paid.']);
                 break;
 
@@ -815,7 +821,7 @@ function apply_snapshot($row)
                             <label
                                 style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;display:block;margin-bottom:6px;">Register
                                 Final Car Plate</label>
-                            <input type="text" id="plateNumberInput" class="form-control" placeholder="e.g. ABC 1234">
+                            <input type="text" id="plateNumberInput" class="form-control" placeholder="e.g. ABC 1234" autocomplete="off">
                             <button class="btn-export" id="btnSaveDPDetails"
                                 style="margin-top:12px;background:#fff;border-color:#3b82f6;color:#3b82f6;width:100%;"
                                 onclick="saveDPDetails()">
@@ -923,8 +929,6 @@ function apply_snapshot($row)
                     style="color:#ef4444;border-color:#ef4444;display:none;">Reject & Cancel</button>
                 <button type="button" id="btnApproveBooking" class="btn-add-blue" onclick="approveBooking()"
                     style="display:none;border:none;background:#10b981;color:#fff;">Verify & Approve Booking</button>
-                <button type="button" id="btnRejectDP" class="btn-export" onclick="rejectDP()"
-                    style="color:#ef4444;border-color:#ef4444;display:none;">Reject DP</button>
                 <button type="button" id="btnApproveDP" class="btn-add-blue" onclick="approveDP()"
                     style="display:none;border:none;background:#10b981;color:#fff;">Verify & Generate Loan</button>
             </div>

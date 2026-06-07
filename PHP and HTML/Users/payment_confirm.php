@@ -208,7 +208,6 @@ include 'Includes/header.php';
         padding: 32px;
     }
 
-    /* Amount Headline */
     .amount-paid-box {
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         border: 1px solid #bbf7d0;
@@ -241,7 +240,6 @@ include 'Includes/header.php';
         margin-top: 4px;
     }
 
-    /* Reference number row */
     .reference-box {
         background: #f8fafc;
         border: 1.5px dashed #cbd5e1;
@@ -426,7 +424,6 @@ include 'Includes/header.php';
         color: #1d4ed8;
     }
 
-    /* Buttons */
     .button-group {
         display: flex;
         gap: 12px;
@@ -481,7 +478,10 @@ include 'Includes/header.php';
         .button-group,
         .topbar,
         nav,
-        header {
+        header,
+        footer,
+        .footer,
+        .site-footer {
             display: none !important;
         }
 
@@ -636,7 +636,6 @@ include 'Includes/header.php';
 </div>
 
 <?php
-// Clean any leftover payment-flow session keys (defensive — should already be cleared)
 unset(
     $_SESSION['pay_ref'],
     $_SESSION['pay_booking_id'],

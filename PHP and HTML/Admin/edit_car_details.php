@@ -297,9 +297,9 @@ if (isset($_POST['save_all_details'])) {
                     mysqli_query($conn, "INSERT INTO car_inventory (car_id, variant, color_name, color_hex, quantity) 
                         VALUES ($target_id, '$variant', '$cname', '$hex', $qty)");
                     $total_stock += $qty;
-                    break; // Only first row allowed
+                    break; 
                 } else {
-                    $qty = max(0, (int) ($_POST['inv_qty'][$i] ?? 0));
+                    $qty = min(100, max(0, (int) ($_POST['inv_qty'][$i] ?? 0)));
                     mysqli_query($conn, "INSERT INTO car_inventory (car_id, variant, color_name, color_hex, quantity) 
                         VALUES ($target_id, '$variant', '$cname', '$hex', $qty)");
                     $total_stock += $qty;
@@ -1008,7 +1008,7 @@ if (isset($_POST['save_all_details'])) {
                         </div>
                         <div class="form-group">
                             <label>Mileage <span class="hint">(km)</span></label>
-                            <input type="number" name="car_mileage" min="0"
+                            <input type="number" name="car_mileage" min="0" max="10000000"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="car_mileage"
                                 class="form-control" value="<?= htmlspecialchars($car['car_mileage']) ?>">
                         </div>
@@ -1100,7 +1100,7 @@ if (isset($_POST['save_all_details'])) {
                             <label>Engine Displacement <span class="hint">(cc)</span></label>
                             <input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="engine_cc"
-                                class="form-control" value="<?= htmlspecialchars($car['engine_cc']) ?>" min="0">
+                                class="form-control" value="<?= htmlspecialchars($car['engine_cc']) ?>" min="0" max="5000">
                         </div>
                         <div class="form-group">
                             <label>Compression Ratio</label>
@@ -1111,13 +1111,13 @@ if (isset($_POST['save_all_details'])) {
                             <label>Peak Power <span class="hint">(kW)</span></label>
                             <input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="peak_power_kw"
-                                class="form-control" value="<?= htmlspecialchars($car['peak_power_kw']) ?>" min="0">
+                                class="form-control" value="<?= htmlspecialchars($car['peak_power_kw']) ?>" min="0" max="2000">
                         </div>
                         <div class="form-group">
                             <label>Peak Torque <span class="hint">(Nm)</span></label>
                             <input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="peak_torque_nm"
-                                class="form-control" value="<?= htmlspecialchars($car['peak_torque_nm']) ?>" min="0">
+                                class="form-control" value="<?= htmlspecialchars($car['peak_torque_nm']) ?>" min="0" max="2400">
                         </div>
                     </div>
                 </div>
@@ -1128,7 +1128,7 @@ if (isset($_POST['save_all_details'])) {
                         <label>Battery Range <span class="hint">(km)</span></label>
                         <input type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                             name="battery_range" class="form-control"
-                            value="<?= htmlspecialchars($car['battery_range']) ?>" min="0">
+                            value="<?= htmlspecialchars($car['battery_range']) ?>" min="0" max="1000">
                     </div>
                 </div>
 
@@ -1137,26 +1137,26 @@ if (isset($_POST['save_all_details'])) {
                     <div class="grid-3">
                         <div class="form-group"><label>Length <span class="hint">(mm)</span></label><input type="number"
                                 inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="length"
-                                class="form-control" value="<?= htmlspecialchars($car['length']) ?>" min="0"></div>
+                                class="form-control" value="<?= htmlspecialchars($car['length']) ?>" min="0" max="10000"></div>
                         <div class="form-group"><label>Width <span class="hint">(mm)</span></label><input type="number"
                                 inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="width"
-                                class="form-control" value="<?= htmlspecialchars($car['width']) ?>" min="0"></div>
+                                class="form-control" value="<?= htmlspecialchars($car['width']) ?>" min="0" max="10000"></div>
                         <div class="form-group"><label>Height <span class="hint">(mm)</span></label><input type="number"
                                 inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="height"
-                                class="form-control" value="<?= htmlspecialchars($car['height']) ?>" min="0"></div>
+                                class="form-control" value="<?= htmlspecialchars($car['height']) ?>" min="0" max="10000"></div>
                         <div class="form-group"><label>Wheelbase <span class="hint">(mm)</span></label><input
                                 type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="wheelbase" class="form-control" value="<?= htmlspecialchars($car['wheelbase']) ?>"
-                                min="0">
+                                min="0" max="10000">
                         </div>
                         <div class="form-group"><label>Fuel Tank <span class="hint">(L)</span></label><input
                                 type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="fuel_tank" class="form-control" value="<?= htmlspecialchars($car['fuel_tank']) ?>"
-                                min="0"></div>
+                                min="0" max="10000"></div>
                         <div class="form-group"><label>Kerb Weight <span class="hint">(kg)</span></label><input
                                 type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="weight" class="form-control" value="<?= htmlspecialchars($car['weight']) ?>"
-                                min="0">
+                                min="0" max="10000">
                         </div>
                     </div>
                 </div>
@@ -1188,7 +1188,7 @@ if (isset($_POST['save_all_details'])) {
                         <div class="form-group"><label>Infotainment Screen</label><input type="number" name="screen"
                                 placeholder="7" class="form-control"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                                value="<?= htmlspecialchars($car['screen']) ?>" min="0"></div>
+                                value="<?= htmlspecialchars($car['screen']) ?>" min="0" max="100"></div>
                         <div class="form-group"><label>Airbags Count</label><input type="number" inputmode="numeric"
                                 placeholder="20" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="airbags_count" class="form-control"
@@ -1331,7 +1331,7 @@ if (isset($_POST['save_all_details'])) {
                             class="form-control" value="<?= htmlspecialchars($car['car_plate']) ?>"></div>
                     <div class="form-group"><label>Previous Owners</label><input type="number" inputmode="numeric"
                             oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="owners" class="form-control"
-                            value="<?= htmlspecialchars($car['owners']) ?>" min="0"></div>
+                            value="<?= htmlspecialchars($car['owners']) ?>" min="0" max="20"></div>
                     <div class="form-group">
                         <label>Remaining Warranty</label>
                         <select name="rem_warranty" class="form-control">
@@ -1371,7 +1371,7 @@ if (isset($_POST['save_all_details'])) {
                     <div class="form-group"><label>Next Service <span class="hint">(km)</span></label><input
                             type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                             name="next_service" class="form-control"
-                            value="<?= htmlspecialchars($car['next_service']) ?>" min="0"></div>
+                            value="<?= htmlspecialchars($car['next_service']) ?>" min="0" max="1000000"></div>
                 </div>
                 <div class="grid-2" style="margin-bottom:16px;">
                     <div class="form-group"><label>Roadtax Expiry</label><input type="date" name="roadtax"

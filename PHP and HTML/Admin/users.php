@@ -120,8 +120,7 @@ if (!empty($search)) {
 }
 if ($role_filter == 'admin') {
     $where .= " AND user_role IN ('Admin', 'Super Admin')";
-}
-elseif ($role_filter == 'customer') {
+} elseif ($role_filter == 'customer') {
     $where .= " AND user_role = 'Customer'";
 }
 if ($status_filter != 'all') {
@@ -353,6 +352,10 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
         visibility: hidden;
         transition: all 0.25s ease;
         z-index: 9999;
+    }
+
+    .swal2-container {
+        z-index: 100000 !important;
     }
 
     .modal.active {

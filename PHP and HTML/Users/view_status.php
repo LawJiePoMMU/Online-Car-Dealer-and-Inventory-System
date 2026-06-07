@@ -27,7 +27,6 @@ SELECT
     cs.car_status_price AS car_price_live,
     (SELECT car_image_url FROM car_image WHERE car_id = b.car_id LIMIT 1) AS car_image_live,
 
-    -- Down payment info
     dp.id AS dp_id,
     dp.dp_amount,
     dp.dp_status,
@@ -38,10 +37,9 @@ SELECT
     dp.plate_option,
     dp.dp_reason,
 
-    -- Documents
     doc.ic_url, doc.driving_license_url, doc.payslip_url, doc.bank_statement_url,
 
-    -- Booking fee payment
+    
     (SELECT receipt_number FROM payments
      WHERE reference_id = b.booking_id AND payment_type='Booking Fee' AND payment_status='Paid'
      ORDER BY payment_id DESC LIMIT 1) AS bf_receipt,
@@ -49,14 +47,12 @@ SELECT
      WHERE reference_id = b.booking_id AND payment_type='Booking Fee' AND payment_status='Paid'
      ORDER BY payment_id DESC LIMIT 1) AS bf_paid_date,
 
-    -- Installment summary
+   
     (SELECT COUNT(*) FROM monthly_installments WHERE booking_id = b.booking_id) AS total_months,
     (SELECT COUNT(*) FROM monthly_installments WHERE booking_id = b.booking_id AND payment_status='Paid') AS paid_months,
     (SELECT COUNT(*) FROM monthly_installments WHERE booking_id = b.booking_id AND payment_status='Overdue') AS overdue_months,
     (SELECT MIN(due_date) FROM monthly_installments WHERE booking_id = b.booking_id AND payment_status IN ('Pending','Overdue')) AS next_due,
     (SELECT monthly_amount FROM monthly_installments WHERE booking_id = b.booking_id LIMIT 1) AS monthly_amount,
-
-    -- Total paid
     (SELECT COALESCE(SUM(payment_amount), 0) FROM payments WHERE reference_id = b.booking_id AND payment_status='Paid') AS total_paid
 
 FROM bookings b
@@ -81,10 +77,13 @@ $reservations_sql = "
 SELECT
     r.*,
     c.car_brand, c.car_model, c.car_year, c.car_origin,
+    cs.car_status_status AS car_status_live,
+    (SELECT IFNULL(SUM(quantity),0) FROM car_inventory WHERE car_id = r.car_id) AS car_stock_live,
     (SELECT car_image_url FROM car_image WHERE car_id = r.car_id LIMIT 1) AS car_image_live,
     t.test_drive_id, t.test_drive_at, t.test_drive_status, t.test_drive_done_at, t.test_drive_cancel_reason
 FROM reservations r
 LEFT JOIN cars c ON c.car_id = r.car_id
+LEFT JOIN car_status cs ON cs.car_id = r.car_id
 LEFT JOIN test_drives t ON t.reservation_id = r.reservation_id
 WHERE r.user_id = ?
 ORDER BY r.reservation_created_at DESC
@@ -98,6 +97,24 @@ $reservations = [];
 while ($r = mysqli_fetch_assoc($res_result))
     $reservations[] = $r;
 mysqli_stmt_close($res_stmt);
+
+$receipt_map = [];
+$rcpt_sql = "
+    SELECT p.payment_id, p.reference_id, p.payment_type, p.payment_amount, p.payment_date
+    FROM payments p
+    JOIN bookings b ON b.booking_id = p.reference_id
+    WHERE b.user_id = ?
+      AND p.payment_status = 'Paid'
+      AND p.payment_type IN ('Booking Fee','Down Payment')
+    ORDER BY p.payment_date ASC
+";
+$rc_stmt = mysqli_prepare($conn, $rcpt_sql);
+mysqli_stmt_bind_param($rc_stmt, "i", $user_id);
+mysqli_stmt_execute($rc_stmt);
+$rc_res = mysqli_stmt_get_result($rc_stmt);
+while ($row = mysqli_fetch_assoc($rc_res))
+    $receipt_map[(int) $row['reference_id']][] = $row;
+mysqli_stmt_close($rc_stmt);
 
 function get_booking_stage($b)
 {
@@ -336,7 +353,6 @@ include 'Includes/header.php';
         font-size: 14px;
     }
 
-    /* Tabs */
     .tabs {
         display: flex;
         gap: 8px;
@@ -381,7 +397,6 @@ include 'Includes/header.php';
         color: #fff;
     }
 
-    /* Activity card */
     .activity-card {
         background: #fff;
         border: 1px solid #f1f5f9;
@@ -465,7 +480,6 @@ include 'Includes/header.php';
         line-height: 1.5;
     }
 
-    /* Badge */
     .badge {
         display: inline-flex;
         align-items: center;
@@ -590,7 +604,6 @@ include 'Includes/header.php';
         border-color: #cbd5e1;
     }
 
-    /* Expanded body */
     .card-body {
         display: none;
         background: #f8fafc;
@@ -620,7 +633,6 @@ include 'Includes/header.php';
         gap: 6px;
     }
 
-    /* Progress */
     .progress-track {
         background: #e2e8f0;
         height: 8px;
@@ -691,7 +703,6 @@ include 'Includes/header.php';
         }
     }
 
-    /* Detail grid */
     .detail-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -723,7 +734,6 @@ include 'Includes/header.php';
         word-break: break-word;
     }
 
-    /* Document chips */
     .doc-row {
         display: flex;
         flex-wrap: wrap;
@@ -758,7 +768,6 @@ include 'Includes/header.php';
         font-style: italic;
     }
 
-    /* Reason box */
     .reason-box {
         background: #fef2f2;
         border: 1px solid #fecaca;
@@ -770,7 +779,6 @@ include 'Includes/header.php';
         line-height: 1.6;
     }
 
-    /* Empty state */
     .empty-state {
         background: #fff;
         border: 1px solid #f1f5f9;
@@ -1019,7 +1027,8 @@ include 'Includes/header.php';
                                         <div class="detail-cell">
                                             <label>Loan Tenure</label>
                                             <p><?= htmlspecialchars($b['installment_years']) ?> Years @
-                                                <?= number_format($b['interest_rate'], 2) ?>%</p>
+                                                <?= number_format($b['interest_rate'], 2) ?>%
+                                            </p>
                                         </div>
                                         <div class="detail-cell">
                                             <label>Installments Paid</label>
@@ -1099,6 +1108,34 @@ include 'Includes/header.php';
                                 </div>
                             </div>
 
+                            <?php if (!empty($receipt_map[$bid]) || $paid_months > 0): ?>
+                                <div class="section">
+                                    <h4><i class="fas fa-receipt"></i> Payment Receipts</h4>
+                                    <div class="doc-row">
+                                        <?php foreach (($receipt_map[$bid] ?? []) as $rc):
+                                            $rc_label = $rc['payment_type'] === 'Booking Fee' ? 'Booking Fee' : 'Down Payment';
+                                            $rc_date = !empty($rc['payment_date']) ? date('d M Y', strtotime($rc['payment_date'])) : '';
+                                            ?>
+                                            <a class="doc-chip" href="payment_confirm.php?id=<?= (int) $rc['payment_id'] ?>"
+                                                target="_blank">
+                                                <i class="fas fa-receipt" style="color:#16a34a;"></i>
+                                                <?= $rc_label ?> Receipt — RM <?= number_format($rc['payment_amount'], 2) ?>
+                                                <span style="color:#94a3b8;font-size:11px;">(<?= $rc_date ?>)</span>
+                                                <i class="fas fa-external-link-alt" style="font-size:10px;color:#94a3b8;"></i>
+                                            </a>
+                                        <?php endforeach; ?>
+
+                                        <?php if ($paid_months > 0): ?>
+                                            <a class="doc-chip" href="monthly_installment.php?id=<?= $bid ?>" target="_blank">
+                                                <i class="fas fa-calendar-alt" style="color:#2563eb;"></i>
+                                                Installment Receipts (<?= $paid_months ?> paid)
+                                                <i class="fas fa-external-link-alt" style="font-size:10px;color:#94a3b8;"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
                             <?php if (in_array($stage['key'], ['rejected', 'refunded', 'dp_rejected'])): ?>
                                 <div class="section">
                                     <h4><i class="fas fa-exclamation-triangle"></i> Status Reason</h4>
@@ -1113,7 +1150,7 @@ include 'Includes/header.php';
 
             <?php endif; ?>
 
-<?php endif; ?>
+        <?php endif; ?>
 
         <?php if ($active_tab === 'reservations' || $active_tab === 'history'):
             $res_list = ($active_tab === 'history') ? $history_reservations : $active_reservations; ?>
@@ -1144,6 +1181,11 @@ include 'Includes/header.php';
                     $rref = 'RES' . str_pad($rid, 3, '0', STR_PAD_LEFT);
                     $stage = get_reservation_stage($r);
 
+                    $car_status_live = trim($r['car_status_live'] ?? '');
+                    $car_stock_live = (int) ($r['car_stock_live'] ?? 0);
+                    $is_used_res = (strcasecmp(trim($car_origin), 'Used Car') === 0);
+                    $can_book = (strcasecmp($car_status_live, 'Active') === 0) && ($is_used_res || $car_stock_live > 0);
+
                     $preferred = !empty($r['preferred_test_drive_at']) ? date('d M Y, h:i A', strtotime($r['preferred_test_drive_at'])) : 'Not specified';
                     $td_at = !empty($r['test_drive_at']) ? date('d M Y, h:i A', strtotime($r['test_drive_at'])) : null;
                     ?>
@@ -1167,11 +1209,15 @@ include 'Includes/header.php';
                                 <div class="stage-desc"><?= htmlspecialchars($stage['desc']) ?></div>
                             </div>
                             <div class="card-actions">
-                                <?php if ($stage['class'] === 'completed'): ?>
+                                <?php if ($stage['class'] === 'completed' && $can_book): ?>
                                     <a href="start_booking.php?car_id=<?= $r['car_id'] ?>" class="btn-action primary-green"
                                         onclick="event.stopPropagation()">
                                         Book This Car <i class="fas fa-arrow-right"></i>
                                     </a>
+                                <?php elseif ($stage['class'] === 'completed' && !$can_book): ?>
+                                    <span class="badge neutral" style="white-space:nowrap;">
+                                        <span class="dot"></span> No Longer Available
+                                    </span>
                                 <?php endif; ?>
                                 <button class="btn-expand" id="btn_rs<?= $rid ?>"
                                     onclick="event.stopPropagation(); toggleCard('rs<?= $rid ?>')">

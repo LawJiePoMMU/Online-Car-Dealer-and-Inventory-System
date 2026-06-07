@@ -271,7 +271,6 @@ function openModal(row, tab, sub_tab) {
     
     document.getElementById('btnApproveBooking').style.display = isBooking ? 'inline-block' : 'none';
     document.getElementById('btnRejectBooking').style.display = isBooking ? 'inline-block' : 'none';
-    document.getElementById('btnRejectDP').style.display = isDP ? 'inline-block' : 'none';
 
     document.getElementById('splitModal').style.display = 'flex';
 }

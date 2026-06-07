@@ -19,8 +19,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if ($new_password !== $confirm_password) {
         $error = "Passwords do not match. Please try again.";
-    } elseif (strlen($new_password) < 6) {
-        $error = "Password must be at least 6 characters long.";
+    } elseif (
+        strlen($new_password) < 8 ||
+        !preg_match('@[A-Z]@', $new_password) ||
+        !preg_match('@[0-9]@', $new_password) ||
+        !preg_match('@[^\w]@', $new_password)
+    ) {
+        $error = "Password must be at least 8 characters and include 1 uppercase letter, 1 number, and 1 symbol.";
     } else {
         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
         $update_sql = "UPDATE users SET user_password = '$hashed_password', user_otp_code = NULL, user_otp_expiry = NULL WHERE user_email = '$email'";
@@ -46,31 +51,37 @@ include '../Includes/header.php';
                 Please enter a secure new password for your account.
             </p>
 
-            <?php if(!empty($error)): ?>
-                <div class="auth-error" style="background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; font-weight: 600;">
+            <?php if (!empty($error)): ?>
+                <div class="auth-error"
+                    style="background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; font-weight: 600;">
                     <?php echo $error; ?>
                 </div>
             <?php endif; ?>
 
-            <?php if(!empty($success)): ?>
-                <div style="background: #dcfce7; color: #166534; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; font-weight: 600;">
+            <?php if (!empty($success)): ?>
+                <div
+                    style="background: #dcfce7; color: #166534; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; font-weight: 600;">
                     ✅ <?php echo $success; ?>
                 </div>
-                <a href="login.php" class="auth-btn auth-btn-primary" style="display: block; text-align: center; text-decoration: none;">Go to Login Page</a>
+                <a href="login.php" class="auth-btn auth-btn-primary"
+                    style="display: block; text-align: center; text-decoration: none;">Go to Login Page</a>
             <?php else: ?>
                 <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
                     <div class="form-group">
                         <label class="auth-label">New Password</label>
-                        <input type="password" name="new_password" class="auth-input" placeholder="At least 6 characters" required>
+                        <input type="password" name="new_password" class="auth-input" placeholder="At least 6 characters"
+                            required>
                     </div>
                     <div class="form-group">
                         <label class="auth-label">Confirm New Password</label>
-                        <input type="password" name="confirm_password" class="auth-input" placeholder="Re-enter new password" required>
+                        <input type="password" name="confirm_password" class="auth-input"
+                            placeholder="Re-enter new password" required>
                     </div>
-                    <button type="submit" class="auth-btn auth-btn-primary" style="margin-top: 10px;">Update Password</button>
+                    <button type="submit" class="auth-btn auth-btn-primary" style="margin-top: 10px;">Update
+                        Password</button>
                 </form>
             <?php endif; ?>
-            
+
         </div>
     </div>
 </div>

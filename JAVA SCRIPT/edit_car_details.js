@@ -57,10 +57,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         function populateCustomCities(stateName, preselect = '') {
-            cityList.innerHTML = ''; 
+            cityList.innerHTML = '';
             if (locations[stateName]) {
                 locations[stateName].forEach(city => {
-                    const item = createDropdownItem(city, city, function(e) {
+                    const item = createDropdownItem(city, city, function (e) {
                         e.stopPropagation();
                         cityDisplay.textContent = city;
                         cityInput.value = city;
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     cityList.appendChild(item);
                 });
             }
-            
+
             if (preselect && locations[stateName] && locations[stateName].includes(preselect)) {
                 cityDisplay.textContent = preselect;
                 cityInput.value = preselect;
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         for (const st in locations) {
-            const item = createDropdownItem(st, st, function(e) {
+            const item = createDropdownItem(st, st, function (e) {
                 e.stopPropagation();
                 stateDisplay.textContent = st;
                 stateInput.value = st;
@@ -97,19 +97,19 @@ document.addEventListener('DOMContentLoaded', function () {
             populateCustomCities(savedState, savedCity);
         }
 
-        stateDisplay.addEventListener('click', function(e) {
+        stateDisplay.addEventListener('click', function (e) {
             e.stopPropagation();
-            cityList.classList.remove('active'); 
+            cityList.classList.remove('active');
             stateList.classList.toggle('active');
         });
 
-        cityDisplay.addEventListener('click', function(e) {
+        cityDisplay.addEventListener('click', function (e) {
             e.stopPropagation();
-            stateList.classList.remove('active'); 
+            stateList.classList.remove('active');
             cityList.classList.toggle('active');
         });
 
-        document.addEventListener('click', function() {
+        document.addEventListener('click', function () {
             stateList.classList.remove('active');
             cityList.classList.remove('active');
         });
@@ -263,11 +263,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             </a>
                         </div>
                     `;
-                    
-                    // 將這段 UI 插入到檔案輸入框的正下方
+
                     this.insertAdjacentHTML('afterend', previewHtml);
                 } else {
-                    // 如果選的不是 PDF，跳出警告並清空輸入框
                     Swal.fire({ icon: 'error', title: 'Invalid File', text: 'Please select a PDF document.' });
                     this.value = '';
                 }
@@ -320,7 +318,7 @@ function addInventoryRow(colorName, colorHex, qty) {
             <div class="color-palette-popup">${swatchHtml}</div>
         </div>
         <input type="text" inputmode="numeric"
-               oninput="this.value=this.value.replace(/[^0-9]/g,''); updateTotalStock();"
+               oninput="this.value=this.value.replace(/[^0-9]/g,''); if (this.value !== '' && +this.value > 100) this.value = 100; updateTotalStock();"
                name="inv_qty[]" class="form-control inv-qty-input"
                placeholder="Qty" value="${displayQty}" ${qtyReadonly}>
         <button type="button" class="icon-btn" onclick="removeInventoryRow(this)" title="Remove">

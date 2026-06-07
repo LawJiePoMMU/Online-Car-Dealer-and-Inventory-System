@@ -4,20 +4,26 @@ let directoryUsers = [];
 let currentDirTab = 'Admin';
 
 function getAvatarHTML(name, avatarUrl, size = 42) {
+    let parts = name ? name.trim().split(' ') : ['G'];
+    let initials = '';
+    parts.forEach(p => { if (p) initials += p.charAt(0).toUpperCase(); });
+    initials = initials.substring(0, 3) || 'G';
+
     if (avatarUrl && avatarUrl !== 'NULL' && avatarUrl !== '') {
-        return `<img src="${avatarUrl}" style="width:${size}px; height:${size}px; border-radius:50%; object-fit:cover; display:block;">`;
-    } else {
-        let parts = name ? name.trim().split(' ') : ['G'];
-        let initials = '';
-        parts.forEach(p => { if (p) initials += p.charAt(0).toUpperCase(); });
-        initials = initials.substring(0, 3);
-        return `<div class='avatar' style='width: ${size}px; height: ${size}px; font-size: ${size * 0.42}px; font-weight: 700; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background-color: #e0e7ff; color: #1e3a8a; flex-shrink: 0;'>${initials}</div>`;
+        return `<img src="${avatarUrl}" data-initials="${initials}" data-size="${size}" onerror="avatarFallback(this)" style="width:${size}px; height:${size}px; border-radius:50%; object-fit:cover; display:block;">`;
     }
+    return `<div class='avatar' style='width: ${size}px; height: ${size}px; font-size: ${size * 0.42}px; font-weight: 700; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background-color: #f3f4f6; color: #111827; flex-shrink: 0;'>${initials}</div>`;
+}
+
+function avatarFallback(img) {
+    const size = parseInt(img.dataset.size) || 42;
+    const initials = img.dataset.initials || 'G';
+    img.outerHTML = `<div class='avatar' style='width: ${size}px; height: ${size}px; font-size: ${size * 0.42}px; font-weight: 700; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background-color: #f3f4f6; color: #111827; flex-shrink: 0;'>${initials}</div>`;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
     loadUsers();
-
+    
     document.getElementById('searchContact').addEventListener('input', function () {
         let term = this.value.toLowerCase();
         document.querySelectorAll('#chatList .contact-item').forEach(item => {

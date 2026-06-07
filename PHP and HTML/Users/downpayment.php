@@ -5,17 +5,11 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 require '../Config/database.php';
 require '../Config/functions.php';
 
-// ======================================================
-// CONSTANTS
-// ======================================================
 
-define('INSURANCE_FEE', 3000.00);   // RM 3000 fixed insurance
-define('PLATE_REG_FEE', 10.00);     // RM 10 fixed plate registration
+define('INSURANCE_FEE', 3000.00);   
+define('PLATE_REG_FEE', 10.00);     
 define('TEMPLATE_PDF', '../documents/Motor_Insurance_Contract_Summary.pdf');
 
-// ======================================================
-// SESSION CHECK
-// ======================================================
 
 if (
     !isset($_SESSION['loggedin']) ||
@@ -30,9 +24,6 @@ if (
 $user_id = (int) $_SESSION['id'];
 $booking_id = intval($_GET['id'] ?? $_POST['booking_id'] ?? 0);
 
-// ======================================================
-// FRIENDLY ERROR PAGE
-// ======================================================
 
 function show_error_page($title, $message, $btn_text = 'Return Home', $btn_href = 'index.php')
 {
@@ -61,9 +52,6 @@ if ($booking_id <= 0) {
     );
 }
 
-// ======================================================
-// FETCH BOOKING + DOWN PAYMENT
-// ======================================================
 
 $sql = "
 SELECT
@@ -103,9 +91,6 @@ if (!$booking) {
     );
 }
 
-// ======================================================
-// PRECONDITIONS
-// ======================================================
 
 if ($booking['booking_status'] !== 'Approved') {
     show_error_page(
@@ -139,11 +124,6 @@ if (!empty($booking['dp_paid_at'])) {
         'view_status.php'
     );
 }
-
-// ======================================================
-// SNAPSHOT + DERIVED FIELDS
-// ======================================================
-
 $snap = json_decode($booking['snapshot_data'] ?: '{}', true);
 if (!is_array($snap))
     $snap = [];
@@ -167,7 +147,6 @@ $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
 
-    // --- Validate plate (only 'new' or 'used' allowed; no custom) ---
     $plate_option = $_POST['plate_option'] ?? '';
     if (!in_array($plate_option, ['new', 'used'])) {
         $errors[] = "Please select a valid plate option.";
@@ -176,10 +155,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
         $errors[] = "Only used cars can keep an existing plate.";
     }
 
-    // Plate fee
     $plate_fee = ($plate_option === 'used') ? 0.00 : PLATE_REG_FEE;
 
-    // --- Validate insurance upload ---
     $insurance_db_url = '';
     if (!isset($_FILES['insurance_pdf']) || $_FILES['insurance_pdf']['error'] !== UPLOAD_ERR_OK) {
         $errors[] = "Please upload your signed insurance document.";
@@ -223,12 +200,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
     if (strlen($card_cvv) !== 3)
         $errors[] = "CVV must be 3 digits.";
 
-    // --- Process if no errors ---
     if (empty($errors)) {
 
         $total_amount = $dp_amount + INSURANCE_FEE + $plate_fee;
 
-        // Save insurance file FIRST (outside transaction so failed upload doesn't block rollback)
         $insurance_dir_fs = __DIR__ . '/../../uploads/insurance/';
         if (!is_dir($insurance_dir_fs))
             @mkdir($insurance_dir_fs, 0777, true);
@@ -254,8 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
                     $last4
                 );
 
-                // UPDATE down_payments
-                // NOTE: plate_number is NOT set here - admin assigns it later
                 $upd = mysqli_prepare(
                     $conn,
                     "UPDATE down_payments
@@ -284,8 +257,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
                     throw new Exception('DP update failed: ' . mysqli_stmt_error($upd));
                 }
                 mysqli_stmt_close($upd);
-
-                // INSERT payment
                 $ins = mysqli_prepare(
                     $conn,
                     "INSERT INTO payments
@@ -315,7 +286,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
 
             } catch (Exception $e) {
                 mysqli_rollback($conn);
-                // Cleanup uploaded file if DB failed
                 if (file_exists($target_fs))
                     @unlink($target_fs);
                 $errors[] = "Payment processing failed. Please try again.";
@@ -1021,7 +991,8 @@ include 'Includes/header.php';
             <div class="amount-banner">
                 <div class="lbl">Total Amount Due</div>
                 <div class="amt" id="amountBanner">RM
-                    <?= number_format($dp_amount + INSURANCE_FEE + PLATE_REG_FEE, 2) ?></div>
+                    <?= number_format($dp_amount + INSURANCE_FEE + PLATE_REG_FEE, 2) ?>
+                </div>
                 <div class="sub">Down Payment &middot; BK<?= str_pad($booking_id, 4, '0', STR_PAD_LEFT) ?></div>
             </div>
 
@@ -1045,7 +1016,7 @@ include 'Includes/header.php';
                             <strong><i class="fas fa-file-pdf"></i> Motor Insurance Cover Note</strong>
                             <p>Download, fill in your details, sign it, and upload the completed copy below.</p>
                         </div>
-                        <a href="<?= htmlspecialchars(TEMPLATE_PDF) ?>" download>
+                        <a href="<?= htmlspecialchars(TEMPLATE_PDF) ?>" download="Motor_Insurance_Contract_Summary.pdf">
                             <i class="fas fa-download"></i> Download PDF
                         </a>
                     </div>
