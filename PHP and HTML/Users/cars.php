@@ -151,7 +151,7 @@ include 'Includes/header.php';
 
         <aside class="inventory-sidebar">
             <div class="filter-group">
-                <div class="sidebar-title" style="font-size: 16px; color: #0f172a; font-weight: 900;">🚗 PROTON FILTER</div>
+                <div class="sidebar-title" style="font-size: 16px; color: #0f172a; font-weight: 900;"> CAR FILTER</div>
             </div>
 
             <div class="filter-group">

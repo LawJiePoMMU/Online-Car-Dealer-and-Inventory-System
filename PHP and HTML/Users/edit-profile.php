@@ -8,11 +8,11 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
     exit;
 }
 
-// 确保连接数据库的路径是正确的
 require_once "../Config/database.php";
 
 $user_id = $_SESSION["id"];
 $success = $error = "";
+$avatar = ""; // 新增 avatar 变量
 
 // --- 1. 处理表单提交 (Update) ---
 if($_SERVER["REQUEST_METHOD"] == "POST"){
@@ -31,7 +31,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         
         if(mysqli_stmt_execute($stmt)){
             $success = "Profile updated successfully!";
-            // 如果 header 有用到名字，顺便更新 Session
             if(isset($_SESSION["name"])) $_SESSION["name"] = $new_name; 
         } else {
             $error = "Something went wrong. Please try again.";
@@ -41,28 +40,86 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 }
 
 // --- 2. 抓取当前资料以填充表单 (Fetch) ---
-$sql = "SELECT user_name, user_email, user_ic, user_phone, user_address, user_city, user_state, user_postcode FROM users WHERE user_id = ?";
+// 🔥 修复：这里加入了 user_avatar
+$sql = "SELECT user_name, user_email, user_ic, user_phone, user_address, user_city, user_state, user_postcode, user_avatar FROM users WHERE user_id = ?";
 if($stmt = mysqli_prepare($conn, $sql)){
     mysqli_stmt_bind_param($stmt, "i", $user_id);
     mysqli_stmt_execute($stmt);
-    mysqli_stmt_bind_result($stmt, $name, $email, $ic, $phone, $address, $city, $state, $postcode);
+    // 🔥 修复：绑定 $avatar
+    mysqli_stmt_bind_result($stmt, $name, $email, $ic, $phone, $address, $city, $state, $postcode, $avatar);
     mysqli_stmt_fetch($stmt);
     mysqli_stmt_close($stmt);
 }
 
-// 🔥 修复：Header 路径加上了 ../
 include 'Includes/header.php';
 ?>
+
+<style>
+    /* 高级感侧边栏菜单样式 */
+    .profile-menu {
+        list-style: none;
+        padding: 0;
+        margin: 20px 0 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .profile-menu li a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: #475569;
+        font-weight: 500;
+        font-size: 15px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    .profile-menu li a:hover, .profile-menu li a.active {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+    .profile-menu li a svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        stroke-width: 2;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+</style>
 
 <div class="inventory-page" style="background-color: #f8fafc; min-height: 100vh; padding: 20px 0;">
     <div class="inventory-wrapper">
         <div class="profile-layout">
             
             <aside class="profile-sidebar">
-                <div class="profile-avatar"><?php echo strtoupper(substr($name, 0, 1)); ?></div>
+                <!-- 🔥 修复：加入和 Profile 一样的头像展示和上传功能 -->
+                <div class="profile-avatar" onclick="document.getElementById('avatar-upload').click();" title="Click to change avatar">
+                    <?php if(!empty($avatar)): ?>
+                        <img id="avatar-img" src="<?php echo htmlspecialchars($avatar); ?>" alt="Avatar">
+                        <span id="avatar-text" style="display: none;"><?php echo strtoupper(substr($name, 0, 1)); ?></span>
+                    <?php else: ?>
+                        <img id="avatar-img" src="" alt="Avatar" style="display: none;">
+                        <span id="avatar-text"><?php echo strtoupper(substr($name, 0, 1)); ?></span>
+                    <?php endif; ?>
+                    <div class="avatar-overlay">📷</div>
+                </div>
+                
+                <input type="file" id="avatar-upload" accept="image/png, image/jpeg, image/jpg, image/gif" style="display: none;" onchange="uploadAvatar(this)">
+
                 <h3>Edit Profile</h3>
+                
                 <ul class="profile-menu">
-                    <li><a href="profile.php">👤 Back to Profile</a></li>
+                    <li>
+                        <a href="profile.php">
+                            <!-- 高级 SVG 箭头 -->
+                            <svg viewBox="0 0 24 24"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            Back to Profile
+                        </a>
+                    </li>
                 </ul>
             </aside>
 
@@ -134,5 +191,43 @@ include 'Includes/header.php';
         </div>
     </div>
 </div>
+
+<!-- 🔥 修复：加入上传头像的 JS 逻辑，让 Edit 页面也能改图 -->
+<script>
+    function uploadAvatar(input) {
+        if (input.files && input.files[0]) {
+            let formData = new FormData();
+            formData.append('avatar', input.files[0]);
+
+            let overlay = document.querySelector('.avatar-overlay');
+            overlay.innerHTML = '⏳'; 
+
+            fetch('upload_avatar.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                overlay.innerHTML = '📷'; 
+
+                if (data.status === 'success') {
+                    let img = document.getElementById('avatar-img');
+                    let text = document.getElementById('avatar-text');
+                    
+                    img.src = data.filepath + '?t=' + new Date().getTime(); 
+                    img.style.display = 'block';
+                    if(text) text.style.display = 'none';
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                overlay.innerHTML = '📷';
+                alert('Something went wrong. Please try again.');
+            });
+        }
+    }
+</script>
 
 <?php include 'Includes/footer.php'; ?>

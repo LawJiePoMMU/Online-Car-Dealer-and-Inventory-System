@@ -237,7 +237,7 @@ try {
         border-radius: 4px;
     }
 
-    /* ================= 标题与你原本的极简心愿单按钮 ================= */
+    /* ================= 标题与心愿单按钮 ================= */
     .title-area {
         margin-bottom: 30px;
         display: flex;
@@ -266,14 +266,12 @@ try {
         display: block;
     }
 
-    /* 🔥 完美复刻外面的空心设计 */
     .clean-wishlist-btn {
         background: transparent;
         border: none;
         padding: 8px;
         cursor: pointer;
         color: #94a3b8;
-        /* 默认灰色 */
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
@@ -296,7 +294,6 @@ try {
         color: #ef4444;
     }
 
-    /* 🔴 核心：点亮后，变成跟你原本设计一模一样的空心红边（不填满填充色） */
     .clean-wishlist-btn.liked {
         color: #ef4444;
     }
@@ -688,7 +685,6 @@ try {
         <?php endif; ?>
     </div>
 
-    <!-- 🔥 完美复刻外层样式的空心爱心 -->
     <div class="title-area">
         <div class="title-area-text">
             <h2><?php echo htmlspecialchars(($car['car_brand'] ?? 'TBA') . ' ' . ($car['car_model'] ?? '')); ?></h2>
@@ -934,20 +930,18 @@ try {
 
             <div class="fin-form-group">
                 <label style="color: #111827;">Down Payment</label>
-                <div class="custom-combo-input">
-                    <input type="number" id="dp-amt" min="0" oninput="calcFromAmt()" onblur="enforceMinAmt()"
-                        onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();" placeholder="0">
+                <div class="custom-combo-input" style="background-color: #f9fafb;">
+                    <input type="number" id="dp-amt" value="<?php echo $car_price * ($default_dp_pct / 100); ?>" 
+                        readonly style="color: #6b7280; cursor: not-allowed;">
                     <div class="vertical-divider"></div>
-                    <div class="pct-section">
-                        <input type="number" id="dp-pct" value="<?php echo $default_dp_pct; ?>" min="0" max="100"
-                            step="1" oninput="calcFromPct()" onblur="enforceMinPct()"
-                            onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();">
+                    <div class="pct-section" style="background-color: #f9fafb;">
+                        <input type="number" id="dp-pct" value="<?php echo $default_dp_pct; ?>" 
+                            readonly style="color: #6b7280; cursor: not-allowed; background-color: transparent;">
                         <span class="pct-sign">%</span>
                     </div>
                 </div>
                 <small style="color: #9ca3af; font-size: 12px; margin-top: 6px; display: block;" id="dp-warning-text">
-                    Min.
-                    <?php echo $default_dp_pct; ?>% down payment
+                    Min. <?php echo $default_dp_pct; ?>% down payment
                 </small>
             </div>
 
@@ -959,9 +953,8 @@ try {
 
             <div class="fin-form-group" style="margin-bottom: 0;">
                 <label style="color: #111827;">Interest Rate (%)</label>
-                <input type="number" id="int-rate" value="<?php echo $default_loan_rate; ?>" min="0" step="0.1"
-                    class="basic-input" oninput="calculateMonthlyLoan()"
-                    onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();">
+                <input type="number" id="int-rate" value="<?php echo $default_loan_rate; ?>" 
+                    class="basic-input" readonly style="background-color: #f9fafb; color: #6b7280; cursor: not-allowed;">
             </div>
         </div>
 
@@ -988,3 +981,106 @@ try {
     </div>
 
 </div>
+
+<script>
+    // 1. 当用户拖动年份滑块时触发
+    function updateTenure() {
+        let tenure = document.getElementById('tenure-slider').value;
+        document.getElementById('tenure-val').innerText = tenure + " Years";
+        calculateMonthlyLoan();
+    }
+
+    // 2. 计算月供的核心逻辑
+    function calculateMonthlyLoan() {
+        let carPrice = parseFloat(document.getElementById('car-price-data').value) || 0;
+        let dpAmt = parseFloat(document.getElementById('dp-amt').value) || 0;
+        let intRate = parseFloat(document.getElementById('int-rate').value) || 0;
+        let years = parseInt(document.getElementById('tenure-slider').value) || 9;
+
+        let loanAmount = carPrice - dpAmt;
+        
+        if (loanAmount <= 0) {
+            document.getElementById('monthly-result').innerText = "RM 0";
+            return;
+        }
+
+        let totalInterest = loanAmount * (intRate / 100) * years;
+        let totalToPay = loanAmount + totalInterest;
+        let monthlyPayment = totalToPay / (years * 12);
+
+        document.getElementById('monthly-result').innerText = "RM " + Math.round(monthlyPayment).toLocaleString();
+    }
+
+    // 3. Reset 按钮逻辑
+    function resetCalc() {
+        document.getElementById('tenure-slider').value = 9;
+        updateTenure();
+    }
+
+    // 4. 当页面刚加载完成时，自动算一次
+    document.addEventListener("DOMContentLoaded", function() {
+        updateTenure();
+    });
+
+    // -------------------------------------------------------------
+    // 以下为你页面原本需要用到的 UI 控制函数 (Gallery/Specs等)
+    // -------------------------------------------------------------
+    let currentImgIndex = 0;
+    
+    function showImg(index) {
+        let galleryData = document.getElementById('gallery-data');
+        if (!galleryData) return;
+        
+        let images = JSON.parse(galleryData.getAttribute('data-images'));
+        if (!images || images.length === 0) return;
+        
+        currentImgIndex = index;
+        document.getElementById('main-gallery-img').src = images[currentImgIndex];
+        
+        // 更新小图的 active 样式
+        let thumbs = document.querySelectorAll('.thumb-img');
+        thumbs.forEach((thumb, i) => {
+            if (i === index) thumb.classList.add('active');
+            else thumb.classList.remove('active');
+        });
+    }
+
+    function prevImg() {
+        let galleryData = document.getElementById('gallery-data');
+        if (!galleryData) return;
+        let images = JSON.parse(galleryData.getAttribute('data-images'));
+        if (!images) return;
+
+        currentImgIndex = (currentImgIndex - 1 + images.length) % images.length;
+        showImg(currentImgIndex);
+    }
+
+    function nextImg() {
+        let galleryData = document.getElementById('gallery-data');
+        if (!galleryData) return;
+        let images = JSON.parse(galleryData.getAttribute('data-images'));
+        if (!images) return;
+
+        currentImgIndex = (currentImgIndex + 1) % images.length;
+        showImg(currentImgIndex);
+    }
+
+    function toggleMoreSpecs() {
+        let box = document.getElementById('more-specs-box');
+        let btn = document.getElementById('toggleSpecsBtn');
+        if (box.style.display === 'none') {
+            box.style.display = 'block';
+            btn.innerText = 'Hide Full Specifications';
+        } else {
+            box.style.display = 'none';
+            btn.innerText = 'View Full Specifications';
+        }
+    }
+
+    // Wishlist Toggle (占位，如果你外部有定义可以删除这个)
+    function toggleSidebarWishlist(event, btn, carId) {
+        event.preventDefault();
+        // 这里放你原本 AJAX 加入 wishlist 的逻辑
+        btn.classList.toggle('liked');
+    }
+</script>

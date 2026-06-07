@@ -461,16 +461,6 @@ if ($chat_type === 'group') {
         overflow-wrap: break-word;
     }
 
-    .chat-container {
-        display: flex;
-        height: 75vh;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        background: #fff;
-        overflow: hidden;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
     .chat-sidebar {
         width: 320px;
         border-right: 1px solid #e5e7eb;
@@ -512,8 +502,9 @@ if ($chat_type === 'group') {
         white-space: nowrap;
     }
 
+    /* 🔥 统一主题颜色：深石板黑 */
     .chat-tab-btn.active {
-        background: #1e3a8a;
+        background: #0f172a;
         color: #fff;
     }
 
@@ -540,9 +531,10 @@ if ($chat_type === 'group') {
         background: #f3f4f6;
     }
 
+    /* 🔥 选中联系人的极简灰色背景 + 黑色侧边条 */
     .contact-item.active {
-        background: #e0e7ff;
-        border-left: 4px solid #1e3a8a;
+        background: #f1f5f9;
+        border-left: 4px solid #0f172a;
     }
 
     .avatar-wrap {
@@ -550,12 +542,13 @@ if ($chat_type === 'group') {
         margin-right: 12px;
     }
 
+    /* 🔥 未读消息改成醒目的红色 */
     .unread-badge {
         position: absolute;
         right: 16px;
         top: 50%;
         transform: translateY(-50%);
-        background: #10b981;
+        background: #ef4444; 
         color: white;
         font-size: 11px;
         font-weight: bold;
@@ -631,8 +624,9 @@ if ($chat_type === 'group') {
         border-top-left-radius: 0;
     }
 
+    /* 🔥 发送出去的消息气泡换成深石板黑 */
     .outgoing .message-bubble {
-        background: #1e3a8a;
+        background: #0f172a;
         color: #ffffff;
         border-top-right-radius: 0;
     }
@@ -664,8 +658,9 @@ if ($chat_type === 'group') {
         background: #f9fafb;
     }
 
+    /* 🔥 发送按钮颜色更新 */
     .btn-send {
-        background: #1e3a8a;
+        background: #0f172a;
         color: white;
         width: 44px;
         height: 44px;
@@ -680,21 +675,8 @@ if ($chat_type === 'group') {
     }
 
     .btn-send:hover {
-        background: #1e40af;
+        background: #1e293b;
         transform: scale(1.05);
-    }
-
-    .profile-sidebar {
-        width: 320px;
-        background: #fff;
-        border-left: 1px solid #e5e7eb;
-        display: none;
-        flex-direction: column;
-    }
-
-    .profile-sidebar.open {
-        display: flex;
-        animation: slideIn 0.3s ease-out;
     }
 
     @keyframes slideIn {
@@ -705,22 +687,6 @@ if ($chat_type === 'group') {
         to {
             margin-right: 0;
         }
-    }
-
-    .profile-header {
-        padding: 20px;
-        border-bottom: 1px solid #e5e7eb;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        font-weight: bold;
-    }
-
-    .profile-content {
-        padding: 24px;
-        text-align: center;
-        overflow-y: auto;
-        flex: 1;
     }
 
     .media-grid {
@@ -801,7 +767,7 @@ if ($chat_type === 'group') {
                     <div class="search-bar-row">
                         <input type="text" id="searchContact" class="form-control" placeholder="Search contacts...">
                         <button class="btn-add-blue" onclick="openNewChatModal()"
-                            style="padding: 10px; border-radius: 8px; background: #1e3a8a; color: #fff; border: none; cursor: pointer;"
+                            style="padding: 10px; border-radius: 8px; background: #0f172a; color: #fff; border: none; cursor: pointer;"
                             title="New Chat"><i class="fas fa-plus"></i></button>
                     </div>
                     <div class="chat-tabs">
@@ -811,7 +777,7 @@ if ($chat_type === 'group') {
                         <?php if ($my_role == 'Admin'): ?>
                             <button class="chat-tab-btn" onclick="switchTab('group', this)">Groups</button>
                             <button class="chat-tab-btn"
-                                style="margin-left:auto; background:transparent; color:#1e3a8a; border: 1px solid #1e3a8a;"
+                                style="margin-left:auto; background:transparent; color:#0f172a; border: 1px solid #0f172a;"
                                 onclick="openCreateGroupModal()"><i class="fas fa-users" style="margin-right:4px;"></i>+
                                 Group</button>
                         <?php endif; ?>
@@ -862,7 +828,7 @@ if ($chat_type === 'group') {
             </div>
 
             <div class="chat-main" id="emptyChatArea"
-                style="align-items: center; justify-content: center; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);">
+                style="align-items: center; justify-content: center; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
                 <div style="text-align: center; color: #9ca3af;">
                     <i class="fas fa-comments" style="font-size: 60px; margin-bottom: 16px; opacity: 0.5;"></i>
                     <h3 style="color: #4b5563;">Select a contact
@@ -949,7 +915,7 @@ if ($chat_type === 'group') {
                 <div id="groupMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
                 <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                     <button class="btn-add-blue"
-                        style="width: 100%; padding: 12px; background: #1e3a8a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
+                        style="width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
                         onclick="submitCreateGroup()">Create Group</button>
                 </div>
             </div>
@@ -974,7 +940,7 @@ if ($chat_type === 'group') {
                 <div id="addMembersList" style="overflow-y: auto; flex: 1; padding: 0; background: #fff;"></div>
                 <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb;">
                     <button class="btn-add-blue"
-                        style="width: 100%; padding: 12px; background: #1e3a8a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
+                        style="width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
                         onclick="submitAddMembers()">Add to Group</button>
                 </div>
             </div>
@@ -999,7 +965,7 @@ if ($chat_type === 'group') {
         <img id="lightboxImg" src=""
             style="max-width:90%; max-height:80%; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
         <a id="lightboxDownload" href="" download class="btn-add-blue"
-            style="margin-top:20px; padding: 10px 20px; background: #1e3a8a; color: white; border-radius: 8px; text-decoration:none;"><i
+            style="margin-top:20px; padding: 10px 20px; background: #0f172a; color: white; border-radius: 8px; text-decoration:none;"><i
                 class="fas fa-download" style="margin-right:6px;"></i> Download Image</a>
     </div>
     <?php include 'Includes/footer.php'; ?>
