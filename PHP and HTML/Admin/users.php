@@ -34,7 +34,7 @@ if (isset($_POST['save_user'])) {
     }
     $name = mysqli_real_escape_string($conn, $_POST['user_name']);
     $ic = mysqli_real_escape_string($conn, $_POST['user_ic']);
-    $email = mysqli_real_escape_string($conn, $_POST['user_email']);
+    $email = strtolower(mysqli_real_escape_string($conn, $_POST['user_email']));
     $phone = mysqli_real_escape_string($conn, $_POST['user_phone']);
     $role = mysqli_real_escape_string($conn, $_POST['user_role']);
     $status = mysqli_real_escape_string($conn, $_POST['user_status']);
@@ -527,7 +527,7 @@ while ($r = mysqli_fetch_assoc($existing_users_query)) {
                 <div style="position: relative;">
                     <i class="fas fa-search"
                         style="position: absolute; left: 14px; top: 11px; color: #9ca3af; font-size: 14px;"></i>
-                    <input type="text" name="search" class="form-control" placeholder="Search Name or IC..."
+                    <input type="text" name="search" class="form-control" placeholder="Search Name, Email or IC..."
                         style="padding-left: 38px; width: 280px; font-size: 13px;"
                         value="<?= htmlspecialchars($search) ?>">
                 </div>

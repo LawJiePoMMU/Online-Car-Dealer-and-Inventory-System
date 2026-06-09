@@ -189,12 +189,19 @@ $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['searc
 $count_new = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM cars WHERE car_origin = 'New Car'"))['c'];
 $count_used = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold'"))['c'];
 $count_sold = (int) mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(c.car_id) as c FROM cars c LEFT JOIN car_status stat ON c.car_id = stat.car_id WHERE stat.car_status_status = 'Sold'"))['c'];
-$search_condition = "";
+$search_condition_new = "";
 if (!empty($search)) {
-    $search_condition = " AND (c.car_brand LIKE '%$search%' OR c.car_model LIKE '%$search%' OR ud.car_plate LIKE '%$search%') ";
+    $search_condition_new = " AND (c.car_brand LIKE '%$search%' OR c.car_model LIKE '%$search%') ";
 }
+
+$search_condition_used = "";
+if (!empty($search)) {
+    $search_condition_used = " AND (c.car_brand LIKE '%$search%' OR c.car_model LIKE '%$search%' OR ud.car_plate LIKE '%$search%') ";
+}
+
 if ($status_filter !== 'all') {
-    $search_condition .= " AND stat.car_status_status = '$status_filter' ";
+    $search_condition_new .= " AND stat.car_status_status = '$status_filter' ";
+    $search_condition_used .= " AND stat.car_status_status = '$status_filter' ";
 }
 
 $base_search = "";
@@ -219,7 +226,7 @@ try {
             SELECT COUNT(DISTINCT c.car_id) as c FROM cars c
             LEFT JOIN car_status stat ON c.car_id = stat.car_id
             LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
-            WHERE c.car_origin = 'New Car' $search_condition"))['c'];
+            WHERE c.car_origin = 'New Car' $search_condition_new"))['c'];
         $pages_new = max(1, (int) ceil($cf / $limit));
         $result_new = mysqli_query($conn, "
             SELECT c.*, stat.car_status_price, stat.car_status_status, 
@@ -233,7 +240,7 @@ try {
             LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
             LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
             LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
-            WHERE c.car_origin = 'New Car' $search_condition 
+            WHERE c.car_origin = 'New Car' $search_condition_new 
             GROUP BY c.car_id 
             ORDER BY (CASE WHEN IFNULL((SELECT SUM(quantity) FROM car_inventory WHERE car_id = c.car_id), 0) <= $low_stock_limit THEN 0 ELSE 1 END) ASC, c.car_brand ASC, c.car_model ASC, c.car_id DESC
             LIMIT $limit OFFSET $offset_new
@@ -243,7 +250,7 @@ try {
             SELECT COUNT(DISTINCT c.car_id) as c FROM cars c
             LEFT JOIN car_status stat ON c.car_id = stat.car_id
             LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
-            WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold' $search_condition"))['c'];
+            WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold' $search_condition_used"))['c'];
         $pages_used = max(1, (int) ceil($cf / $limit));
         $result_used = mysqli_query($conn, "
             SELECT c.*, stat.car_status_price, stat.car_status_status, 
@@ -257,12 +264,12 @@ try {
             LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
             LEFT JOIN car_inventory inv ON c.car_id = inv.car_id
             LEFT JOIN used_car_details ud ON c.car_id = ud.car_id
-            WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold' $search_condition 
-            GROUP BY c.car_id 
+            WHERE c.car_origin = 'Used Car' AND IFNULL(stat.car_status_status,'') <> 'Sold' $search_condition_used 
+            GROUP BY c.car_id
             ORDER BY FIELD(stat.car_status_status, 'Active', 'Inactive') ASC, c.car_brand ASC, c.car_model ASC, c.car_id DESC
             LIMIT $limit OFFSET $offset_used
         ");
-    } else { // history = Sold cars
+    } else {
         $cf = (int) mysqli_fetch_assoc(mysqli_query($conn, "
             SELECT COUNT(DISTINCT c.car_id) as c FROM cars c
             LEFT JOIN car_status stat ON c.car_id = stat.car_id
@@ -337,7 +344,8 @@ function getCarImgUrl($conn, $car_id)
                 <div style="position:relative;">
                     <i class="fas fa-search"
                         style="position:absolute;left:14px;top:11px;color:#9ca3af;font-size:14px;"></i>
-                    <input type="text" name="search" class="form-control" placeholder="Search Brand, Model or Plate..."
+                    <input type="text" name="search" class="form-control"
+                        placeholder="<?= $active_tab === 'new' ? 'Search Brand or Model' : 'Search Brand, Model or Plate' ?>"
                         style="padding-left:38px;width:280px;font-size:13px;" value="<?= htmlspecialchars($search) ?>">
                 </div>
                 <?php if ($active_tab !== 'history'): ?>

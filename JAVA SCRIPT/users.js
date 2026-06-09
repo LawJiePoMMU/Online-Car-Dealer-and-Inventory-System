@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return false;
             }
 
-            if (!email.match(/^[a-zA-Z0-9._%+-]+@gmail\.com$/)) {
+            if (!email.match(/^[a-zA-Z0-9._%+-]+@gmail\.com$/i)) {
                 e.preventDefault();
                 Toast.fire({ icon: 'error', title: 'Must be a valid @gmail.com address.' });
                 return false;
@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
             for (let i = 0; i < existingUsers.length; i++) {
                 let u = existingUsers[i];
                 if (u.user_id != id) {
-                    if (u.user_name === name || u.user_ic === ic || u.user_email === email || u.user_phone === phone) {
+                    if (u.user_name === name || u.user_ic === ic || u.user_email.toLowerCase() === email.toLowerCase() || u.user_phone === phone) {
                         isDuplicate = true;
                         break;
                     }

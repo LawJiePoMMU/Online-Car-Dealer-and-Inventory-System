@@ -82,29 +82,6 @@ if ($month === 'all') {
     }
 }
 
-$installment_query = mysqli_query($conn, "
-SELECT 
-    mi.payment_status, 
-    COUNT(*) as total
-FROM monthly_installments mi
-JOIN bookings b ON mi.booking_id = b.booking_id
-WHERE YEAR(b.created_at) = '$year'
-$month_condition
-GROUP BY mi.payment_status
-");
-
-$paid = 0;
-$pending = 0;
-$overdue = 0;
-while ($row = mysqli_fetch_assoc($installment_query)) {
-    if ($row['payment_status'] == 'Paid')
-        $paid = $row['total'];
-    if ($row['payment_status'] == 'Pending')
-        $pending = $row['total'];
-    if ($row['payment_status'] == 'Overdue')
-        $overdue = $row['total'];
-}
-
 $top_models_query = mysqli_query($conn, "
 SELECT 
     c.car_brand, 
@@ -270,7 +247,7 @@ LIMIT 5
 
         .chart-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 1fr;
             gap: 18px;
             margin-bottom: 18px;
         }
@@ -488,22 +465,6 @@ LIMIT 5
                 </div>
             </div>
 
-            <div class="chart-card">
-                <div class="chart-header">
-                    <div class="chart-title">
-                        <div class="chart-icon"><i class="fas fa-chart-pie"></i></div>
-                        <div>
-                            <h2>Installment Status</h2>
-                            <div class="chart-sub">Paid vs Pending vs Overdue</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="installmentChart"></canvas>
-                </div>
-            </div>
-        </div>
-
         <div class="chart-card top-models-card">
             <div class="chart-header">
                 <div class="chart-title">
@@ -557,24 +518,6 @@ LIMIT 5
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: { y: { beginAtZero: true } }
-            }
-        });
-
-        new Chart(document.getElementById('installmentChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Paid', 'Pending', 'Overdue'],
-                datasets: [{
-                    data: [<?= $paid ?>, <?= $pending ?>, <?= $overdue ?>],
-                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '72%',
-                plugins: { legend: { position: 'bottom' } }
             }
         });
     </script>

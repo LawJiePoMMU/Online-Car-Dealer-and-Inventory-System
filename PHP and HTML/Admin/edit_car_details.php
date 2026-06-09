@@ -297,7 +297,7 @@ if (isset($_POST['save_all_details'])) {
                     mysqli_query($conn, "INSERT INTO car_inventory (car_id, variant, color_name, color_hex, quantity) 
                         VALUES ($target_id, '$variant', '$cname', '$hex', $qty)");
                     $total_stock += $qty;
-                    break; 
+                    break;
                 } else {
                     $qty = min(100, max(0, (int) ($_POST['inv_qty'][$i] ?? 0)));
                     mysqli_query($conn, "INSERT INTO car_inventory (car_id, variant, color_name, color_hex, quantity) 
@@ -1100,7 +1100,8 @@ if (isset($_POST['save_all_details'])) {
                             <label>Engine Displacement <span class="hint">(cc)</span></label>
                             <input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="engine_cc"
-                                class="form-control" value="<?= htmlspecialchars($car['engine_cc']) ?>" min="0" max="5000">
+                                class="form-control" value="<?= htmlspecialchars($car['engine_cc']) ?>" min="0"
+                                max="5000">
                         </div>
                         <div class="form-group">
                             <label>Compression Ratio</label>
@@ -1111,13 +1112,15 @@ if (isset($_POST['save_all_details'])) {
                             <label>Peak Power <span class="hint">(kW)</span></label>
                             <input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="peak_power_kw"
-                                class="form-control" value="<?= htmlspecialchars($car['peak_power_kw']) ?>" min="0" max="2000">
+                                class="form-control" value="<?= htmlspecialchars($car['peak_power_kw']) ?>" min="0"
+                                max="2000">
                         </div>
                         <div class="form-group">
                             <label>Peak Torque <span class="hint">(Nm)</span></label>
                             <input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="peak_torque_nm"
-                                class="form-control" value="<?= htmlspecialchars($car['peak_torque_nm']) ?>" min="0" max="2400">
+                                class="form-control" value="<?= htmlspecialchars($car['peak_torque_nm']) ?>" min="0"
+                                max="2400">
                         </div>
                     </div>
                 </div>
@@ -1137,13 +1140,16 @@ if (isset($_POST['save_all_details'])) {
                     <div class="grid-3">
                         <div class="form-group"><label>Length <span class="hint">(mm)</span></label><input type="number"
                                 inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="length"
-                                class="form-control" value="<?= htmlspecialchars($car['length']) ?>" min="0" max="10000"></div>
+                                class="form-control" value="<?= htmlspecialchars($car['length']) ?>" min="0"
+                                max="10000"></div>
                         <div class="form-group"><label>Width <span class="hint">(mm)</span></label><input type="number"
                                 inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="width"
-                                class="form-control" value="<?= htmlspecialchars($car['width']) ?>" min="0" max="10000"></div>
+                                class="form-control" value="<?= htmlspecialchars($car['width']) ?>" min="0" max="10000">
+                        </div>
                         <div class="form-group"><label>Height <span class="hint">(mm)</span></label><input type="number"
                                 inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="height"
-                                class="form-control" value="<?= htmlspecialchars($car['height']) ?>" min="0" max="10000"></div>
+                                class="form-control" value="<?= htmlspecialchars($car['height']) ?>" min="0"
+                                max="10000"></div>
                         <div class="form-group"><label>Wheelbase <span class="hint">(mm)</span></label><input
                                 type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="wheelbase" class="form-control" value="<?= htmlspecialchars($car['wheelbase']) ?>"
@@ -1185,10 +1191,11 @@ if (isset($_POST['save_all_details'])) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group"><label>Infotainment Screen</label><input type="number" name="screen"
-                                placeholder="7" class="form-control"
-                                oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                                value="<?= htmlspecialchars($car['screen']) ?>" min="0" max="100"></div>
+                        <div class="form-group"><label>Infotainment Screen <span
+                                    class="hint">(inches)</span></label><input type="number" name="screen"
+                                placeholder="10.25" class="form-control" inputmode="decimal" step="0.01" min="0" max="20"
+                                oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')"
+                                value="<?= htmlspecialchars($car['screen']) ?>"></div>
                         <div class="form-group"><label>Airbags Count</label><input type="number" inputmode="numeric"
                                 placeholder="20" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="airbags_count" class="form-control"
@@ -1217,11 +1224,11 @@ if (isset($_POST['save_all_details'])) {
                 <div class="form-section">
                     <h3 class="section-header"><i class="fas fa-wave-square"></i> Suspension Specifications</h3>
                     <div class="grid-2">
-                        <div class="form-group"><label>Front Suspension</label><input type="text" 
+                        <div class="form-group"><label>Front Suspension</label><input type="text"
                                 name="front_suspension" class="form-control" placeholder="e.g., MacPherson Strut"
                                 value="<?= htmlspecialchars($car['front_suspension']) ?>"></div>
-                        <div class="form-group"><label>Rear Suspension</label><input type="text" 
-                                name="rear_suspension" class="form-control" placeholder="e.g., Multi-link"
+                        <div class="form-group"><label>Rear Suspension</label><input type="text" name="rear_suspension"
+                                class="form-control" placeholder="e.g., Multi-link"
                                 value="<?= htmlspecialchars($car['rear_suspension']) ?>"></div>
                     </div>
                 </div>
@@ -1292,118 +1299,118 @@ if (isset($_POST['save_all_details'])) {
                 </div>
             </div>
 
-        <div id="tab-history" class="tab-content">
-            <div class="form-section">
-                <h3 class="section-header warning">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                        <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                    Location
-                </h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>State</label>
-                        <div class="custom-dropdown-container" id="state_wrapper">
-                            <div class="form-control custom-dropdown-selected" id="state_display">Select State</div>
-                            <div class="custom-dropdown-list" id="state_list"></div>
-                            <input type="hidden" id="state_input" name="location_state"
-                                value="<?= htmlspecialchars($car['location_state']) ?>">
+            <div id="tab-history" class="tab-content">
+                <div class="form-section">
+                    <h3 class="section-header warning">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        Location
+                    </h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>State</label>
+                            <div class="custom-dropdown-container" id="state_wrapper">
+                                <div class="form-control custom-dropdown-selected" id="state_display">Select State</div>
+                                <div class="custom-dropdown-list" id="state_list"></div>
+                                <input type="hidden" id="state_input" name="location_state"
+                                    value="<?= htmlspecialchars($car['location_state']) ?>">
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>City</label>
-                        <div class="custom-dropdown-container" id="city_wrapper">
-                            <div class="form-control custom-dropdown-selected" id="city_display">Select City</div>
-                            <div class="custom-dropdown-list" id="city_list"></div>
-                            <input type="hidden" id="city_input" name="location_city"
-                                value="<?= htmlspecialchars($car['location_city']) ?>">
+                        <div class="form-group">
+                            <label>City</label>
+                            <div class="custom-dropdown-container" id="city_wrapper">
+                                <div class="form-control custom-dropdown-selected" id="city_display">Select City</div>
+                                <div class="custom-dropdown-list" id="city_list"></div>
+                                <input type="hidden" id="city_input" name="location_city"
+                                    value="<?= htmlspecialchars($car['location_city']) ?>">
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-section">
-                <h3 class="section-header warning"><i class="fas fa-file-contract"></i> Used Car History</h3>
-                <div class="grid-3" style="margin-bottom:16px;">
-                    <div class="form-group"><label>Plate Number</label><input type="text" name="car_plate"
-                            class="form-control" value="<?= htmlspecialchars($car['car_plate']) ?>"></div>
-                    <div class="form-group"><label>Previous Owners</label><input type="number" inputmode="numeric"
-                            oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="owners" class="form-control"
-                            value="<?= htmlspecialchars($car['owners']) ?>" min="0" max="20"></div>
-                    <div class="form-group">
-                        <label>Remaining Warranty</label>
-                        <select name="rem_warranty" class="form-control">
-                            <?php foreach (['No', 'Yes'] as $rw): ?>
-                                <option <?= $car['rem_warranty'] === $rw ? 'selected' : '' ?>><?= $rw ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-2" style="margin-bottom:16px;">
-                    <div class="form-group">
-                        <label>Accident History</label>
-                        <select name="accident" class="form-control">
-                            <?php foreach (['None', 'Minor', 'Major'] as $ac): ?>
-                                <option <?= $car['accident'] === $ac ? 'selected' : '' ?>><?= $ac ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Flood / Fire</label>
-                        <select name="flood" class="form-control">
-                            <?php foreach (['No', 'Flood', 'Fire'] as $fl): ?>
-                                <option <?= $car['flood'] === $fl ? 'selected' : '' ?>><?= $fl ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" style="margin-bottom:16px;">
-                    <label>Service History</label>
-                    <input type="text" name="service_hist" class="form-control"
-                        placeholder="e.g., Full service records available"
-                        value="<?= htmlspecialchars($car['service_hist']) ?>">
-                </div>
-                <div class="grid-2" style="margin-bottom:16px;">
-                    <div class="form-group"><label>Last Service Date</label><input type="date" name="last_service"
-                            class="form-control" value="<?= htmlspecialchars($car['last_service']) ?>"></div>
-                    <div class="form-group"><label>Next Service <span class="hint">(km)</span></label><input
-                            type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                            name="next_service" class="form-control"
-                            value="<?= htmlspecialchars($car['next_service']) ?>" min="0" max="1000000"></div>
-                </div>
-                <div class="grid-2" style="margin-bottom:16px;">
-                    <div class="form-group"><label>Roadtax Expiry</label><input type="date" name="roadtax"
-                            class="form-control" value="<?= htmlspecialchars($car['roadtax']) ?>"></div>
-                    <div class="form-group"><label>Puspakom Date</label><input type="date" name="puspakom"
-                            class="form-control" value="<?= htmlspecialchars($car['puspakom']) ?>"></div>
-                </div>
-                <div class="form-group" style="margin-bottom:16px;">
-                    <label>Known Defects</label>
-                    <textarea name="defects" class="form-control"
-                        rows="3"><?= htmlspecialchars($car['defects']) ?></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Inspection Report PDF <span class="hint">(max 5MB)</span></label>
-                    <?php if (!empty($car['inspection_pdf'])): ?>
-                        <div
-                            style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
-                            <i class="fas fa-file-pdf" style="color:#ef4444;font-size:20px;"></i>
-                            <a href="<?= htmlspecialchars($car['inspection_pdf']) ?>" target="_blank"
-                                style="color:#15803d;font-weight:600;text-decoration:none;flex:1;">View Current
-                                Inspection PDF</a>
-                            <label
-                                style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#b91c1c;font-size:13px;font-weight:600;">
-                                <input type="checkbox" name="remove_inspection_pdf" value="1"> Remove
-                            </label>
+                <div class="form-section">
+                    <h3 class="section-header warning"><i class="fas fa-file-contract"></i> Used Car History</h3>
+                    <div class="grid-3" style="margin-bottom:16px;">
+                        <div class="form-group"><label>Plate Number</label><input type="text" name="car_plate" autocomplete="off"
+                                class="form-control" value="<?= htmlspecialchars($car['car_plate']) ?>"></div>
+                        <div class="form-group"><label>Previous Owners</label><input type="number" inputmode="numeric"
+                                oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="owners" class="form-control"
+                                value="<?= htmlspecialchars($car['owners']) ?>" min="0" max="20"></div>
+                        <div class="form-group">
+                            <label>Remaining Warranty</label>
+                            <select name="rem_warranty" class="form-control">
+                                <?php foreach (['No', 'Yes'] as $rw): ?>
+                                    <option <?= $car['rem_warranty'] === $rw ? 'selected' : '' ?>><?= $rw ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                    <?php endif; ?>
-                    <input type="file" name="inspection_pdf" accept="application/pdf" class="form-control"
-                        style="padding:10px 14px;height:auto;background:#f9fafb;border:1px dashed #cbd5e1;cursor:pointer;">
+                    </div>
+                    <div class="grid-2" style="margin-bottom:16px;">
+                        <div class="form-group">
+                            <label>Accident History</label>
+                            <select name="accident" class="form-control">
+                                <?php foreach (['None', 'Minor', 'Major'] as $ac): ?>
+                                    <option <?= $car['accident'] === $ac ? 'selected' : '' ?>><?= $ac ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Flood / Fire</label>
+                            <select name="flood" class="form-control">
+                                <?php foreach (['No', 'Flood', 'Fire'] as $fl): ?>
+                                    <option <?= $car['flood'] === $fl ? 'selected' : '' ?>><?= $fl ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label>Service History</label>
+                        <input type="text" name="service_hist" class="form-control"
+                            placeholder="e.g., Full service records available"
+                            value="<?= htmlspecialchars($car['service_hist']) ?>">
+                    </div>
+                    <div class="grid-2" style="margin-bottom:16px;">
+                        <div class="form-group"><label>Last Service Date</label><input type="date" name="last_service"
+                                class="form-control" value="<?= htmlspecialchars($car['last_service']) ?>"></div>
+                        <div class="form-group"><label>Next Service <span class="hint">(km)</span></label><input
+                                type="number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                                name="next_service" class="form-control"
+                                value="<?= htmlspecialchars($car['next_service']) ?>" min="0" max="1000000"></div>
+                    </div>
+                    <div class="grid-2" style="margin-bottom:16px;">
+                        <div class="form-group"><label>Roadtax Expiry</label><input type="date" name="roadtax"
+                                class="form-control" value="<?= htmlspecialchars($car['roadtax']) ?>"></div>
+                        <div class="form-group"><label>Puspakom Date</label><input type="date" name="puspakom"
+                                class="form-control" value="<?= htmlspecialchars($car['puspakom']) ?>"></div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label>Known Defects</label>
+                        <textarea name="defects" class="form-control"
+                            rows="3"><?= htmlspecialchars($car['defects']) ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Inspection Report PDF <span class="hint">(max 5MB)</span></label>
+                        <?php if (!empty($car['inspection_pdf'])): ?>
+                            <div
+                                style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                                <i class="fas fa-file-pdf" style="color:#ef4444;font-size:20px;"></i>
+                                <a href="<?= htmlspecialchars($car['inspection_pdf']) ?>" target="_blank"
+                                    style="color:#15803d;font-weight:600;text-decoration:none;flex:1;">View Current
+                                    Inspection PDF</a>
+                                <label
+                                    style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#b91c1c;font-size:13px;font-weight:600;">
+                                    <input type="checkbox" name="remove_inspection_pdf" value="1"> Remove
+                                </label>
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="inspection_pdf" accept="application/pdf" class="form-control"
+                            style="padding:10px 14px;height:auto;background:#f9fafb;border:1px dashed #cbd5e1;cursor:pointer;">
+                    </div>
                 </div>
             </div>
-        </div>
         </form>
     </main>
 

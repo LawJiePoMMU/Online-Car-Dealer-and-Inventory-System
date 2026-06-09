@@ -859,7 +859,7 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                             <div class="upload-controls-grid">
                                 <div class="setting-group">
                                     <label>Display Order (1 is first)</label>
-                                    <input type="number" id="display_order" name="display_order" min="1" max="100"
+                                    <input type="number" id="display_order" name="display_order" min="1" max="10"
                                         required placeholder="Example: 1">
                                 </div>
                                 <div class="setting-group">
@@ -927,16 +927,18 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                         <div class="setting-row">
                             <div class="setting-group">
                                 <label>Default Down Payment (%)</label>
-                                <input type="number" step="0.1" min="0"
+                                <input type="number" step="0.1" min="10" max="50"
                                     onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();"
+                                    oninput="if (this.value !== '' && +this.value > 50) this.value = 50;"
                                     id="default_dp_percent" name="default_dp_percent">
                                 <div class="helper-text"><i class="fas fa-info-circle"></i> Standard DP rate applied to
                                     new bookings.</div>
                             </div>
                             <div class="setting-group">
                                 <label>Interest Rate (% p.a.)</label>
-                                <input type="number" step="0.01" min="0"
+                                <input type="number" step="0.01" min="1" max="10"
                                     onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();"
+                                    oninput="if (this.value !== '' && +this.value > 10) this.value = 10;"
                                     id="default_loan_rate" name="default_loan_rate">
                                 <div class="helper-text"><i class="fas fa-percentage"></i> Default bank interest rate
                                     for loan calculations.</div>
@@ -958,8 +960,9 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                     <form id="form-notif">
                         <div class="setting-group" style="max-width:48%; margin-bottom:24px;">
                             <label>Low Stock Warning Threshold</label>
-                            <input type="number" min="0"
+                            <input type="number" min="0" max="50"
                                 onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();"
+                                oninput="if (this.value !== '' && +this.value > 50) this.value = 50;"
                                 id="low_stock_threshold" name="low_stock_threshold">
                             <div class="helper-text"><i class="fas fa-exclamation-triangle"></i> Cars with stock at or
                                 below this number will be highlighted.</div>
