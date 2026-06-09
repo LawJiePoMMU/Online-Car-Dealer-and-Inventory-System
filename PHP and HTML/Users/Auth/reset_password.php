@@ -69,7 +69,7 @@ include '../Includes/header.php';
                 <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
                     <div class="form-group">
                         <label class="auth-label">New Password</label>
-                        <input type="password" name="new_password" class="auth-input" placeholder="At least 6 characters"
+                        <input type="password" name="new_password" class="auth-input" placeholder="At least 8 characters"
                             required>
                     </div>
                     <div class="form-group">

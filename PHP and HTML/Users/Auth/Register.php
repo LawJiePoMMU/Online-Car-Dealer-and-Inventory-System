@@ -23,7 +23,7 @@ $name_err = $email_err = $password_err = $confirm_password_err = $register_err =
 if($_SERVER["REQUEST_METHOD"] == "POST"){
     $name = trim($_POST["name"]);
     $ic = trim($_POST["ic"]);
-    $email = trim($_POST["email"]);
+    $email = strtolower(trim($_POST["email"]));
     $phone = trim($_POST["phone"]);
     $address = trim($_POST["address"]);
     $city = trim($_POST["city"]);
