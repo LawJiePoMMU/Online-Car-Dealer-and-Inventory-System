@@ -317,8 +317,20 @@ function addInventoryRow(colorName, colorHex, qty) {
             <div class="selected-color-circle" style="background:${colorHex};" onclick="toggleColorPalette(this)" title="Pick color"></div>
             <div class="color-palette-popup">${swatchHtml}</div>
         </div>
-        <input type="text" inputmode="numeric"
-               oninput="this.value=this.value.replace(/[^0-9]/g,''); if (this.value !== '' && +this.value > 100) this.value = 100; updateTotalStock();"
+        <input type="number" min="0" max="100" step="1"
+               onkeydown="
+                   if(['-','e','.'].includes(event.key)) event.preventDefault();
+                   if(event.key === '0' && this.value === '0') event.preventDefault();
+               "
+               oninput="
+                   this.value = this.value.replace(/^0+(?=\d)/, '');
+                   if (this.value !== '' && +this.value > 100) this.value = 100;
+                   updateTotalStock();
+               "
+               onblur="
+                   this.value = (this.value === '' || isNaN(this.value) || +this.value < 0) ? 0 : parseInt(this.value, 10);
+                   updateTotalStock();
+               "
                name="inv_qty[]" class="form-control inv-qty-input"
                placeholder="Qty" value="${displayQty}" ${qtyReadonly}>
         <button type="button" class="icon-btn" onclick="removeInventoryRow(this)" title="Remove">
@@ -423,3 +435,15 @@ function escapeHtml(str) {
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     })[ch]);
 }
+
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+        if (['-', 'e'].includes(e.key)) e.preventDefault();
+    });
+
+    input.addEventListener('input', (e) => {
+        if (e.target.value.length > 1 && e.target.value.startsWith('0')) {
+            e.target.value = e.target.value.replace(/^0+/, '');
+        }
+    });
+});

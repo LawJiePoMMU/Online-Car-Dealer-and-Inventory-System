@@ -117,20 +117,26 @@ if ($sys_q) {
     }
 }
 
-$current_loan_rate = (float) ($sys['default_loan_rate'] ?? 3.0);
-$current_dp_pct = (float) ($sys['default_dp_percent'] ?? 10.0);
-$locked_loan_rate = isset($_POST['locked_loan_rate'])
-    ? (float) $_POST['locked_loan_rate']
-    : $current_loan_rate;
+$db_loan_rate = (float) ($sys['default_loan_rate'] ?? 3.0);
+$db_dp_pct = (float) ($sys['default_dp_percent'] ?? 10.0);
 
-$locked_dp_pct = isset($_POST['locked_dp_pct'])
-    ? (float) $_POST['locked_dp_pct']
-    : $current_dp_pct;
+// 为这辆特定汽车生成唯一的 session 键值
+$session_rate_key = 'locked_rate_' . $car_id;
+$session_dp_key = 'locked_dp_' . $car_id;
 
-if ($locked_loan_rate < 0 || $locked_loan_rate > 100)
-    $locked_loan_rate = $current_loan_rate;
-if ($locked_dp_pct < 0 || $locked_dp_pct > 100)
-    $locked_dp_pct = $current_dp_pct;
+// 如果尚未针对该特定车辆初始化会话锁定，则进行初始化
+if (!isset($_SESSION[$session_rate_key]) || !isset($_SESSION[$session_dp_key])) {
+    $_SESSION[$session_rate_key] = $db_loan_rate;
+    $_SESSION[$session_dp_key] = $db_dp_pct;
+}
+
+// 直接从 session 中获取锁定的变量
+$locked_loan_rate = $_SESSION[$session_rate_key];
+$locked_dp_pct = $_SESSION[$session_dp_key];
+
+// 后备安全限制
+if ($locked_loan_rate < 0 || $locked_loan_rate > 100) $locked_loan_rate = $db_loan_rate;
+if ($locked_dp_pct < 0 || $locked_dp_pct > 100) $locked_dp_pct = $db_dp_pct;
 
 
 $errors = [];
@@ -152,7 +158,6 @@ $car_color = $is_used_car
     ? $default_color
     : ($_POST['car_color'] ?? $default_color);
 
-// Loan tenure
 $loan_years = intval($_POST['loan_years'] ?? 5);
 if (!in_array($loan_years, [5, 7, 9])) {
     $loan_years = 5;
@@ -182,7 +187,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     if (empty($car_color))
         $errors[] = "Vehicle color is required.";
 
-    // --- duplicate check ---
     $dup_stmt = mysqli_prepare(
         $conn,
         "SELECT booking_id FROM bookings
@@ -241,9 +245,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             mkdir($target_dir, 0777, true);
         }
 
-        $uploaded_paths = []; // for rollback if any one fails
-        $stored_urls = []; // for DB
-
+        $uploaded_paths = []; 
+        $stored_urls = []; 
         $rollback_files = function () use (&$uploaded_paths) {
             foreach ($uploaded_paths as $p) {
                 if (file_exists($p))
@@ -290,8 +293,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             'car_color' => $car_color,
             'car_plate' => $car['car_plate'] ?? '',
             'car_image' => $car['car_image'] ?? '',
-
-            // finance snapshot (so admin sees the exact rate user agreed to)
             'locked_loan_rate' => $locked_loan_rate,
             'locked_dp_pct' => $locked_dp_pct,
             'booking_fee' => $booking_fee,
@@ -381,6 +382,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             $_SESSION['pay_source'] = 'booking';
             $_SESSION['pay_label'] = 'Booking Fee';
             unset($_SESSION['booking_car_id']);
+
+            unset($_SESSION[$session_rate_key]);
+            unset($_SESSION[$session_dp_key]);
 
             header("Location: payment.php?id=" . $new_booking_id);
             exit();
@@ -530,7 +534,6 @@ include 'Includes/header.php';
         color: #dc2626;
     }
 
-    /* Summary box */
     .summary-card h3 {
         font-size: 13px;
         color: #1e293b;
@@ -602,7 +605,6 @@ include 'Includes/header.php';
         color: #2563eb;
     }
 
-    /* Form sections */
     .form-section {
         margin-bottom: 24px;
     }
@@ -755,7 +757,6 @@ include 'Includes/header.php';
         word-break: break-all;
     }
 
-    /* Submit button */
     .btn-submit {
         width: 100%;
         background: #1e293b;
@@ -782,7 +783,6 @@ include 'Includes/header.php';
         box-shadow: 0 10px 15px -3px rgba(30, 41, 59, 0.25);
     }
 
-    /* Error box */
     .error-box {
         grid-column: 1 / -1;
         background: #fef2f2;
@@ -848,7 +848,6 @@ include 'Includes/header.php';
             </div>
         <?php endif; ?>
 
-        <!-- ===== LEFT: Vehicle + Summary ===== -->
         <div class="left-col">
 
             <div class="bk-card vehicle-preview">
@@ -930,11 +929,6 @@ include 'Includes/header.php';
         <div class="bk-card">
             <form method="POST" enctype="multipart/form-data" autocomplete="off">
 
-                <!-- Lock current page-load rate so admin can't change it on us mid-form -->
-                <input type="hidden" name="locked_loan_rate" value="<?= htmlspecialchars($locked_loan_rate) ?>">
-                <input type="hidden" name="locked_dp_pct" value="<?= htmlspecialchars($locked_dp_pct) ?>">
-
-                <!-- 1. Customer Info -->
                 <div class="form-section">
                     <h3><i class="fas fa-user-circle"></i> 1. Customer Information</h3>
 

@@ -996,9 +996,17 @@ if (isset($_POST['save_all_details'])) {
                         </div>
                         <div class="form-group">
                             <label>Year</label>
-                            <input type="number" min="1985" max="2100" placeholder="1985" step="1"
-                                oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="car_year"
-                                class="form-control" value="<?= htmlspecialchars($car['car_year']) ?>">
+                            <input type="number" min="1985" max="2100" placeholder="<?= date('Y') ?>" step="1"
+                                onkeydown="
+            if(['-','e','.'].includes(event.key)) event.preventDefault();
+            if(event.key === '0' && this.value === '') event.preventDefault();
+        " oninput="
+            this.value = this.value.replace(/^0+/, '');
+            if (this.value !== '' && +this.value > 2100) this.value = 2100;
+        " onblur="
+            let currentYear = new Date().getFullYear();
+            this.value = (this.value === '' || isNaN(this.value) || +this.value < 1985) ? currentYear : parseInt(this.value, 10);
+        " name="car_year" class="form-control" value="<?= htmlspecialchars($car['car_year']) ?>">
                         </div>
                         <div class="form-group">
                             <label>Seats</label>
@@ -1045,8 +1053,14 @@ if (isset($_POST['save_all_details'])) {
                     <div class="grid-3">
                         <div class="form-group">
                             <label>Price (RM)</label>
-                            <input type="number" inputmode="decimal" step="0.01" max="1000000"
-                                oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')"
+                            <input type="number" inputmode="decimal" step="0.01" min="0" max="1000000" onkeydown="
+            if(['-','e'].includes(event.key)) event.preventDefault();
+            if(event.key === '0' && this.value === '0') event.preventDefault();
+        " oninput="
+            this.value = this.value.replace(/^0+(?=\d)/, '');
+            if (this.value.includes('.')) this.value = this.value.substring(0, this.value.indexOf('.') + 3);
+            if (this.value !== '' && +this.value > 1000000) this.value = 1000000;
+        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 0) ? 0 : +this.value;"
                                 name="car_status_price" class="form-control"
                                 value="<?= htmlspecialchars($car['car_status_price']) ?>">
                         </div>
@@ -1191,11 +1205,19 @@ if (isset($_POST['save_all_details'])) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group"><label>Infotainment Screen <span
-                                    class="hint">(inches)</span></label><input type="number" name="screen"
-                                placeholder="10.25" class="form-control" inputmode="decimal" step="0.01" min="0" max="20"
-                                oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1')"
-                                value="<?= htmlspecialchars($car['screen']) ?>"></div>
+                        <div class="form-group">
+                            <label>Infotainment Screen <span class="hint">(inches)</span></label>
+                            <input type="number" name="screen" placeholder="10.25" class="form-control"
+                                inputmode="decimal" step="0.01" min="0" max="20" onkeydown="
+            if(['-','e'].includes(event.key)) event.preventDefault();
+            if(event.key === '0' && this.value === '0') event.preventDefault();
+        " oninput="
+            this.value = this.value.replace(/^0+(?=\d)/, '');
+            if (this.value.includes('.')) this.value = this.value.substring(0, this.value.indexOf('.') + 3);
+            if (this.value !== '' && +this.value > 20) this.value = 20;
+        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 0) ? '' : +this.value;"
+                                value="<?= htmlspecialchars($car['screen']) ?>">
+                        </div>
                         <div class="form-group"><label>Airbags Count</label><input type="number" inputmode="numeric"
                                 placeholder="20" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 name="airbags_count" class="form-control"
@@ -1254,10 +1276,10 @@ if (isset($_POST['save_all_details'])) {
                     <div class="grid-2">
                         <div class="form-group"><label>Front Rim <span class="hint">(inches)</span></label><input
                                 type="number" name="front_rim_inches" class="form-control" placeholder="18"
-                                value="<?= htmlspecialchars($car['front_rim_inches']) ?>" min="0" max="18"></div>
+                                value="<?= htmlspecialchars($car['front_rim_inches']) ?>" step="0.1" min="0" max="18"></div>
                         <div class="form-group"><label>Rear Rim <span class="hint">(inches)</span></label><input
                                 type="number" name="rear_rim_inches" class="form-control" placeholder="18"
-                                value="<?= htmlspecialchars($car['rear_rim_inches']) ?>" min="0" max="18"></div>
+                                value="<?= htmlspecialchars($car['rear_rim_inches']) ?>" step="0.1" min="0" max="18"></div>
                     </div>
                 </div>
             </div>
@@ -1334,8 +1356,9 @@ if (isset($_POST['save_all_details'])) {
                 <div class="form-section">
                     <h3 class="section-header warning"><i class="fas fa-file-contract"></i> Used Car History</h3>
                     <div class="grid-3" style="margin-bottom:16px;">
-                        <div class="form-group"><label>Plate Number</label><input type="text" name="car_plate" autocomplete="off"
-                                class="form-control" value="<?= htmlspecialchars($car['car_plate']) ?>"></div>
+                        <div class="form-group"><label>Plate Number</label><input type="text" name="car_plate"
+                                autocomplete="off" class="form-control"
+                                value="<?= htmlspecialchars($car['car_plate']) ?>"></div>
                         <div class="form-group"><label>Previous Owners</label><input type="number" inputmode="numeric"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="owners" class="form-control"
                                 value="<?= htmlspecialchars($car['owners']) ?>" min="0" max="20"></div>

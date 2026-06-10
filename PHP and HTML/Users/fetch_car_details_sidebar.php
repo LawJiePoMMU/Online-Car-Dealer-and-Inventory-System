@@ -260,7 +260,6 @@ try {
         padding: 8px;
         cursor: pointer;
         color: #94a3b8;
-        /* 默认灰色 */
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
@@ -562,18 +561,17 @@ try {
         padding: 32px 24px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
     }
 
     .fin-right-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 0;
     }
 
     .fin-right-header span {
-        font-size: 13px;
+        font-size: clamp(12px, 2.5vw, 16px);
         font-weight: 500;
         color: #a1a1aa;
     }
@@ -596,18 +594,18 @@ try {
     }
 
     .fin-result {
-        font-size: 42px;
+        font-size: clamp(42px, 4vw, 160px);
         font-weight: 800;
-        margin: 0 0 20px 0;
         color: #ffffff;
         letter-spacing: -0.02em;
+        margin: auto 0;
     }
 
     .fin-disclaimer {
-        font-size: 12px;
+        font-size: clamp(12px, 2.5vw, 16px);
         color: #71717a;
         line-height: 1.5;
-        margin-top: auto;
+        margin: 0;
     }
 
     .action-buttons {

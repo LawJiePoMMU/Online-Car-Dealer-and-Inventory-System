@@ -951,10 +951,12 @@ include 'Includes/header.php';
             </div>
 
             <div class="stat-card info">
-                <div class="lbl"><i class="fas fa-coins"></i> Remaining</div>
+                <div class="lbl"><i class="fas fa-coins"></i> Total Outstanding</div>
                 <div class="val">RM <?= number_format($remaining_amount, 2) ?></div>
                 <div class="sub"><?= $total_months - $paid_months ?>
                     month<?= ($total_months - $paid_months) > 1 ? 's' : '' ?> left</div>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">*Includes
+                    interest</span>
             </div>
 
             <div class="stat-card <?= $overdue_months > 0 ? 'danger' : '' ?>">
@@ -1052,7 +1054,8 @@ include 'Includes/header.php';
         <div class="payment-modal">
             <div class="pm-header">
                 <h2><i class="fas fa-credit-card"></i> Pay Installment #<?= $pay_inst['installment_number'] ?> of
-                    <?= $total_months ?></h2>
+                    <?= $total_months ?>
+                </h2>
                 <p>Due: <?= date('d M Y', strtotime($pay_inst['due_date'])) ?></p>
                 <a href="?id=<?= $booking_id ?>" class="pm-close" title="Close">
                     <i class="fas fa-times"></i>

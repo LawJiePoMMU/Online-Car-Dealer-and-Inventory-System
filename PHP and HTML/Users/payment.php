@@ -4,9 +4,6 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 require '../Config/database.php';
 
-// ======================================================
-// SESSION CHECK
-// ======================================================
 
 if (
     !isset($_SESSION['loggedin']) ||
@@ -20,9 +17,6 @@ if (
 
 $user_id = (int) $_SESSION['id'];
 
-// ======================================================
-// RESOLVE BOOKING ID
-// ======================================================
 
 $booking_id = intval(
     $_GET['id']
@@ -34,9 +28,6 @@ $booking_id = intval(
 $pay_source = trim($_SESSION['pay_source'] ?? 'booking');
 $pay_label  = trim($_SESSION['pay_label']  ?? 'Booking Fee');
 
-// ======================================================
-// FRIENDLY ERROR PAGE
-// ======================================================
 
 function show_error_page($title, $message, $btn_text = 'Return Home', $btn_href = 'index.php')
 {
@@ -65,9 +56,6 @@ if ($booking_id <= 0) {
     );
 }
 
-// ======================================================
-// VERIFY OWNERSHIP + LOAD BOOKING
-// ======================================================
 
 $verify_sql = "
 SELECT
@@ -98,9 +86,6 @@ if (!$booking) {
     );
 }
 
-// ======================================================
-// SNAPSHOT
-// ======================================================
 
 $snap = json_decode($booking['snapshot_data'] ?: '{}', true);
 if (!is_array($snap)) $snap = [];
@@ -118,9 +103,6 @@ if (empty($car_image)) {
     $car_image = 'https://via.placeholder.com/600x400.png?text=Vehicle';
 }
 
-// ======================================================
-// PAYMENT TYPE + AMOUNT
-// ======================================================
 
 $payment_type = 'Booking Fee';
 if ($pay_source === 'downpayment')  $payment_type = 'Down Payment';
@@ -142,9 +124,6 @@ if ($pay_amount <= 0) {
     );
 }
 
-// ======================================================
-// ALREADY PAID — redirect to receipt
-// ======================================================
 
 if ($payment_type === 'Booking Fee') {
     $check = mysqli_query(
@@ -164,15 +143,10 @@ if ($payment_type === 'Booking Fee') {
     }
 }
 
-// ======================================================
-// PROCESS PAYMENT (POST)
-// ======================================================
-
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
 
-    // ---- card field validation ----
     $card_number = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
     $card_name   = trim($_POST['card_name'] ?? '');
     $card_expiry = trim($_POST['card_expiry'] ?? '');
@@ -274,9 +248,6 @@ if ($payment_type === 'Booking Fee') {
     }
 }
 
-// ======================================================
-// RENDER
-// ======================================================
 
 include 'Includes/header.php';
 ?>
@@ -374,7 +345,6 @@ include 'Includes/header.php';
 }
 .amount-banner .sub{ font-size:12px; opacity:0.6; margin-top:4px; }
 
-/* ==== Live Card Visual ==== */
 .card-visual{
     background:linear-gradient(135deg, #334155 0%, #1e293b 50%, #0f172a 100%);
     color:#fff;
@@ -505,7 +475,6 @@ include 'Includes/header.php';
             <p>Secure card payment. Your booking will be sent to our team for review after confirmation.</p>
         </div>
 
-        <!-- LEFT: Vehicle + Summary -->
         <div class="left-col">
             <div class="pay-card vehicle-preview">
                 <img src="<?= htmlspecialchars($car_image) ?>" alt="Vehicle">
@@ -572,11 +541,6 @@ include 'Includes/header.php';
                         <div class="v" id="cardVisualExp">MM/YY</div>
                     </div>
                 </div>
-            </div>
-
-            <div class="test-hint">
-                <i class="fas fa-flask"></i>
-                <span><strong>Test mode:</strong> Use any 16-digit number, future MM/YY, and 3-digit CVV.</span>
             </div>
 
             <form method="POST" autocomplete="off" id="payForm">
@@ -670,11 +634,9 @@ include 'Includes/header.php';
     </div>
 </div>
 
-<!-- SweetAlert -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// ============== Input formatters + live card preview ==============
 const num   = document.getElementById('card_number');
 const name  = document.getElementById('card_name');
 const exp   = document.getElementById('card_expiry');
@@ -707,12 +669,10 @@ cvv.addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
 });
 
-// pre-fill display on POST error reload
 if (num.value)   num.dispatchEvent(new Event('input'));
 if (name.value)  name.dispatchEvent(new Event('input'));
 if (exp.value)   exp.dispatchEvent(new Event('input'));
 
-// ============== Submit with confirmation + loading ==============
 const form = document.getElementById('payForm');
 const btn  = document.getElementById('btnPay');
 const AMOUNT_TEXT = 'RM <?= number_format($pay_amount, 2) ?>';
@@ -720,7 +680,6 @@ const AMOUNT_TEXT = 'RM <?= number_format($pay_amount, 2) ?>';
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    // Quick client-side check (server still validates as the source of truth)
     const rawNum = num.value.replace(/\s/g, '');
     if (rawNum.length !== 16) {
         Swal.fire({ icon: 'error', title: 'Invalid Card Number', text: 'Card number must be exactly 16 digits.' });
@@ -734,7 +693,6 @@ form.addEventListener('submit', async function(e) {
         Swal.fire({ icon: 'error', title: 'Invalid Expiry', text: 'Expiry must be in MM/YY format.' });
         return;
     }
-    // Check not expired
     const [mm, yy] = exp.value.split('/').map(s => parseInt(s, 10));
     const fullYear = 2000 + yy;
     const now = new Date();
@@ -747,7 +705,6 @@ form.addEventListener('submit', async function(e) {
         return;
     }
 
-    // Confirmation popup
     const last4 = rawNum.slice(-4);
     const r = await Swal.fire({
         icon: 'question',
@@ -777,7 +734,6 @@ form.addEventListener('submit', async function(e) {
 
     if (!r.isConfirmed) return;
 
-    // Lock button + processing modal
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
@@ -795,7 +751,6 @@ form.addEventListener('submit', async function(e) {
         didOpen: () => { Swal.showLoading(); }
     });
 
-    // Simulate gateway delay (2 seconds), then actually submit form
     setTimeout(() => { form.submit(); }, 2000);
 });
 </script>

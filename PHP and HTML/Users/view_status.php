@@ -1040,8 +1040,10 @@ include 'Includes/header.php';
                                         <p style="color:#16a34a;">RM <?= number_format($total_paid, 2) ?></p>
                                     </div>
                                     <div class="detail-cell">
-                                        <label>Remaining</label>
-                                        <p style="color:#dc2626;">RM <?= number_format($remaining, 2) ?></p>
+                                        <label>Loan Principal</label>
+                                        <p style="color:#dc2626; margin-bottom: 2px;">RM <?= number_format($remaining, 2) ?></p>
+                                        <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">*Excludes
+                                            interest</span>
                                     </div>
                                 </div>
                             </div>

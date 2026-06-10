@@ -860,7 +860,13 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                                 <div class="setting-group">
                                     <label>Display Order (1 is first)</label>
                                     <input type="number" id="display_order" name="display_order" min="1" max="10"
-                                        required placeholder="Example: 1">
+                                        required placeholder="Example: 1" onkeydown="
+                                            if(['-','e','.'].includes(event.key)) event.preventDefault();
+                                            if(event.key === '0' && this.value === '') event.preventDefault();
+                                        " oninput="
+                                            this.value = this.value.replace(/^0+/, '');
+                                            if (this.value !== '' && +this.value > 10) this.value = 10;
+                                        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 1) ? 1 : parseInt(this.value, 10);">
                                 </div>
                                 <div class="setting-group">
                                     <label>Visibility Status</label>
@@ -927,18 +933,27 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                         <div class="setting-row">
                             <div class="setting-group">
                                 <label>Default Down Payment (%)</label>
-                                <input type="number" step="0.1" min="10" max="50"
-                                    onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();"
-                                    oninput="if (this.value !== '' && +this.value > 50) this.value = 50;"
+                                <input type="number" min="10" max="50" onkeydown="
+            if(['-','e'].includes(event.key)) event.preventDefault();
+            if(event.key === '0' && this.value === '0') event.preventDefault();
+        " oninput="
+            if (this.value.includes('.')) this.value = this.value.substring(0, this.value.indexOf('.') + 2);
+            if (this.value !== '' && +this.value > 50) this.value = 50;
+        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 10) ? 10 : +this.value;"
                                     id="default_dp_percent" name="default_dp_percent">
                                 <div class="helper-text"><i class="fas fa-info-circle"></i> Standard DP rate applied to
                                     new bookings.</div>
                             </div>
+
                             <div class="setting-group">
                                 <label>Interest Rate (% p.a.)</label>
-                                <input type="number" step="0.01" min="1" max="10"
-                                    onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();"
-                                    oninput="if (this.value !== '' && +this.value > 10) this.value = 10;"
+                                <input type="number" step="0.01" min="1" max="10" onkeydown="
+            if(['-','e'].includes(event.key)) event.preventDefault();
+            if(event.key === '0' && this.value === '0') event.preventDefault();
+        " oninput="
+            if (this.value.includes('.')) this.value = this.value.substring(0, this.value.indexOf('.') + 3);
+            if (this.value !== '' && +this.value > 10) this.value = 10;
+        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 1) ? 1 : +this.value;"
                                     id="default_loan_rate" name="default_loan_rate">
                                 <div class="helper-text"><i class="fas fa-percentage"></i> Default bank interest rate
                                     for loan calculations.</div>
@@ -960,9 +975,12 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                     <form id="form-notif">
                         <div class="setting-group" style="max-width:48%; margin-bottom:24px;">
                             <label>Low Stock Warning Threshold</label>
-                            <input type="number" min="0" max="50"
-                                onkeydown="if(['-','e'].includes(event.key)) event.preventDefault();"
-                                oninput="if (this.value !== '' && +this.value > 50) this.value = 50;"
+                            <input type="number" min="0" max="50" step="1" onkeydown="
+            if(['-','e','.'].includes(event.key)) event.preventDefault();
+            if(event.key === '0' && this.value === '0') event.preventDefault();
+        " oninput="
+            if (this.value !== '' && +this.value > 50) this.value = 50;
+        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 0) ? 0 : parseInt(this.value, 10);"
                                 id="low_stock_threshold" name="low_stock_threshold">
                             <div class="helper-text"><i class="fas fa-exclamation-triangle"></i> Cars with stock at or
                                 below this number will be highlighted.</div>
