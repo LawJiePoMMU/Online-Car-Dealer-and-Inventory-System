@@ -1,3 +1,0 @@
-Number of NVIDIA Multi-GPUs detected (by AFR groups) = 1
-
-

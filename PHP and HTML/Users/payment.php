@@ -509,7 +509,6 @@ include 'Includes/header.php';
             </div>
         </div>
 
-        <!-- RIGHT: Card Form -->
         <div class="pay-card">
 
             <div class="amount-banner">
@@ -526,7 +525,6 @@ include 'Includes/header.php';
                 </div>
             <?php endif; ?>
 
-            <!-- Live Card Visual -->
             <div class="card-visual">
                 <div class="brand">VISA</div>
                 <div class="chip"></div>

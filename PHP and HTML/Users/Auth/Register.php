@@ -6,10 +6,8 @@ if(isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true){
     exit;
 }
 
-// 1. 引入你原封不动的 database.php
 require_once "../../Config/database.php";
 
-// 2. 借用 database.php 里的变量，在这里直接生成高级的 PDO 连接
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -34,8 +32,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
     if(empty($name)){ $name_err = "Required"; }
     if(empty($email)){ $email_err = "Required"; }
-    
-    // 后端密码严格验证 (防止前端被绕过)
     if(empty($password)){
         $password_err = "Password is required";     
     } else {
@@ -146,7 +142,6 @@ include '../Includes/header.php';
                         
                         <span class="auth-error-msg"><?php echo $password_err; ?></span>
 
-                        <!-- 高级验证要求弹窗 -->
                         <div id="pwd-tracker" class="pwd-tracker">
                             <div id="req-len" class="req-item">
                                 <div class="req-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"></path></svg></div>
@@ -181,7 +176,6 @@ include '../Includes/header.php';
                         <span class="auth-error-msg"><?php echo $confirm_password_err; ?></span>
                     </div>
 
-                    <!-- 🔥 刚刚那条该死的分割线和占位空间已经被我彻底删除了！ -->
 
                     <div class="form-group full-width">
                         <label class="auth-label">Address *</label>
@@ -234,7 +228,6 @@ include '../Includes/header.php';
 </div>
 
 <script>
-    // 1. 小眼睛显示/隐藏密码
     function togglePwd(inputId) {
         const input = document.getElementById(inputId);
         const eyeSvg = document.getElementById('eye-' + inputId);
@@ -248,19 +241,14 @@ include '../Includes/header.php';
         }
     }
 
-    // 2. 高级实时密码验证交互 (修复了挡住下面地址栏的问题)
     const pwdInput = document.getElementById('main-pwd');
     const tracker = document.getElementById('pwd-tracker');
-    
-    // 点击密码框时显示弹窗
+
     pwdInput.addEventListener('focus', () => tracker.style.display = 'block');
-    
-    // 🔥 修复：只要离开密码框（点别的地方），直接隐藏弹窗，绝不挡路！
     pwdInput.addEventListener('blur', () => {
         tracker.style.display = 'none';
     });
 
-    // 实时监测打字
     pwdInput.addEventListener('input', function() {
         const val = pwdInput.value;
         
@@ -277,7 +265,6 @@ include '../Includes/header.php';
         else document.getElementById('req-sym').className = 'req-item';
     });
 
-    // 3. IC 和 电话自动格式化
     const icInput = document.getElementById('ic-input');
     if(icInput) {
         icInput.addEventListener('input', function (e) {

@@ -15,7 +15,7 @@ $bodyType = isset($_POST['bodyType']) ? trim($_POST['bodyType']) : 'All';
 $sql = "SELECT DISTINCT c.car_model, c.car_brand 
         FROM cars c
         LEFT JOIN car_types t ON c.car_type_id = t.car_type_id
-        JOIN car_status s ON c.car_id = s.car_id  /* 👈 重点：把 LEFT 删掉，直接用 JOIN */
+        JOIN car_status s ON c.car_id = s.car_id  
         WHERE s.car_status_status = 'Active' 
         AND s.car_status_stock_quantity > 0 
         AND TRIM(c.car_origin) = 'New Car'

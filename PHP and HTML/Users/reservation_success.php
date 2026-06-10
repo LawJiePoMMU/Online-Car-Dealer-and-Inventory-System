@@ -2,12 +2,8 @@
 session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
-// NOTE: this file lives in PHP AND HTML/Users/, so database is at ../Config/
 require '../Config/database.php';
 
-// ======================================================
-// SESSION CHECK (align with Auth/login.php)
-// ======================================================
 
 if (
     !isset($_SESSION['loggedin']) ||
@@ -29,7 +25,6 @@ if (isset($_GET['id']) && intval($_GET['id']) > 0) {
 
 $user_id = (int) $_SESSION['id'];
 
-// Render styled error if no valid reservation ID
 if ($reservation_id <= 0) {
     include 'Includes/header.php';
     echo '
@@ -49,9 +44,6 @@ if ($reservation_id <= 0) {
     exit;
 }
 
-// ======================================================
-// FETCH RESERVATION (including licence URL)
-// ======================================================
 
 $reservation_sql = "
 SELECT
@@ -78,9 +70,6 @@ if (!$reservation) {
     die("Reservation record not found.");
 }
 
-// ======================================================
-// DECODE SNAPSHOT
-// ======================================================
 
 $snapshot = json_decode($reservation['snapshot_data'], true);
 if (!is_array($snapshot)) $snapshot = [];
@@ -106,17 +95,11 @@ $car_image = !empty($snapshot['car_image'])
 $licence_url = $reservation['driving_licence_url'] ?? '';
 $is_used_car = (strcasecmp($car_origin, 'Used Car') === 0);
 
-// ======================================================
-// REFERENCE NUMBER
-// ======================================================
 $reservation_ref = 'RES' . str_pad($reservation_id, 3, '0', STR_PAD_LEFT);
 
 $reservation_status = $reservation['reservation_status'] ?? 'Pending Viewing';
 $status_lower       = strtolower($reservation_status);
 
-// ======================================================
-// FORMAT DATES
-// ======================================================
 
 $created_at = 'N/A';
 if (!empty($reservation['reservation_created_at'])) {
@@ -188,7 +171,6 @@ include 'Includes/header.php';
     padding:32px;
 }
 
-/* Reference number */
 .reference-box{
     background:#f8fafc;
     border:1.5px dashed #cbd5e1;
@@ -227,7 +209,6 @@ include 'Includes/header.php';
 .status-approved{ background:#dcfce7; color:#166534; }
 .status-rejected{ background:#fee2e2; color:#991b1b; }
 
-/* Sections */
 .detail-section{
     margin-bottom:26px;
 }
@@ -315,7 +296,6 @@ include 'Includes/header.php';
 }
 .info-card.plate p{ color:#dc2626; }
 
-/* Driving licence area */
 .licence-box{
     background:#f8fafc;
     border:1px solid #e2e8f0;
@@ -362,7 +342,6 @@ include 'Includes/header.php';
     display:none;
 }
 
-/* Note */
 .note-box{
     background:#f1f5f9;
     border-left:4px solid #1e293b;
@@ -377,7 +356,6 @@ include 'Includes/header.php';
     margin:0;
 }
 
-/* Buttons */
 .button-group{
     display:flex;
     gap:12px;
@@ -422,8 +400,6 @@ include 'Includes/header.php';
 
 <div class="success-page">
     <div class="success-container">
-
-        <!-- Header -->
         <div class="success-header">
             <div class="success-icon"><i class="fas fa-check"></i></div>
             <h1>Reservation Submitted Successfully</h1>
@@ -434,8 +410,6 @@ include 'Includes/header.php';
         </div>
 
         <div class="content-wrapper">
-
-            <!-- Reference -->
             <div class="reference-box">
                 <div>
                     <div class="label">Reservation Reference</div>
@@ -445,8 +419,6 @@ include 'Includes/header.php';
                     <?= htmlspecialchars($reservation_status) ?>
                 </span>
             </div>
-
-            <!-- Vehicle -->
             <div class="detail-section">
                 <h3><i class="fas fa-car"></i> Vehicle Information</h3>
                 <div class="vehicle-section">
@@ -480,7 +452,6 @@ include 'Includes/header.php';
                 </div>
             </div>
 
-            <!-- Schedule -->
             <div class="detail-section">
                 <h3><i class="fas fa-calendar-alt"></i> Schedule</h3>
                 <div class="info-grid">
@@ -495,7 +466,6 @@ include 'Includes/header.php';
                 </div>
             </div>
 
-            <!-- Customer -->
             <div class="detail-section">
                 <h3><i class="fas fa-user-circle"></i> Customer Information</h3>
                 <div class="info-grid">
@@ -518,7 +488,6 @@ include 'Includes/header.php';
                 </div>
             </div>
 
-            <!-- Driving Licence -->
             <div class="detail-section">
                 <h3><i class="fas fa-id-card"></i> Driving Licence</h3>
                 <div class="licence-box">
@@ -541,7 +510,6 @@ include 'Includes/header.php';
                 </div>
             </div>
 
-            <!-- Note -->
             <div class="note-box">
                 <p>
                     <strong>What's next?</strong> Our sales advisor will review your request and contact you shortly

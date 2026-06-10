@@ -3,10 +3,6 @@ session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
 require '../Config/database.php';
-
-// ======================================================
-// SESSION CHECK
-// ======================================================
 if (
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
@@ -18,10 +14,6 @@ if (
 }
 
 $user_id = (int) $_SESSION['id'];
-
-// ======================================================
-// RESOLVE PAYMENT ID (URL first, then session)
-// ======================================================
 $payment_id = intval($_GET['id'] ?? $_SESSION['pay_id'] ?? 0);
 
 function show_error_page($title, $message, $btn_text = 'Return Home', $btn_href = 'index.php')
@@ -46,9 +38,6 @@ if ($payment_id <= 0) {
     show_error_page('Receipt Not Found', 'No valid payment reference was provided. Your receipt link may have expired.');
 }
 
-// ======================================================
-// 1. FETCH PAYMENT
-// ======================================================
 $sql_payment = "
 SELECT 
     payment_id, payment_type, reference_id, payment_amount, 
@@ -513,7 +502,6 @@ include 'Includes/header.php';
                 <div class="typ"><?= htmlspecialchars($payment_type) ?></div>
             </div>
 
-            <!-- Reference numbers -->
             <div class="reference-box">
                 <div>
                     <div class="col-lbl">Receipt Number</div>
@@ -528,7 +516,6 @@ include 'Includes/header.php';
                 </span>
             </div>
 
-            <!-- Vehicle -->
             <div class="detail-section">
                 <h3><i class="fas fa-car"></i> Vehicle Information</h3>
                 <div class="vehicle-section">
@@ -556,7 +543,6 @@ include 'Includes/header.php';
                 </div>
             </div>
 
-            <!-- Transaction Details -->
             <div class="detail-section">
                 <h3><i class="fas fa-receipt"></i> Transaction Details</h3>
                 <div class="info-grid">
@@ -586,7 +572,6 @@ include 'Includes/header.php';
                 </div>
             </div>
 
-            <!-- Booking Status -->
             <div class="detail-section">
                 <h3><i class="fas fa-clipboard-check"></i> Booking Status</h3>
                 <div class="info-grid">

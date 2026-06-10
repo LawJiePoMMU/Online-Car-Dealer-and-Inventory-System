@@ -119,22 +119,16 @@ if ($sys_q) {
 
 $db_loan_rate = (float) ($sys['default_loan_rate'] ?? 3.0);
 $db_dp_pct = (float) ($sys['default_dp_percent'] ?? 10.0);
-
-// 为这辆特定汽车生成唯一的 session 键值
 $session_rate_key = 'locked_rate_' . $car_id;
 $session_dp_key = 'locked_dp_' . $car_id;
-
-// 如果尚未针对该特定车辆初始化会话锁定，则进行初始化
 if (!isset($_SESSION[$session_rate_key]) || !isset($_SESSION[$session_dp_key])) {
     $_SESSION[$session_rate_key] = $db_loan_rate;
     $_SESSION[$session_dp_key] = $db_dp_pct;
 }
 
-// 直接从 session 中获取锁定的变量
 $locked_loan_rate = $_SESSION[$session_rate_key];
 $locked_dp_pct = $_SESSION[$session_dp_key];
 
-// 后备安全限制
 if ($locked_loan_rate < 0 || $locked_loan_rate > 100) $locked_loan_rate = $db_loan_rate;
 if ($locked_dp_pct < 0 || $locked_dp_pct > 100) $locked_dp_pct = $db_dp_pct;
 
@@ -254,7 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             }
         };
 
-        // Move all 4 files
         foreach ($file_fields as $field => $label) {
             $ext = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
             $filename =
@@ -469,7 +462,6 @@ include 'Includes/header.php';
         }
     }
 
-    /* Vehicle preview */
     .vehicle-preview img {
         width: 100%;
         height: 200px;
@@ -706,7 +698,6 @@ include 'Includes/header.php';
         font-style: italic;
     }
 
-    /* File upload */
     .file-upload {
         border: 2px dashed #cbd5e1;
         border-radius: 10px;
@@ -925,7 +916,6 @@ include 'Includes/header.php';
 
         </div>
 
-        <!-- ===== RIGHT: Form ===== -->
         <div class="bk-card">
             <form method="POST" enctype="multipart/form-data" autocomplete="off">
 
@@ -959,7 +949,6 @@ include 'Includes/header.php';
                     </div>
                 </div>
 
-                <!-- 2. Billing Address -->
                 <div class="form-section">
                     <h3><i class="fas fa-map-marker-alt"></i> 2. Billing Address <span
                             style="color:#dc2626;font-size:11px;margin-left:6px;">* Required for loan approval</span>
@@ -993,7 +982,6 @@ include 'Includes/header.php';
                     </div>
                 </div>
 
-                <!-- 3. Vehicle Configuration -->
                 <div class="form-section">
                     <h3><i class="fas fa-car"></i> 3. Vehicle Configuration</h3>
 
@@ -1040,7 +1028,6 @@ include 'Includes/header.php';
                     </div>
                 </div>
 
-                <!-- 4. Financing -->
                 <div class="form-section">
                     <h3><i class="fas fa-coins"></i> 4. Loan Tenure</h3>
                     <div class="form-row single">
@@ -1059,7 +1046,6 @@ include 'Includes/header.php';
                     </div>
                 </div>
 
-                <!-- 5. Documents -->
                 <div class="form-section">
                     <h3><i class="fas fa-folder-open"></i> 5. Loan Application Documents <span
                             style="color:#dc2626;font-size:11px;margin-left:6px;">All 4 required</span></h3>
@@ -1101,7 +1087,6 @@ include 'Includes/header.php';
 </div>
 
 <script>
-    // Live financial recalculation when loan tenure changes
     const carPrice = <?= json_encode($car_price) ?>;
     const bookFee = <?= json_encode($booking_fee) ?>;
     const dpPct = <?= json_encode($locked_dp_pct) ?>;
@@ -1122,7 +1107,6 @@ include 'Includes/header.php';
     }
     document.getElementById('loan_years').addEventListener('change', recalc);
 
-    // File name preview
     document.querySelectorAll('.doc-input').forEach(input => {
         input.addEventListener('change', e => {
             const f = e.target.files[0];

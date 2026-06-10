@@ -176,7 +176,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
         }
     }
 
-    // --- Validate card ---
     $card_number = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
     $card_name = trim($_POST['card_name'] ?? '');
     $card_expiry = trim($_POST['card_expiry'] ?? '');
@@ -520,7 +519,6 @@ include 'Includes/header.php';
         gap: 8px;
     }
 
-    /* Insurance section */
     .template-download {
         background: #eff6ff;
         border: 1px solid #bfdbfe;
@@ -630,7 +628,6 @@ include 'Includes/header.php';
         display: inline-block;
     }
 
-    /* Plate options */
     .plate-grid {
         display: grid;
         gap: 12px;
@@ -728,7 +725,6 @@ include 'Includes/header.php';
         margin-top: 2px;
     }
 
-    /* Card */
     .card-visual {
         background: linear-gradient(135deg, #334155 0%, #1e293b 50%, #0f172a 100%);
         color: #fff;
@@ -1234,7 +1230,6 @@ include 'Includes/header.php';
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        // Validations
         if (insInput.files.length === 0) {
             Swal.fire({ icon: 'error', title: 'Missing Document', text: 'Please upload your signed insurance form.' });
             return;

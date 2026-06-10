@@ -3,7 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 1. 检查登录
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || !isset($_SESSION["id"])){
     header("location: Auth/login.php");
     exit;
@@ -15,7 +14,6 @@ $user_id = $_SESSION["id"];
 $name = $email = $ic = $phone = $created_at = $avatar = "";
 $address = $city = $state = $postcode = "";
 
-// 2. 抓取完整资料
 $sql = "SELECT user_name, user_email, user_ic, user_phone, user_created_at, user_avatar, user_address, user_city, user_state, user_postcode FROM users WHERE user_id = ?";
 if($stmt = mysqli_prepare($conn, $sql)){
     mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -32,7 +30,6 @@ include 'Includes/header.php';
 ?>
 
 <style>
-    /* 高级感侧边栏菜单样式 */
     .profile-menu {
         list-style: none;
         padding: 0;
@@ -46,7 +43,7 @@ include 'Includes/header.php';
         align-items: center;
         gap: 12px;
         text-decoration: none;
-        color: #475569; /* 默认深灰 */
+        color: #475569;
         font-weight: 500;
         font-size: 15px;
         padding: 12px 16px;
@@ -55,10 +52,9 @@ include 'Includes/header.php';
     }
     .profile-menu li a:hover, .profile-menu li a.active {
         background-color: #f1f5f9;
-        color: #0f172a; /* 选中/Hover变成更深的黑 */
+        color: #0f172a; /
     }
     
-    /* Logout 专属红色样式 */
     .profile-menu li a.logout-link {
         color: #dc2626;
     }
@@ -100,7 +96,6 @@ include 'Includes/header.php';
                 <h3><?php echo htmlspecialchars($name); ?></h3>
                 <p style="color: #64748b; font-size: 14px;">Customer</p>
 
-                <!-- 🔥 替换为高级感的极简 SVG 图标 -->
                 <ul class="profile-menu">
                     <li>
                         <a href="profile.php" class="active">

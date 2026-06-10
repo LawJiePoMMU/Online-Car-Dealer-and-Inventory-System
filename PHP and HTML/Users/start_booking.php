@@ -4,10 +4,6 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 require '../Config/database.php';
 
-// ======================================================
-// SESSION CHECK (align with Auth/login.php)
-// ======================================================
-
 if (
     !isset($_SESSION['loggedin']) ||
     $_SESSION['loggedin'] !== true ||
@@ -18,9 +14,6 @@ if (
     exit();
 }
 
-// ======================================================
-// VALIDATE CAR ID
-// ======================================================
 
 if (!isset($_GET['car_id']) || empty($_GET['car_id'])) {
     header("Location: index.php");
@@ -34,9 +27,6 @@ if ($car_id <= 0) {
     exit();
 }
 
-// ======================================================
-// VERIFY CAR EXISTS + HAS STOCK
-// ======================================================
 
 $check_sql = "
 SELECT
@@ -62,18 +52,12 @@ if (!$car_check) {
     die("Selected vehicle does not exist.");
 }
 
-// Optional: block if out of stock
 if (intval($car_check['stock']) <= 0) {
     die("Sorry, this vehicle is currently out of stock.");
 }
 
-// ======================================================
-// STORE BOOKING SESSION + CLEAR OLD STATE
-// ======================================================
-
 $_SESSION['booking_car_id'] = $car_id;
 
-// Clear any leftover booking state from previous failed flow
 unset(
     $_SESSION['booking_id'],
     $_SESSION['pay_amount'],
@@ -82,9 +66,6 @@ unset(
     $_SESSION['pay_ref']
 );
 
-// ======================================================
-// REDIRECT TO BOOKING FORM
-// ======================================================
 
 header("Location: booking.php");
 exit();

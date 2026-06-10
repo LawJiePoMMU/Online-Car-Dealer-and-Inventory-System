@@ -1103,7 +1103,7 @@ if (isset($_POST['save_all_details'])) {
                     <h3 class="section-header"><i class="fas fa-bolt"></i> Engine Specifications</h3>
                     <div class="grid-3" style="margin-bottom:16px;">
                         <div class="form-group">
-                            <label>Engine Type</label>
+                            <label>Fuel Type</label>
                             <select name="engine_type" class="form-control" id="engine_type_select">
                                 <?php foreach (['Petrol', 'Diesel', 'Hybrid', 'EV'] as $et): ?>
                                     <option <?= $car['engine_type'] === $et ? 'selected' : '' ?>><?= $et ?></option>

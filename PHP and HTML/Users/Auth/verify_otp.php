@@ -74,42 +74,29 @@ include '../Includes/header.php';
     const timerElement = document.getElementById('timer');
     const countdownText = document.getElementById('countdownText');
     const resendLink = document.getElementById('resendLink');
-
-    // 1. 获取当前时间（秒）
     let now = Math.floor(Date.now() / 1000);
-    
-    // 2. 去 sessionStorage 里面找，看看之前有没有存过倒数结束的时间？
     let targetTime = sessionStorage.getItem('otpCooldownTarget');
 
-    // 3. 如果没存过（第一次进页面），或者之前存的时间已经过期很久了，就重新设定一个新的结束时间（当前时间 + 60秒）
     if (!targetTime || targetTime < now - 60) {
         targetTime = now + 60;
         sessionStorage.setItem('otpCooldownTarget', targetTime);
     }
 
-    // 4. 计算还剩下多少秒
     let timeLeft = targetTime - now;
 
-    // 5. 倒数逻辑
     function updateTimer() {
         if (timeLeft <= 0) {
-            clearInterval(countdown); // 停止倒数
-            countdownText.style.display = 'none'; // 隐藏 "You can resend in..."
-            resendLink.style.display = 'inline-block'; // 显示 Resend 按钮
+            clearInterval(countdown); 
+            countdownText.style.display = 'none'; 
+            resendLink.style.display = 'inline-block'; 
         } else {
-            timerElement.textContent = timeLeft; // 更新画面上的数字
+            timerElement.textContent = timeLeft; 
             timeLeft--;
         }
     }
 
-    // 进网页立刻执行一次，避免闪烁
     updateTimer(); 
-    
-    // 开启每秒钟执行一次的计时器
     const countdown = setInterval(updateTimer, 1000);
-
-    // 🔥 核心逻辑：当用户点击 "Resend OTP" 时，清空记忆！
-    // 这样重新跳转回来的时候，系统才会给它一个全新的 60 秒！
     resendLink.addEventListener('click', function() {
         sessionStorage.removeItem('otpCooldownTarget');
     });

@@ -153,7 +153,8 @@ if (isset($_GET['ajax'], $_GET['action'], $_GET['car_id']) && $_GET['action'] ==
 
         (SELECT IFNULL(SUM(quantity),0) FROM car_inventory WHERE car_id = c.car_id) AS total_stock,
         (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS('::', color_name, color_hex, quantity) SEPARATOR '||') FROM car_inventory WHERE car_id = c.car_id) AS color_data,
-        (SELECT GROUP_CONCAT(DISTINCT variant SEPARATOR ', ') FROM car_inventory WHERE car_id = c.car_id) AS all_variants
+        (SELECT GROUP_CONCAT(DISTINCT variant SEPARATOR ', ') FROM car_inventory WHERE car_id = c.car_id) AS all_variants,
+        (SELECT GROUP_CONCAT(car_image_url SEPARATOR '||') FROM car_image WHERE car_id = c.car_id) AS image_urls
     FROM cars c
     LEFT JOIN car_types ct ON c.car_type_id = ct.car_type_id
     LEFT JOIN locations loc ON c.location_id = loc.location_id

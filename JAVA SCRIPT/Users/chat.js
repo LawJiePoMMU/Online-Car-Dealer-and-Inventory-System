@@ -572,14 +572,9 @@ function confirmAction(type) {
                 .then(data => {
                     if (data.status === 'success') {
                         if (type === 'clear') {
-                            // SOFT DELETE for current user only.
-                            // Keep chat box open, just refresh content to reflect cleared_at cutoff.
                             loadMessages(id, chatType);
                             loadProfileMedia(id, chatType);
-                            // Do NOT call loadUsers() here — the contact stays in the list
-                            // because deleted_at is NOT set by clear_chat.
                         } else {
-                            // delete_chat: hide chat for current user only.
                             document.getElementById('mainChatArea').style.display = 'none';
                             document.getElementById('emptyChatArea').style.display = 'flex';
                             sessionStorage.removeItem('lastActiveChatId');

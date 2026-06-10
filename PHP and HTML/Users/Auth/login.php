@@ -41,7 +41,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                             $_SESSION["loggedin"] = true;
                             $_SESSION["id"] = $db_id; 
                             $_SESSION["email"] = $db_email;
-                            $_SESSION["role"] = $db_role; // 这里存的是 "Customer"
+                            $_SESSION["role"] = $db_role;
 
                             header("location: ../index.php");
                             exit;

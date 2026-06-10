@@ -1,21 +1,15 @@
-/* =========================================
-   1. CSS Variables (统一高级感配色)
-   ========================================= */
 :root {
-    --primary-color: #1e293b; /* 🔥 高级曜石青 (核心色) */
-    --primary-hover: #0f172a; /* 🔥 鼠标悬浮时的深色 */
-    --bg-color: #f8fafc;      /* 极浅冷灰背景 */
-    --card-bg: #ffffff;       /* 纯白卡片 */
-    --text-dark: #334155;     /* 深石板灰文字 */
-    --text-light: #64748b;    /* 次要辅助文字 */
+    --primary-color: #1e293b; 
+    --primary-hover: #0f172a; 
+    --bg-color: #f8fafc;     
+    --card-bg: #ffffff;       
+    --text-dark: #334155;    
+    --text-light: #64748b;   
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.3s ease;
 }
 
-/* =========================================
-   2. Basic Reset & Typography
-   ========================================= */
 * {
     margin: 0;
     padding: 0;
@@ -35,9 +29,6 @@ body {
     padding: 0 20px;
 }
 
-/* =========================================
-   3. Navbar (全屏伸缩，永远靠两边)
-   ========================================= */
 .navbar {
     background: #fff;
     position: sticky;
@@ -112,9 +103,6 @@ body {
     z-index: 10; 
 }
 
-/* =========================================
-   4. Buttons (全站统一样式 - 高级感微动效)
-   ========================================= */
 .btn-primary {
     background-color: var(--primary-color);
     color: white;
@@ -137,9 +125,6 @@ body {
     box-shadow: var(--shadow-hover);
 }
 
-/* =========================================
-   5. Grid System (网格布局)
-   ========================================= */
 .grid {
     display: grid;
     gap: 20px;
@@ -147,9 +132,6 @@ body {
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .grid-4 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
 
-/* =========================================
-   6. Card Design (车卡片 / 分类卡片)
-   ========================================= */
 .card {
     background: var(--card-bg);
     border-radius: 12px;
@@ -186,9 +168,6 @@ body {
     margin-bottom: 15px;
 }
 
-/* =========================================
-   7. Forms & Inputs (联系表单/普通表单)
-   ========================================= */
 .form-container {
     max-width: 500px;
     margin: 50px auto;
@@ -249,9 +228,6 @@ body {
     box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
 }
 
-/* =========================================
-   8. Specific Page Layouts (特定页面排版)
-   ========================================= */
 .details-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -287,9 +263,6 @@ body {
     height: fit-content;
 }
 
-/* =========================================
-   9. Utility & Footer (工具类与底部)
-   ========================================= */
 .text-center { text-align: center; }
 .section-title { margin: 40px 0 20px; font-size: 28px; color: var(--text-dark); }
 
@@ -301,18 +274,12 @@ body {
     border-top: 1px solid #edf2f7;
 }
 
-/* =========================================
-   10. Responsive Design (通用响应式)
-   ========================================= */
 @media (max-width: 768px) {
     .nav-container { flex-direction: column; gap: 15px; padding: 15px 20px; }
     .nav-links { position: static; transform: none; flex-wrap: wrap; justify-content: center; gap: 20px; }
     .details-layout, .search-layout { grid-template-columns: 1fr; }
 }
 
-/* =========================================
-   11. Authentication Pages (Login / Register) - Premium Edition
-   ========================================= */
 body:has(.auth-wrapper) {
     background-color: var(--bg-color);
     min-height: 100vh;
@@ -345,7 +312,6 @@ body:has(.auth-wrapper) .navbar {
     box-sizing: border-box;
 }
 
-/* Register 页面的特定宽度 */
 .auth-container.register-container {
     max-width: 750px !important;
 }
@@ -456,9 +422,6 @@ body:has(.auth-wrapper) .navbar {
     letter-spacing: 0.5px;
 }
 
-/* =========================================
-   🔥 Register Page Specific Grid & Tracker
-   ========================================= */
 .register-grid {
     display: grid;
     grid-template-columns: 1fr 1fr; 
@@ -553,9 +516,6 @@ body:has(.auth-wrapper) .navbar {
     }
 }
 
-/* =========================================
-   12. Logged-in User Menu (头像与爱心图标)
-   ========================================= */
 .user-menu {
     display: flex;
     align-items: center;
@@ -578,9 +538,6 @@ body:has(.auth-wrapper) .navbar {
     color: #ef4444; 
 }
 
-/* =========================================
-   13. Home Page / Hero Section (主页大图设计)
-   ========================================= */
 .hero-section {
     height: 70vh; 
     min-height: 500px;
@@ -632,9 +589,6 @@ body:has(.auth-wrapper) .navbar {
     flex: 1;
 }
 
-/* =========================================
-   14. Why Choose Us (信任板块设计)
-   ========================================= */
 .features-section {
     background: #ffffff;
     padding: 60px 0;
@@ -658,16 +612,13 @@ body:has(.auth-wrapper) .navbar {
     .hero-content h1 { font-size: 36px; }
 }
 
-/* =========================================
-   15. Profile Page (个人主页与编辑页面设计)
-   ========================================= */
 .profile-layout {
     display: grid;
     grid-template-columns: 280px 1fr; 
     gap: 30px;
-    max-width: 1100px; /* 🔥 限制最大宽度，不让它拉太长 */
-    width: 100%;       /* 🔥 占满可用空间 */
-    margin: 40px auto 60px auto; /* 🔥 完美居中 */
+    max-width: 1100px;
+    width: 100%;      
+    margin: 40px auto 60px auto; 
 }
 
 .profile-sidebar {
@@ -705,7 +656,6 @@ body:has(.auth-wrapper) .navbar {
     object-fit: cover; 
 }
 
-/* 鼠标移上去显示的相机遮罩 */
 .avatar-overlay {
     position: absolute;
     top: 0;
@@ -819,7 +769,6 @@ body:has(.auth-wrapper) .navbar {
     color: var(--text-dark);
 }
 
-/* Edit Form */
 .edit-form .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 15px; }
 .edit-form .form-group { display: flex; flex-direction: column; }
 .edit-form .form-group label { font-size: 13px; font-weight: 700; color: var(--text-light); margin-bottom: 8px; }
@@ -835,9 +784,7 @@ body:has(.auth-wrapper) .navbar {
     .edit-form .form-row { grid-template-columns: 1fr; }
     .content-header { flex-direction: column; align-items: flex-start; gap: 15px; }
 }
-/* =========================================
-   16. Cars Inventory Page (Pro Dealer Layout - 全屏极限紧凑版)
-   ========================================= */
+
 .inventory-page {
     background-color: #f4f6f8; 
     min-height: 100vh;
@@ -845,7 +792,6 @@ body:has(.auth-wrapper) .navbar {
     font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
 }
 
-/* --- 让网页全屏铺满 --- */
 .inventory-wrapper {
     max-width: 98%; 
     width: 100%;
@@ -856,7 +802,6 @@ body:has(.auth-wrapper) .navbar {
     align-items: flex-start;
 }
 
-/* --- 左侧专业 Sidebar --- */
 .inventory-sidebar {
     width: 260px;
     flex-shrink: 0;
@@ -906,13 +851,11 @@ body:has(.auth-wrapper) .navbar {
     cursor: pointer;
 }
 
-/* --- 右侧主内容区 --- */
 .inventory-main {
     flex: 1;
     min-width: 0;
 }
 
-/* 顶部搜索与分类栏 */
 .top-action-bar {
     background: #fff;
     border-radius: 12px;
@@ -994,7 +937,6 @@ body:has(.auth-wrapper) .navbar {
     border-bottom-color: var(--primary-color, #e11d48); 
 }
 
-/* --- 车辆网格 (全屏自动排满 5-6 辆) --- */
 .inventory-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1004,7 +946,7 @@ body:has(.auth-wrapper) .navbar {
 .pro-car-card {
     display: flex;
     flex-direction: column;
-    height: 100%; /* 确保卡片填满 Grid 格子 */
+    height: 100%; 
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 24px;
@@ -1014,13 +956,13 @@ body:has(.auth-wrapper) .navbar {
 }
 
 .card-content {
-    flex-grow: 1; /* 让内容区域自动填充剩余空间 */
+    flex-grow: 1; 
     display: flex;
     flex-direction: column;
 }
 
 .card-footer {
-    margin-top: auto; /* 这一行会让 Footer 永远被推到底部，实现高度对齐 */
+    margin-top: auto; 
 }
 
 .pro-car-card:hover {
@@ -1028,10 +970,9 @@ body:has(.auth-wrapper) .navbar {
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
 
-/* 🔥 必须加 relative，里面的标签才能在内部定位 */
 .card-img-container {
     width: 100%;
-    height: 200px; /* 或者你想要的高度 */
+    height: 200px; 
     overflow: hidden;
     position: relative;
     border-radius: 16px;
@@ -1040,10 +981,9 @@ body:has(.auth-wrapper) .navbar {
 .card-img-container img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* 这一行最重要，它会强制图片填满且不拉伸 */
+    object-fit: cover; 
 }
 
-/* 🔥 NEW / USED 标签 (左下角) */
 .badge-condition {
     position: absolute;
     bottom: 10px;
@@ -1058,41 +998,38 @@ body:has(.auth-wrapper) .navbar {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* 🔥 爱心按钮 (右下角)：隐藏，Hover 时显示，透明底线框 */
 .btn-wishlist {
     position: absolute;
     bottom: 10px;
     right: 10px;
     background: transparent; 
     border: none;
-    color: #ffffff; /* 白色线条 */
+    color: #ffffff;
     cursor: pointer;
     transition: all 0.2s;
     padding: 0;
-    opacity: 0; /* 默认完全隐形 */
+    opacity: 0; 
     display: flex;
     align-items: center;
     justify-content: center;
-    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); /* 黑色阴影防止白线看不清 */
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); 
 }
 
-/* 鼠标指到卡片上，爱心才会浮现 */
 .pro-car-card:hover .btn-wishlist {
     opacity: 1; 
 }
 
 .btn-wishlist:hover {
-    transform: scale(1.15); /* 鼠标指到爱心上微微放大 */
+    transform: scale(1.15); 
 }
 
-/* 🔥 收藏后的状态：永远显示、变成空心红边框！ */
 .btn-wishlist.liked {
     opacity: 1;
-    color: #ef4444; /* 让线条变成红色 */
+    color: #ef4444; 
 }
 .btn-wishlist.liked svg {
-    fill: none !important; /* 🔥 关键：强制保持里面是空的，绝对不填满！ */
-    stroke-width: 2.5; /* 顺便把线条加粗一点点，让红心更明显更好看 */
+    fill: none !important; 
+    stroke-width: 2.5; 
 }
 
 .card-title {
@@ -1113,8 +1050,8 @@ body:has(.auth-wrapper) .navbar {
 
 .card-specs {
     font-size: 13px;
-    color: #334155 !important; /* 加深颜色 */
-    font-weight: 600; /* 加粗 */
+    color: #334155 !important;
+    font-weight: 600; 
     display: flex;
     flex-direction: column;
     gap: 4px; 
@@ -1132,7 +1069,6 @@ body:has(.auth-wrapper) .navbar {
     font-size: 12px;
 }
 
-/* 响应式：屏幕太小时，Sidebar 变窄 */
 @media (max-width: 1024px) {
     .inventory-wrapper { flex-direction: column; }
     .inventory-sidebar { width: 100%; position: static; margin-bottom: 20px; }
@@ -1140,14 +1076,12 @@ body:has(.auth-wrapper) .navbar {
     .checkbox-list { flex-direction: row; flex-wrap: wrap; }
 }
 
-/* Container for icon + badge */
 .nav-icon-wrap {
     position: relative;
     display: inline-flex;
     align-items: center;
 }
 
-/* The red dot style */
 .nav-red-dot {
     position: absolute;
     top: -5px;
@@ -1156,5 +1090,5 @@ body:has(.auth-wrapper) .navbar {
     height: 10px;
     background-color: #ef4444;
     border-radius: 50%;
-    border: 2px solid #ffffff; /* Matches background color behind header */
+    border: 2px solid #ffffff;
 }

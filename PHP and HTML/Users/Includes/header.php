@@ -120,7 +120,6 @@ if (isset($conn) && $current_user_id > 0) {
             font-weight: 600;
         }
 
-        /* 新增：小红点专属样式 */
         .nav-chat-link {
             position: relative;
             display: inline-flex;
@@ -131,14 +130,11 @@ if (isset($conn) && $current_user_id > 0) {
             position: absolute;
             top: 6px;
             right: -6px;
-            /* 根据你的间距可微调这个数值 */
             width: 8px;
             height: 8px;
             background-color: #ef4444;
-            /* 红色 */
             border-radius: 50%;
             box-shadow: 0 0 0 2px #ffffff;
-            /* 给红点加个白边，防粘连更好看 */
         }
     </style>
 </head>

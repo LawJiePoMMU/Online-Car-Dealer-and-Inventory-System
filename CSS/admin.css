@@ -262,8 +262,6 @@ body {
     font-weight: 700;
 }
 
-/*---tables card css---*/
-
 .table-card {
     background-color: #ffffff;
     border: 1px solid var(--border-color);
@@ -362,7 +360,6 @@ body {
     background-color: #4f46e5;
 }
 
-/*---manage cars css---*/
 .car-cell {
     display: flex;
     align-items: center;
@@ -473,7 +470,6 @@ body {
     padding: 12px 10px;
 }
 
-/*---specifications css---*/
 .customer-info {
     display: flex;
     align-items: center;
@@ -565,7 +561,6 @@ body {
     padding-left: 0;
 }
 
-/*---reservation css---*/
 .badge-paid {
     background-color: #dcfce7;
     color: #166534;
@@ -576,7 +571,6 @@ body {
     color: #991b1b;
 }
 
-/*---users css---*/
 @media print {
     body {
         background: white !important;
@@ -809,7 +803,6 @@ body {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-/*---chat css---*/
 .chat-container {
     display: flex;
     height: 70vh;

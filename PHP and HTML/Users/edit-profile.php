@@ -12,9 +12,7 @@ require_once "../Config/database.php";
 
 $user_id = $_SESSION["id"];
 $success = $error = "";
-$avatar = ""; // 新增 avatar 变量
-
-// --- 1. 处理表单提交 (Update) ---
+$avatar = ""; 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
     $new_name = trim($_POST["user_name"]);
     $new_ic = trim($_POST["user_ic"]);
@@ -39,13 +37,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     }
 }
 
-// --- 2. 抓取当前资料以填充表单 (Fetch) ---
-// 🔥 修复：这里加入了 user_avatar
 $sql = "SELECT user_name, user_email, user_ic, user_phone, user_address, user_city, user_state, user_postcode, user_avatar FROM users WHERE user_id = ?";
 if($stmt = mysqli_prepare($conn, $sql)){
     mysqli_stmt_bind_param($stmt, "i", $user_id);
     mysqli_stmt_execute($stmt);
-    // 🔥 修复：绑定 $avatar
     mysqli_stmt_bind_result($stmt, $name, $email, $ic, $phone, $address, $city, $state, $postcode, $avatar);
     mysqli_stmt_fetch($stmt);
     mysqli_stmt_close($stmt);
@@ -55,7 +50,6 @@ include 'Includes/header.php';
 ?>
 
 <style>
-    /* 高级感侧边栏菜单样式 */
     .profile-menu {
         list-style: none;
         padding: 0;
@@ -96,7 +90,6 @@ include 'Includes/header.php';
         <div class="profile-layout">
             
             <aside class="profile-sidebar">
-                <!-- 🔥 修复：加入和 Profile 一样的头像展示和上传功能 -->
                 <div class="profile-avatar" onclick="document.getElementById('avatar-upload').click();" title="Click to change avatar">
                     <?php if(!empty($avatar)): ?>
                         <img id="avatar-img" src="<?php echo htmlspecialchars($avatar); ?>" alt="Avatar">
@@ -192,7 +185,6 @@ include 'Includes/header.php';
     </div>
 </div>
 
-<!-- 🔥 修复：加入上传头像的 JS 逻辑，让 Edit 页面也能改图 -->
 <script>
     function uploadAvatar(input) {
         if (input.files && input.files[0]) {

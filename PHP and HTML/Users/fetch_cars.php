@@ -9,7 +9,6 @@ try {
     die("PDO Connection failed: " . $e->getMessage());
 }
 
-// 接收前端传来的所有过滤参数
 $model        = $_POST['model'] ?? 'AllModels';
 $bodyType     = $_POST['bodyType'] ?? 'All';
 $condition    = $_POST['condition'] ?? 'All';
@@ -20,15 +19,11 @@ $sort         = $_POST['sort'] ?? 'Latest';
 $keyword      = $_POST['keyword'] ?? '';
 $page         = isset($_POST['page']) ? (int)$_POST['page'] : 1;
 
-// 获取当前登录用户ID (用于判断是否加入了心愿单)
 $user_id = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
 
-$limit = 20; // 限制每页显示 20 辆车
+$limit = 20; 
 $offset = ($page - 1) * $limit;
 
-// ==========================================
-// 🌟 核心修改区：在这里加入了库存必须大于 0 的判断
-// ==========================================
 $baseSql = "FROM cars c
             LEFT JOIN car_types t ON c.car_type_id = t.car_type_id
             LEFT JOIN car_status s ON c.car_id = s.car_id
@@ -40,13 +35,11 @@ $baseSql = "FROM cars c
 
 $params = [];
 
-// --- 1. MODEL ---
 if ($model !== 'AllModels') { 
     $baseSql .= " AND c.car_model = ?"; 
     $params[] = $model; 
 }
 
-// --- 2. BODY TYPE ---
 if ($bodyType !== 'All') { 
     if ($bodyType === 'EV') { 
         $baseSql .= " AND (c.fuel_type IN ('Electric', 'EV') OR c.body_type = 'EV')"; 
@@ -56,19 +49,16 @@ if ($bodyType !== 'All') {
     }
 }
 
-// --- 3. CONDITION ---
 if ($condition !== 'All') { 
     $baseSql .= " AND c.car_origin = ?"; 
     $params[] = $condition; 
 }
 
-// --- 4. TRANSMISSION ---
 if ($transmission !== 'All') { 
     $baseSql .= " AND c.transmission = ?"; 
     $params[] = $transmission; 
 }
 
-// --- 5. YEAR ---
 if ($year === '2023-2024') { 
     $baseSql .= " AND c.car_year >= 2023 AND c.car_year <= 2024"; 
 } elseif ($year === '2020-2022') { 
@@ -77,7 +67,6 @@ if ($year === '2023-2024') {
     $baseSql .= " AND c.car_year < 2020"; 
 }
 
-// --- 6. PRICE ---
 if ($price === 'Under 50k') { 
     $baseSql .= " AND s.car_status_price < 50000"; 
 } elseif ($price === '50k-100k') { 
@@ -86,7 +75,6 @@ if ($price === 'Under 50k') {
     $baseSql .= " AND s.car_status_price > 100000"; 
 }
 
-// --- 7. KEYWORD SEARCH (黑科技智能发音容错搜索) ---
 if ($keyword !== '') {
     $kw_nospace = str_replace(' ', '', $keyword);
     $wildcard = "%$keyword%";
@@ -107,28 +95,18 @@ if ($keyword !== '') {
     $params[] = $keyword;
 }
 
-// ==========================================
-// 计算分页与总数
-// ==========================================
 $countSql = "SELECT COUNT(c.car_id) " . $baseSql;
 $stmtCount = $pdo->prepare($countSql);
 $stmtCount->execute($params);
 $totalCars = $stmtCount->fetchColumn();
 $totalPages = ceil($totalCars / $limit);
 
-// ==========================================
-// 排序规则
-// ==========================================
 $orderSql = " ORDER BY c.car_created_at DESC";
 if ($sort === 'Price: Low to High') {
     $orderSql = " ORDER BY s.car_status_price ASC";
 } elseif ($sort === 'Price: High to Low') {
     $orderSql = " ORDER BY s.car_status_price DESC";
 }
-
-// ==========================================
-// 查询最终数据
-// ==========================================
 $finalSql = "SELECT c.*, t.car_type_name, s.car_status_price, l.location_city,
              (SELECT car_image_url FROM car_image WHERE car_id = c.car_id LIMIT 1) as car_image_url,
              (SELECT COUNT(*) FROM wishlist WHERE user_id = " . (int)$user_id . " AND car_id = c.car_id) as is_liked 
@@ -138,9 +116,6 @@ $stmt = $pdo->prepare($finalSql);
 $stmt->execute($params);
 $cars = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ==========================================
-// 输出 HTML 卡片
-// ==========================================
 if (count($cars) > 0) {
     foreach ($cars as $car) {
         $id = $car['car_id'];
@@ -188,7 +163,6 @@ if (count($cars) > 0) {
         </a>';
     }
 
-    // --- 输出分页 HTML ---
     if ($totalPages > 1) {
         echo '<div class="pagination-container">';
         for ($i = 1; $i <= $totalPages; $i++) {
@@ -199,7 +173,6 @@ if (count($cars) > 0) {
     }
 
 } else {
-    // 找不到车辆时显示的画面
     echo '
     <div style="grid-column: 1 / -1; text-align: center; padding: 80px 20px;">
         <h3 style="color: #0f172a; margin-bottom: 5px;">No vehicles found</h3>

@@ -443,7 +443,6 @@ include 'Includes/header.php';
         margin-top: 4px;
     }
 
-    /* Progress bar */
     .progress-track {
         background: #e2e8f0;
         height: 10px;

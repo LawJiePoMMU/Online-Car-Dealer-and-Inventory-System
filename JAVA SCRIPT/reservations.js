@@ -295,7 +295,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, 500);
     }
-    // ===== End Highlight =====
 
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', function (e) {

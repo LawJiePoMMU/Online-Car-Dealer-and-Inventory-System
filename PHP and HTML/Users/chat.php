@@ -502,7 +502,6 @@ if ($chat_type === 'group') {
         white-space: nowrap;
     }
 
-    /* 🔥 统一主题颜色：深石板黑 */
     .chat-tab-btn.active {
         background: #374151;
         color: #fff;
@@ -531,7 +530,6 @@ if ($chat_type === 'group') {
         background: #f3f4f6;
     }
 
-    /* 🔥 选中联系人的极简灰色背景 + 黑色侧边条 */
     .contact-item.active {
         background: #e0e7ff;
         border-left: 4px solid #374151;
@@ -542,7 +540,6 @@ if ($chat_type === 'group') {
         margin-right: 12px;
     }
 
-    /* 🔥 未读消息改成醒目的红色 */
     .unread-badge {
         position: absolute;
         right: 16px;
@@ -624,7 +621,6 @@ if ($chat_type === 'group') {
         border-top-left-radius: 0;
     }
 
-    /* 🔥 发送出去的消息气泡换成深石板黑 */
     .outgoing .message-bubble {
         background: #374151;
         color: #ffffff;
@@ -658,7 +654,6 @@ if ($chat_type === 'group') {
         background: #f9fafb;
     }
 
-    /* 🔥 发送按钮颜色更新 */
     .btn-send {
         background: #374151;
         color: white;

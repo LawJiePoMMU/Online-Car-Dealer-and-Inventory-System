@@ -2,7 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-// 1. 确保退两层能找到 Config 和 Includes
+
 require_once "../../Config/database.php"; 
 
 require 'PHPMailer/Exception.php';
@@ -33,8 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com';
                 $mail->SMTPAuth   = true;
-                
-                // 🔥 用回你朋友的账号和密码 (保证能发信)
+
                 $mail->Username   = 'lcwcar.support@gmail.com'; 
                 $mail->Password   = 'isxuzhsgirepjkfs'; 
                 
@@ -42,7 +41,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->Port       = 587;
                 $mail->Timeout    = 60;
 
-                // 发件人名字依然显示你的系统名，看起来帅一点
                 $mail->setFrom('lcwcar.support@gmail.com', 'LCWcar Support');
                 $mail->addAddress($email);
 
@@ -65,7 +63,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 header("Location: verify_otp.php"); 
                 exit();
             } catch (Exception $e) {
-                // 如果还报错，会把真正的死因吐出来给你看
                 $error = "Email failed to send. Error details: " . $mail->ErrorInfo;
             }
         }
@@ -74,7 +71,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// 🔥 这里修正了路径，加上了 ../../
 include '../Includes/header.php';
 ?>
 
