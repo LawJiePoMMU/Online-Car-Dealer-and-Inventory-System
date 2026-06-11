@@ -56,14 +56,15 @@ include 'Includes/header.php';
 ?>
 
 <style>
-    .hero-banner {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 16 / 4;
-        max-height: 600px;
-        overflow: hidden;
-        background: #0d1f3c;
-    }
+.hero-banner {
+    position: relative;
+    width: 100%;           
+    margin: 0 auto;;        
+    aspect-ratio: 16 / 6;  
+    height: 60%;     
+    overflow: hidden;
+    background: #0d1f3c;
+}
 
     .banner-slides {
         position: relative;
@@ -595,7 +596,7 @@ include 'Includes/header.php';
                             </span>
                         </div>
                     </a>
-                <?php
+                    <?php
                 endforeach;
             } else {
                 echo "<div style='width: 100%; text-align: center; padding: 40px; color: #64748b;'>No models available right now.</div>";
