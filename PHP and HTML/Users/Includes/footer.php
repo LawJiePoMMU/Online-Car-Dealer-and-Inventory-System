@@ -2,7 +2,7 @@
     <div class="footer-container">
         <div class="footer-grid">
             <div class="footer-col footer-about">
-                <img src="/Online-Car-Dealer-and-Inventory-System/Images/Uploads/company_logo.png" alt="LCWcar"
+                <img src="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/Includes/Logo.png" alt="LCWcar"
                     class="footer-logo">
                 <h3 class="footer-title">LCWcar Sdn Bhd</h3>
                 <p class="footer-desc">

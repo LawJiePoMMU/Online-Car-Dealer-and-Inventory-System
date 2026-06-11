@@ -146,7 +146,7 @@ if (isset($conn) && $current_user_id > 0) {
 
             <a href="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/index.php" class="nav-logo"
                 style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
-                <img src="/Online-Car-Dealer-and-Inventory-System/Images/Uploads/company_logo.png" alt="LCWcar"
+                <img src="/Online-Car-Dealer-and-Inventory-System/PHP%20and%20HTML/Users/Includes/Logo.png" alt="LCWcar"
                     style="height:38px;width:auto;display:block;">
                 <span>LCWcar</span>
             </a>
