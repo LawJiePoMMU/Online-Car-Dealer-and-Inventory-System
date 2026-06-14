@@ -58,9 +58,9 @@ include 'Includes/header.php';
 <style>
 .hero-banner {
     position: relative;
-    width: 100%;           
-    margin: 0 auto;;        
-    aspect-ratio: 16 / 6;  
+    width: 100%;
+    margin: 0 auto;
+    aspect-ratio: 16 / 6;
     height: 60%;     
     overflow: hidden;
     background: #0d1f3c;

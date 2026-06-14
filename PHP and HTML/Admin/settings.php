@@ -132,14 +132,14 @@ if (isset($_GET['ajax']) || isset($_POST['action'])) {
                     if (in_array($ext, $allowed_extensions)) {
                         if (move_uploaded_file($_FILES['banner_image']['tmp_name'], $target_file)) {
                             $sql = "INSERT INTO homepage_banners (Image_Path, Display_Order, Is_Active) VALUES ('$file_name', '$display_order', '$is_active')";
-                            mysqli_query($conn, $sql);
+                        mysqli_query($conn, $sql);
                             echo json_encode(['success' => true, 'message' => 'Banner uploaded successfully!']);
-                            exit;
-                        }
-                    } else {
-                        echo json_encode(['success' => false, 'message' => 'Invalid file type! Only JPG, PNG, and WEBP are allowed.']);
                         exit;
                     }
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Invalid file type! Only JPG, PNG, and WEBP are allowed.']);
+                    exit;
+                }
                 }
                 echo json_encode(['success' => false, 'message' => 'Please select a valid image file.']);
                 exit;
@@ -853,7 +853,7 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                                 <p class="upload-text" id="file-name-display">Drag and drop the banner image here, or
                                     click to
                                     select <span style="color: #1e3a8a; text-decoration: underline;">Browse</span></p>
-                                <p class="upload-subtext">Recommended Format: 16:9 aspect ratio (JPG, PNG, WEBP)</p>
+                                <p class="upload-subtext">Recommended Format: 16:6 aspect ratio / 1920x720 pixels (JPG, PNG, WEBP)</p>
                             </div>
 
                             <div class="upload-controls-grid">
@@ -866,7 +866,8 @@ $sql_banners = mysqli_query($conn, "SELECT * FROM homepage_banners ORDER BY Disp
                                         " oninput="
                                             this.value = this.value.replace(/^0+/, '');
                                             if (this.value !== '' && +this.value > 10) this.value = 10;
-                                        " onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 1) ? 1 : parseInt(this.value, 10);">
+                                        "
+                                        onblur="this.value = (this.value === '' || isNaN(this.value) || +this.value < 1) ? 1 : parseInt(this.value, 10);">
                                 </div>
                                 <div class="setting-group">
                                     <label>Visibility Status</label>
