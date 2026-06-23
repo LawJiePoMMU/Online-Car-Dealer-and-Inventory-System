@@ -6,6 +6,14 @@ include '../Config/functions.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $admin_id = $_SESSION['user_id'] ?? 1;
+mysqli_query($conn, "
+    UPDATE reservations
+    SET
+        reservation_status = 'Rejected',
+        reservation_cancel_reason = 'Reservation expired automatically after 24 hours.'
+    WHERE reservation_status = 'Pending Viewing'
+    AND reservation_created_at <= DATE_SUB(NOW(), INTERVAL 1 DAY)
+");
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
   ob_clean();
   header('Content-Type: application/json');
@@ -660,12 +668,14 @@ $total_pages = max(1, (int) ceil($total_rows / $limit));
             <th style="text-align:left;">Car</th>
             <th style="text-align:left;">
               <?php
-              if ($tab === 'reservations')
-                echo 'Submitted At';
-              elseif ($tab === 'test_drives')
-                echo 'Test Drive At';
-              else
-                echo ($sub_tab === 'reservations' ? 'Rejected At' : 'Date');
+if ($tab === 'reservations')
+    echo 'Submitted At';
+elseif ($tab === 'test_drives')
+    echo 'Test Drive At';
+else
+    echo ($sub_tab === 'reservations'
+        ? 'Reservation Created Date'
+        : 'Date');
               ?>
             </th>
             <th style="text-align:left;">Status</th>

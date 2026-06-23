@@ -11,13 +11,6 @@
                     you can rely on.
                 </p>
                 <p class="footer-tagline"><strong>Drive your dream car today.</strong></p>
-
-                <div class="footer-social">
-                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                    <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                    <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
-                </div>
             </div>
 
             <div class="footer-col">
@@ -53,15 +46,6 @@
                 <div class="footer-registration">
                     <p>SSM: 202401123456</p>
                     <p>SST: M10-2405-12345678</p>
-                </div>
-
-                <div class="footer-payment">
-                    <p class="footer-payment-title">SECURE PAYMENT</p>
-                    <div class="payment-icons">
-                        <span class="pay-badge">VISA</span>
-                        <span class="pay-badge">MasterCard</span>
-                        <span class="pay-badge">FPX</span>
-                    </div>
                 </div>
             </div>
 

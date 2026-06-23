@@ -525,7 +525,7 @@ function apply_snapshot($row)
                 </div>
                 <?php if ($tab === 'history'): ?>
                     <input type="hidden" name="sub_tab" value="<?= htmlspecialchars($sub_tab) ?>">
-                    <?php if ($sub_tab === 'booking' || $sub_tab === 'down_payment'): ?>
+                    <?php if ($sub_tab === 'booking'): ?>
                         <select name="filter" class="form-control" onchange="this.form.submit()"
                             style="padding-left:12px; width:200px; font-size:13px;">
 
@@ -533,12 +533,6 @@ function apply_snapshot($row)
 
                             <?php if ($sub_tab === 'booking'): ?>
                                 <option value="Approved" <?= $filter === 'Approved' ? 'selected' : '' ?>>Approved</option>
-                                <option value="Rejected" <?= $filter === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
-                                <option value="Refunded" <?= $filter === 'Refunded' ? 'selected' : '' ?>>Refunded</option>
-
-                            <?php elseif ($sub_tab === 'down_payment'): ?>
-                                <option value="Approved" <?= $filter === 'Approved' ? 'selected' : '' ?>>Approved</option>
-                                <option value="Cancelled" <?= $filter === 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
                                 <option value="Rejected" <?= $filter === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
                             <?php endif; ?>
 

@@ -109,6 +109,22 @@ LIMIT 5
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        .print-info {
+            display: none;
+        }
+
+        @media print {
+
+            .print-info {
+                display: block;
+            }
+
+            .sidebar,
+            .filter-group {
+                display: none !important;
+            }
+        }
+
         body {
             background: #f5f7fb;
         }
@@ -388,8 +404,24 @@ LIMIT 5
         <div class="page-header">
             <div class="page-title">
                 <h1>Sales Report</h1>
+
+                <div class="print-info">
+                    <p>
+                        Report Period:
+                        <?= ($month === 'all')
+                            ? "All Months $year"
+                            : date('F', mktime(0, 0, 0, $month, 1)) . " $year"; ?>
+                    </p>
+
+                    <p>
+                        Generated Date:
+                        <?= date('d/m/Y H:i:s'); ?>
+                    </p>
+                </div>
             </div>
             <form method="GET" class="filter-group">
+                <button type="button" onclick="window.print()"> Print Report
+                </button>
                 <select name="month" class="form-control">
                     <option value="all" <?= ($month === 'all') ? 'selected' : '' ?>>All Months</option>
                     <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -465,36 +497,36 @@ LIMIT 5
                 </div>
             </div>
 
-        <div class="chart-card top-models-card">
-            <div class="chart-header">
-                <div class="chart-title">
-                    <div class="chart-icon"><i class="fas fa-car-side"></i></div>
-                    <div>
-                        <h2>Top Selling Models</h2>
-                        <div class="chart-sub">Best performing vehicles</div>
+            <div class="chart-card top-models-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <div class="chart-icon"><i class="fas fa-car-side"></i></div>
+                        <div>
+                            <h2>Top Selling Models</h2>
+                            <div class="chart-sub">Best performing vehicles</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="model-list">
-                <?php
-                $rank = 1;
-                while ($model = mysqli_fetch_assoc($top_models_query)):
-                    ?>
-                    <div class="model-item">
-                        <div class="model-left">
-                            <div class="model-rank">#<?= $rank ?></div>
-                            <div class="model-name">
-                                <?= $model['car_brand'] ?>     <?= $model['car_model'] ?>
-                            </div>
-                        </div>
-                        <div class="model-sales"><?= $model['total_sales'] ?> Sales</div>
-                    </div>
+                <div class="model-list">
                     <?php
-                    $rank++;
-                endwhile;
-                ?>
+                    $rank = 1;
+                    while ($model = mysqli_fetch_assoc($top_models_query)):
+                        ?>
+                        <div class="model-item">
+                            <div class="model-left">
+                                <div class="model-rank">#<?= $rank ?></div>
+                                <div class="model-name">
+                                    <?= $model['car_brand'] ?>     <?= $model['car_model'] ?>
+                                </div>
+                            </div>
+                            <div class="model-sales"><?= $model['total_sales'] ?> Sales</div>
+                        </div>
+                        <?php
+                        $rank++;
+                    endwhile;
+                    ?>
+                </div>
             </div>
-        </div>
     </main>
 
     <script>
