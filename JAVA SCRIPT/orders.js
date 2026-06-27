@@ -58,6 +58,12 @@ function openModal(row, tab, sub_tab) {
     const financeBox = document.querySelector('.finance-box');
     let financeHTML = '';
 
+
+    const bookingPaid = row.booking_paid_at;
+
+    const bookingBadge = bookingPaid
+        ? '<span class="paid-badge" style="margin-left:8px;">PAID</span>'
+        : '<span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:8px;">UNPAID</span>';
     if (isBooking || (isHistory && sub_tab === 'booking')) {
         let balance = carPrice - bookFee;
         financeHTML = `
@@ -66,7 +72,7 @@ function openModal(row, tab, sub_tab) {
                 <span style="font-weight:700;color:#111827;font-size:15px;">RM ${fmt(carPrice)}</span>
             </div>
             <div class="finance-row">
-                <span style="color:#6b7280;font-weight:600;">Booking Fee <span class="paid-badge" style="margin-left:8px;">PAID</span></span>
+                <span style="color:#6b7280;font-weight:600;">Booking Fee ${bookingBadge}</span>
                 <span style="font-weight:600;color:#10b981;font-size:14px;">- RM ${fmt(bookFee)}</span>
             </div>
             <div class="finance-row total">
@@ -74,10 +80,9 @@ function openModal(row, tab, sub_tab) {
                 <span style="font-size:18px;font-weight:800;color:#ef4444;">RM ${fmt(balance)}</span>
             </div>
         `;
-} else if (isDP || (isHistory && sub_tab === 'down_payment')) {
+    } else if (isDP || (isHistory && sub_tab === 'down_payment')) {
         let totalPaid = dpAmt + extraFees;
-        let afterBooking = carPrice - bookFee;  
-        // Down payment percentage: prefer the locked snapshot value, else derive from car price
+        let afterBooking = carPrice - bookFee;
         let dpPct = row.locked_dp_pct ? parseFloat(row.locked_dp_pct) : (carPrice > 0 ? Math.round(dpAmt / carPrice * 100) : 0);
         let paidBadge = row.paid_at ? '<span class="paid-badge" style="margin-left:8px;">PAID</span>' : '<span style="background:#fef3c7;color:#d97706;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:8px;">UNPAID</span>';
 
@@ -113,7 +118,7 @@ function openModal(row, tab, sub_tab) {
                 <span style="font-size:18px;font-weight:800;color:#10b981;">RM ${fmt(totalPaid)}</span>
             </div>
         `;
-        let remainingBalance = afterBooking - dpAmt;   
+        let remainingBalance = afterBooking - dpAmt;
         financeHTML += `
             <div class="finance-row total" style="margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:10px;">
                 <span style="font-size:13px;font-weight:700;color:#111827;">Remaining Balance</span>
@@ -264,13 +269,39 @@ function openModal(row, tab, sub_tab) {
     let statusLabel = row.booking_status || '-';
     if (isDP || (isHistory && sub_tab === 'down_payment')) statusLabel = row.dp_status || '-';
     if (isHistory && sub_tab === 'blacklist') statusLabel = 'Blacklisted';
-    
+
     document.getElementById('detStatus').textContent = statusLabel;
     document.getElementById('detLoanTerm').textContent = years + ' Yrs @ ' + loanRate + '%';
     document.getElementById('detCreatedAt').textContent = row.created_at ? new Date(row.created_at).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-    
-    document.getElementById('btnApproveBooking').style.display = isBooking ? 'inline-block' : 'none';
-    document.getElementById('btnRejectBooking').style.display = isBooking ? 'inline-block' : 'none';
+
+    const btnApproveBooking =
+        document.getElementById('btnApproveBooking');
+
+    const btnRejectBooking =
+        document.getElementById('btnRejectBooking');
+
+    if (isBooking) {
+
+        if (!row.booking_paid_at) {
+            btnApproveBooking.style.display = 'inline-block';
+            btnApproveBooking.disabled = true;
+            btnApproveBooking.style.background = '#9ca3af';
+            btnApproveBooking.style.cursor = 'not-allowed';
+            btnApproveBooking.textContent = 'Awaiting Payment...';
+            btnRejectBooking.style.display = 'inline-block';
+        } else {
+            btnApproveBooking.style.display = 'inline-block';
+            btnApproveBooking.disabled = false;
+            btnApproveBooking.style.background = '#10b981';
+            btnApproveBooking.textContent =
+                'Verify & Approve Booking';
+            btnRejectBooking.style.display = 'inline-block';
+        }
+
+    } else {
+        btnApproveBooking.style.display = 'none';
+        btnRejectBooking.style.display = 'inline-block';
+    }
 
     document.getElementById('splitModal').style.display = 'flex';
 }
@@ -295,14 +326,14 @@ window.viewCustomerDoc = function (key) {
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.75);z-index:200000;display:none;align-items:center;justify-content:center;padding:30px;';
         overlay.innerHTML =
             '<div style="background:#fff;border-radius:14px;width:100%;max-width:900px;height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,0.35);">' +
-                '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e5e7eb;">' +
-                    '<span id="docViewerTitle" style="font-weight:700;color:#111827;font-size:15px;"><i class="fas fa-file-pdf" style="color:#ef4444;margin-right:8px;"></i>Document Preview</span>' +
-                    '<div style="display:flex;gap:10px;align-items:center;">' +
-                        '<a id="docViewerOpen" href="#" target="_blank" class="btn-export" style="padding:5px 12px;font-size:12px;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Open in new tab</a>' +
-                        '<button id="docViewerClose" type="button" style="background:#f3f4f6;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;color:#374151;">&times;</button>' +
-                    '</div>' +
-                '</div>' +
-                '<iframe id="docViewerFrame" src="" style="flex:1;width:100%;border:none;"></iframe>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e5e7eb;">' +
+            '<span id="docViewerTitle" style="font-weight:700;color:#111827;font-size:15px;"><i class="fas fa-file-pdf" style="color:#ef4444;margin-right:8px;"></i>Document Preview</span>' +
+            '<div style="display:flex;gap:10px;align-items:center;">' +
+            '<a id="docViewerOpen" href="#" target="_blank" class="btn-export" style="padding:5px 12px;font-size:12px;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Open in new tab</a>' +
+            '<button id="docViewerClose" type="button" style="background:#f3f4f6;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;color:#374151;">&times;</button>' +
+            '</div>' +
+            '</div>' +
+            '<iframe id="docViewerFrame" src="" style="flex:1;width:100%;border:none;"></iframe>' +
             '</div>';
         document.body.appendChild(overlay);
 

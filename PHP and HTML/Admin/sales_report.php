@@ -420,7 +420,8 @@ LIMIT 5
                 </div>
             </div>
             <form method="GET" class="filter-group">
-                <button type="button" onclick="window.print()"> Print Report
+                <button type="button" onclick="window.print()">
+                    <i class="fas fa-print"></i> 
                 </button>
                 <select name="month" class="form-control">
                     <option value="all" <?= ($month === 'all') ? 'selected' : '' ?>>All Months</option>

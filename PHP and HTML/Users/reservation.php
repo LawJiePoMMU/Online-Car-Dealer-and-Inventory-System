@@ -729,8 +729,8 @@ include 'Includes/header.php';
                     <div class="form-row single">
                         <div class="form-group">
                             <label>Preferred Date &amp; Time</label>
-                            <input type="datetime-local" name="preferred_test_drive_at" id="preferred_test_drive_at"
-                                class="form-input" value="<?= htmlspecialchars($preferred_test_drive_at) ?>"
+                            <input type="text" name="preferred_test_drive_at" id="preferred_test_drive_at"
+                                class="form-input" readonly value="<?= htmlspecialchars($preferred_test_drive_at) ?>"
                                 min="<?= htmlspecialchars($min_datetime) ?>" required>
                             <div class="locked-hint">Available 9:00 AM – 5:00 PM only, and at least 2 days in advance
                                 (earliest: <?= date('d M Y', strtotime('+2 days')) ?>). Our team will confirm
@@ -764,9 +764,9 @@ include 'Includes/header.php';
                             <input type="checkbox" name="ack_used_car" value="1" required
                                 style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer;"
                                 <?= !empty($_POST['ack_used_car']) ? 'checked' : '' ?>>
-                            <span>I understand this is a used car with only one unit available. If another customer books
-                                this car first including while my test drive is being arranged my reservation may be
-                                cancelled automatically.</span>
+                            <span>I understand this is a used car with only one unit available. 
+                               <br> If another customer books this car first including while my test drive is being 
+                                arranged my reservation may be cancelled automatically.</span>
                         </label>
                     </div>
                 <?php endif; ?>
@@ -780,7 +780,22 @@ include 'Includes/header.php';
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
+    flatpickr("#preferred_test_drive_at", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+
+        minDate: new Date().fp_incr(2),
+
+        minTime: "09:00",
+        maxTime: "17:00",
+
+        clickOpens: true,
+        allowInput: false,
+        time_24hr: true
+    });
     document.getElementById('driving_licence').addEventListener('change', function (e) {
         const f = e.target.files[0];
         const out = document.getElementById('fileName');
@@ -802,8 +817,8 @@ include 'Includes/header.php';
         function checkBusinessHours() {
             tdInput.setCustomValidity('');
             if (!tdInput.value) return;
-            const t = tdInput.value.split('T')[1] || '';
-            const [hh, mm] = t.split(':').map(n => parseInt(n, 10));
+            const timePart = tdInput.value.slice(-5);
+            const [hh, mm] = timePart.split(':').map(Number);
             if (isNaN(hh)) return;
             const mins = hh * 60 + (mm || 0);
             if (mins < 540 || mins > 1020) {

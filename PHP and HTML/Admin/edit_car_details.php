@@ -1194,7 +1194,7 @@ if (isset($_POST['save_all_details'])) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group"><label>Wheel Size</label><input type="number" name="wheel_size"
+                        <div class="form-group"><label>Wheel Size<span class="hint">(inches)</span></label><input type="number" name="wheel_size"
                                 class="form-control" oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                 value="<?= htmlspecialchars($car['wheel_size']) ?>" min="0" max="18"></div>
                         <div class="form-group">
