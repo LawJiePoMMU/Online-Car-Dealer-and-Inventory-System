@@ -75,25 +75,52 @@ if ($price === 'Under 50k') {
     $baseSql .= " AND s.car_status_price > 100000"; 
 }
 
+// ============== 终极完美修复版：搜索情况（加入标点符号过滤） ==============
 if ($keyword !== '') {
-    $kw_nospace = str_replace(' ', '', $keyword);
+    // 把空格 和 点(.) 都去掉
+    $kw_clean = str_replace([' ', '.'], '', $keyword);
     $wildcard = "%$keyword%";
-    $wildcard_nospace = "%$kw_nospace%";
+    $wildcard_clean = "%$kw_clean%";
 
-    $baseSql .= " AND (
-        CONCAT(c.car_brand, ' ', c.car_model) LIKE ?
-        OR REPLACE(CONCAT(c.car_brand, c.car_model), ' ', '') LIKE ?
-        OR c.car_year LIKE ?
-        OR SOUNDEX(c.car_model) = SOUNDEX(?)
-        OR SOUNDEX(REPLACE(c.car_brand, 'Proton ', '')) = SOUNDEX(?)
-    )";
-    
-    $params[] = $wildcard;
-    $params[] = $wildcard_nospace;
-    $params[] = $wildcard;
-    $params[] = $keyword;
-    $params[] = $keyword;
+    // 第一种：输入 4 位纯数字（代表年份），精确搜索年份
+    if (is_numeric($keyword) && strlen(trim($keyword)) == 4) {
+        $baseSql .= " AND (
+            c.car_year = ? 
+            OR CONCAT(c.car_brand, ' ', c.car_model) LIKE ?
+            OR REPLACE(REPLACE(CONCAT(c.car_brand, c.car_model), ' ', ''), '.', '') LIKE ?
+        )";
+        
+        $params[] = $keyword;
+        $params[] = $wildcard;
+        $params[] = $wildcard_clean;
+        
+    } 
+    // 第二种：输入包含数字的型号（例如 X50, e.mas 7, emas7）
+    elseif (preg_match('/[0-9]/', $keyword)) {
+        $baseSql .= " AND (
+            CONCAT(c.car_brand, ' ', c.car_model) LIKE ?
+            OR REPLACE(REPLACE(CONCAT(c.car_brand, c.car_model), ' ', ''), '.', '') LIKE ?
+        )";
+        
+        $params[] = $wildcard;
+        $params[] = $wildcard_clean;
+    } 
+    // 第三种：输入纯字母（例如 emas, emos, saga）
+    else {
+        $baseSql .= " AND (
+            CONCAT(c.car_brand, ' ', c.car_model) LIKE ?
+            OR REPLACE(REPLACE(CONCAT(c.car_brand, c.car_model), ' ', ''), '.', '') LIKE ?
+            OR SOUNDEX(REPLACE(c.car_model, '.', '')) = SOUNDEX(?)
+            OR SOUNDEX(REPLACE(REPLACE(c.car_brand, 'Proton ', ''), '.', '')) = SOUNDEX(?)
+        )";
+        
+        $params[] = $wildcard;
+        $params[] = $wildcard_clean;
+        $params[] = $kw_clean;
+        $params[] = $kw_clean;
+    }
 }
+// ============== 修复结束 ==============
 
 $countSql = "SELECT COUNT(c.car_id) " . $baseSql;
 $stmtCount = $pdo->prepare($countSql);
