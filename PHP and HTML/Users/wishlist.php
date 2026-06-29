@@ -40,6 +40,7 @@ try {
 ?>
 
 <style>
+    /* ==================== 1. Sidebar Drawer 样式 (你原本的) ==================== */
     .side-drawer {
         position: fixed;
         top: 0;
@@ -112,6 +113,150 @@ try {
         color: #111827;
         background: #f9fafb;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ==================== 2. 从 car.php 复制过来的 Car Card 样式 (完全一样) ==================== */
+    .inventory-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+    }
+
+    .pro-car-card {
+        background: #fff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        transition: transform 0.2s, box-shadow 0.2s;
+        text-decoration: none !important;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .pro-car-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-img-container {
+        position: relative;
+        width: 100%;
+        height: 160px;
+    }
+
+    .card-img-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #f8fafc;
+        display: block;
+    }
+
+    .badge-condition {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        color: #0f172a;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-wishlist {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: transparent;
+        border: none;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 0;
+        opacity: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+    }
+
+    .pro-car-card:hover .btn-wishlist {
+        opacity: 1;
+    }
+
+    .btn-wishlist:hover {
+        transform: scale(1.15);
+    }
+
+    .btn-wishlist.liked {
+        opacity: 1;
+        color: #ef4444;
+    }
+
+    .btn-wishlist.liked svg {
+        fill: none !important;
+        stroke-width: 2.5;
+    }
+
+    .card-content {
+        padding: 12px 15px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .card-title {
+        font-size: 15px;
+        font-weight: 800;
+        color: #0f172a !important;
+        margin: 0 0 4px 0;
+        text-transform: uppercase;
+        line-height: 1.3;
+    }
+
+    .card-price {
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a !important;
+        margin: 0 0 10px 0;
+    }
+
+    .card-specs {
+        font-size: 13px;
+        color: #334155 !important;
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 12px;
+    }
+
+    .spec-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .spec-dot {
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    .card-footer {
+        margin-top: auto;
+        border-top: none;
+        padding-top: 0;
+        font-size: 13px;
+        color: #334155 !important;
+        display: flex;
+        align-items: center;
+        text-transform: capitalize;
+        font-weight: 600;
     }
 </style>
 
